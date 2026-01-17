@@ -1,0 +1,3027 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  DEPUTY
+  TEACHER
+  ACCOUNTANT
+  STUDENT
+  PARENT
+}
+
+enum PilotType {
+  FREE
+  PAID
+}
+
+enum StudentStatus {
+  ACTIVE
+  TRANSFERRED
+  GRADUATED
+  SUSPENDED
+}
+
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum ExamType {
+  BOT
+  MID
+  EOT
+  CA
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK
+}
+
+enum MessageChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+enum RelationshipType {
+  FATHER
+  MOTHER
+  GUARDIAN
+  UNCLE
+  AUNT
+  GRANDPARENT
+  SPONSOR
+  OTHER
+}
+
+// Guardian Management - Requirements 6.1, 6.2
+enum GuardianStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  RESTRICTED
+}
+
+enum GuardianFlag {
+  FEE_DEFAULTER
+  HIGH_CONFLICT
+  LEGAL_RESTRICTION
+}
+
+// Guardian Document Types - Requirements 7.1, 7.2
+enum GuardianDocumentType {
+  CONSENT_FORM
+  AGREEMENT
+  LEGAL_LETTER
+  ID_COPY
+  OTHER
+}
+
+enum DisciplineType {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum DisciplineAction {
+  WARNING
+  DETENTION
+  SUSPENSION
+  EXPULSION
+}
+
+enum LicenseType {
+  FREE_PILOT
+  BASIC
+  PREMIUM
+}
+
+enum SchoolType {
+  PRIMARY
+  SECONDARY
+  BOTH
+}
+
+enum Ownership {
+  PRIVATE
+  GOVERNMENT
+}
+
+// Account lifecycle status - Requirements 17.3, 17.4, 17.5
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+// Permission types for role-permission mapping - Requirements 19.1, 19.6
+enum PermissionType {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+  APPROVE
+  EXPORT
+}
+
+// System lock types - Requirements 20.3, 20.4, 20.5, 20.7
+enum LockType {
+  TERM_CLOSED
+  RESULTS_PUBLISHED
+  FINANCIAL_PERIOD_LOCKED
+}
+
+// ============================================
+// STAFF DASHBOARD ENUMS
+// Requirements: 1.4, 3.2, 12.1, 13.1, 14.1
+// ============================================
+
+enum StaffRole {
+  CLASS_TEACHER
+  DOS
+  HOSTEL_STAFF
+  SUPPORT_STAFF
+  BURSAR
+}
+
+enum ResponsibilityType {
+  CLASS_TEACHING
+  SUBJECT_TEACHING
+  CLASS_TEACHER_DUTY
+  DUTY_TEACHER
+  BOARDING_MASTER
+  DEPARTMENT_HEAD
+}
+
+enum StaffEventType {
+  HIRED
+  ROLE_ASSIGNED
+  ROLE_REMOVED
+  PROMOTED
+  TRANSFERRED
+  RESPONSIBILITY_ASSIGNED
+  RESPONSIBILITY_REMOVED
+  STATUS_CHANGED
+  DEACTIVATED
+}
+
+enum TaskType {
+  SUBMIT_MARKS
+  SUBMIT_REPORT
+  COMPLETE_ATTENDANCE
+  REVIEW_MARKS
+  GENERATE_REPORTS
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+}
+
+enum LinkedModule {
+  ACADEMICS
+  REPORTS
+  ATTENDANCE
+  FINANCE
+}
+
+enum StaffDocumentCategory {
+  CONTRACT
+  CERTIFICATION
+  EVALUATION
+  ID_DOCUMENT
+  QUALIFICATION
+  OTHER
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model School {
+  id                 String      @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  code               String      @unique // Immutable tenant identifier
+  schoolType         SchoolType  @default(PRIMARY)
+  registrationNumber String?
+  ownership          Ownership   @default(PRIVATE)
+  country            String      @default("Uganda")
+  district           String?
+  address            String?
+  phone              String?
+  email              String?
+  logo               String?
+  licenseType        LicenseType @default(FREE_PILOT)
+  features           Json        @default("{\"smsEnabled\":false,\"whatsappEnabled\":false,\"paymentIntegration\":false,\"advancedReporting\":false,\"bulkMessaging\":false}")
+  smsBudgetPerTerm   Int         @default(0)
+  isActive           Boolean     @default(true)
+  termsAcceptedAt    DateTime? // Legal acknowledgment timestamp
+  dataAcknowledgedAt DateTime? // Data responsibility acknowledgment timestamp
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  users            User[]
+  students         Student[]
+  staff            Staff[]
+  teachers         Teacher[]
+  academicYears    AcademicYear[]
+  classes          Class[]
+  subjects         Subject[]
+  gradingSystems   GradingSystem[]
+  exams            Exam[]
+  feeStructures    FeeStructure[]
+  messages         Message[]
+  messageTemplates MessageTemplate[]
+  auditLogs        AuditLog[]
+  announcements    Announcement[]
+  authAuditLogs    AuthAuditLog[]
+  hubAlerts        HubAlert[]
+
+  @@index([isActive])
+}
+
+// ============================================
+// ACADEMIC STRUCTURE
+// ============================================
+
+model AcademicYear {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  terms  Term[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([isActive])
+}
+
+model Term {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  academicYearId String   @db.ObjectId
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  weekCount      Int      @default(12)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  academicYear  AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  exams         Exam[]
+  results       Result[]
+  payments      Payment[]
+  feeStructures FeeStructure[]
+
+  @@unique([academicYearId, name])
+  @@index([academicYearId])
+}
+
+model Class {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  name      String
+  level     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  streams          Stream[]
+  students         Student[]
+  classSubjects    ClassSubject[]
+  timetableEntries TimetableEntry[]
+  feeStructures    FeeStructure[]
+  attendance       Attendance[]
+  staffClasses     StaffClass[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model Stream {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String   @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  class    Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  students Student[]
+
+  @@unique([classId, name])
+  @@index([classId])
+}
+
+model Subject {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String   @db.ObjectId
+  name            String
+  code            String
+  gradingSystemId String?  @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  gradingSystem    GradingSystem?   @relation(fields: [gradingSystemId], references: [id])
+  classSubjects    ClassSubject[]
+  staffSubjects    StaffSubject[]
+  marks            Mark[]
+  timetableEntries TimetableEntry[]
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+  @@index([gradingSystemId])
+}
+
+model GradingSystem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school   School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  grades   GradeRange[]
+  subjects Subject[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model GradeRange {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  gradingSystemId String   @db.ObjectId
+  grade           String
+  minScore        Float
+  maxScore        Float
+  points          Float
+  remarks         String?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  gradingSystem GradingSystem @relation(fields: [gradingSystemId], references: [id], onDelete: Cascade)
+
+  @@index([gradingSystemId])
+}
+
+model ClassSubject {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  // Relations
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@index([classId])
+  @@index([subjectId])
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String?       @db.ObjectId // Nullable for Super Admin users
+  email          String
+  phone          String?
+  username       String? // Alternative login identifier
+  passwordHash   String?
+  role           Role // Primary role (kept for backward compatibility)
+  roles          Role[] // Support multiple roles
+  activeRole     Role? // Currently active role in session
+  isActive       Boolean       @default(true)
+  lastLogin      DateTime?
+  failedAttempts Int           @default(0) // For rate limiting
+  lockedUntil    DateTime? // Account lockout timestamp
+  forcePasswordReset Boolean   @default(false) // Force password change on next login
+  // Account lifecycle fields - Requirements 17.3, 17.4, 17.5
+  status         AccountStatus @default(ACTIVE)
+  deletedAt      DateTime? // Soft delete timestamp
+  deletedBy      String?       @db.ObjectId // User who performed the deletion
+  suspendedAt    DateTime? // Suspension timestamp
+  suspendedBy    String?       @db.ObjectId // User who performed the suspension
+  suspendReason  String? // Reason for suspension
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  school        School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff         Staff?
+  auditLogs     AuditLog[]
+  authAuditLogs AuthAuditLog[]
+
+  @@unique([schoolId, email])
+  @@unique([schoolId, phone])
+  @@unique([schoolId, username])
+  @@index([schoolId])
+  @@index([email])
+  @@index([isActive])
+  @@index([status])
+}
+
+// ============================================
+// ROLE PERMISSIONS - Requirements 19.1, 19.6
+// ============================================
+
+model RolePermission {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  role      Role
+  feature   String // Feature name (e.g., "students", "marks", "fees")
+  type      PermissionType
+  createdAt DateTime       @default(now())
+
+  @@unique([role, feature, type])
+  @@index([role])
+  @@index([feature])
+}
+
+// ============================================
+// SYSTEM LOCKS - Requirements 20.3, 20.4, 20.5, 20.7
+// ============================================
+
+model SystemLock {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String    @db.ObjectId
+  lockType     LockType
+  recordId     String // termId, periodId, etc.
+  lockedAt     DateTime  @default(now())
+  lockedBy     String    @db.ObjectId // User who created the lock
+  unlockedAt   DateTime? // When the lock was removed
+  unlockedBy   String?   @db.ObjectId // User who removed the lock
+  unlockReason String? // Reason for unlocking (required for audit)
+
+  @@unique([schoolId, lockType, recordId])
+  @@index([schoolId])
+  @@index([lockType])
+  @@index([recordId])
+}
+
+// ============================================
+// PASSWORD RESET - Requirements 17.1, 17.2
+// ============================================
+
+model PasswordReset {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  schoolId  String    @db.ObjectId // School context for verification
+  token     String    @unique // Unique reset token
+  expiresAt DateTime // Token expiration time
+  usedAt    DateTime? // When the token was used
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([schoolId])
+  @@index([expiresAt])
+}
+
+// ============================================
+// STUDENT & GUARDIAN
+// ============================================
+
+model Student {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String        @db.ObjectId
+  admissionNumber String
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime?
+  gender          Gender?
+  classId         String        @db.ObjectId
+  streamId        String?       @db.ObjectId
+  pilotType       PilotType     @default(FREE)
+  smsLimitPerTerm Int           @default(2)
+  smsSentCount    Int           @default(0)
+  photo           String?
+  medicalInfo     String?
+  enrollmentDate  DateTime      @default(now())
+  status          StudentStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class            Class             @relation(fields: [classId], references: [id])
+  stream           Stream?           @relation(fields: [streamId], references: [id])
+  studentGuardians StudentGuardian[]
+  attendance       Attendance[]
+  marks            Mark[]
+  results          Result[]
+  payments         Payment[]
+  messages         Message[]
+  disciplineCases  DisciplineCase[]
+  documents        StudentDocument[]
+  account          StudentAccount?
+
+  @@unique([schoolId, admissionNumber])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([streamId])
+  @@index([status])
+}
+
+model Guardian {
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  firstName          String
+  lastName           String
+  phone              String
+  secondaryPhone     String?
+  phoneVerified      Boolean          @default(false)
+  email              String?
+  emailVerified      Boolean          @default(false)
+  whatsappNumber     String?
+  nationalId         String?
+  address            String?
+  relationship       RelationshipType @default(GUARDIAN)
+  preferredChannel   MessageChannel   @default(SMS)
+  languagePreference String           @default("en")
+  status             GuardianStatus   @default(ACTIVE)
+  flags              GuardianFlag[]
+  optOutNonCritical  Boolean          @default(false)
+  lastContactDate    DateTime?
+  consentGiven       Boolean          @default(false)
+  consentDate        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  studentGuardians StudentGuardian[]
+  messages         Message[]
+  secureLinks      SecureLink[]
+  otpVerifications OTPVerification[]
+  documents        GuardianDocument[]
+  portalAccess     GuardianPortalAccess?
+  auditLogs        GuardianAuditLog[]
+
+  @@index([phone])
+  @@index([email])
+  @@index([status])
+}
+
+// Guardian Document - Requirements 7.1, 7.2, 7.3
+model GuardianDocument {
+  id           String               @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId   String               @db.ObjectId
+  documentType GuardianDocumentType
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  uploadedBy   String               @db.ObjectId
+  uploadedAt   DateTime             @default(now())
+
+  // Relations
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+}
+
+// Guardian Portal Access - Requirements 5.1, 5.2
+model GuardianPortalAccess {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId         String    @unique @db.ObjectId
+  isEnabled          Boolean   @default(false)
+  canViewAttendance  Boolean   @default(true)
+  canViewResults     Boolean   @default(true)
+  canViewFees        Boolean   @default(true)
+  canDownloadReports Boolean   @default(false)
+  passwordHash       String?
+  lastLogin          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+}
+
+// Guardian Audit Log - Requirements 5.5, 6.5
+model GuardianAuditLog {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId    String   @db.ObjectId
+  action        String
+  field         String?
+  previousValue String?
+  newValue      String?
+  performedBy   String   @db.ObjectId
+  performedAt   DateTime @default(now())
+  ipAddress     String?
+
+  // Relations
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+  @@index([performedAt])
+}
+
+model StudentGuardian {
+  id                       String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId                String           @db.ObjectId
+  guardianId               String           @db.ObjectId
+  relationshipType         RelationshipType @default(GUARDIAN)
+  isPrimary                Boolean          @default(false)
+  isFinanciallyResponsible Boolean          @default(false)
+  receivesAcademicMessages Boolean          @default(true)
+  receivesFinanceMessages  Boolean          @default(true)
+  createdAt                DateTime         @default(now())
+
+  // Relations
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, guardianId])
+  @@index([studentId])
+  @@index([guardianId])
+}
+
+// ============================================
+// STAFF
+// ============================================
+
+model Staff {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String      @unique @db.ObjectId
+  schoolId       String      @db.ObjectId
+  employeeNumber String
+  firstName      String
+  lastName       String
+  phone          String?
+  email          String?
+  role           Role
+  hireDate       DateTime    @default(now())
+  status         StaffStatus @default(ACTIVE)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Staff Dashboard fields - Requirements 2.3, 3.2
+  primaryRole    StaffRole? // Primary dashboard role (CLASS_TEACHER, DOS, HOSTEL_STAFF, SUPPORT_STAFF, BURSAR)
+  secondaryRoles StaffRole[] // Additional roles for role switcher
+  department     String? // Department assignment
+  lastActivityAt DateTime? // Last system activity timestamp
+
+  // Relations
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school           School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staffSubjects    StaffSubject[]
+  staffClasses     StaffClass[]
+  marks            Mark[]
+  timetableEntries TimetableEntry[]
+  disciplineCases  DisciplineCase[]
+  attendance       Attendance[]
+  responsibilities StaffResponsibility[]
+  historyEntries   StaffHistoryEntry[]
+  documents        StaffDocument[]
+  tasks            StaffTask[]
+
+  @@unique([schoolId, employeeNumber])
+  @@index([schoolId])
+  @@index([primaryRole])
+  @@index([status])
+}
+
+model StaffSubject {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  staffId   String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  // Relations
+  staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, subjectId])
+  @@index([staffId])
+  @@index([subjectId])
+}
+
+model StaffClass {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  staffId   String   @db.ObjectId
+  classId   String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, classId])
+  @@index([staffId])
+  @@index([classId])
+}
+
+// ============================================
+// STAFF DASHBOARD MODELS
+// Requirements: 2.3, 3.2, 3.4, 12.1, 12.2, 13.1, 14.1
+// ============================================
+
+// Staff Responsibility - tracks specific duties assigned to staff
+// Requirements: 3.4 - Responsibility assignment separate from permissions
+model StaffResponsibility {
+  id         String             @id @default(auto()) @map("_id") @db.ObjectId
+  staffId    String             @db.ObjectId
+  type       ResponsibilityType
+  details    Json // Flexible storage for responsibility-specific details (classes, subjects, duty days)
+  assignedAt DateTime           @default(now())
+  assignedBy String             @db.ObjectId
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([type])
+}
+
+// Staff History Entry - tracks promotions, role changes, transfers, exits
+// Requirements: 13.1 - Staff history tracking
+model StaffHistoryEntry {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  staffId       String         @db.ObjectId
+  eventType     StaffEventType
+  previousValue String? // Previous state (e.g., old role, old department)
+  newValue      String? // New state (e.g., new role, new department)
+  reason        String? // Reason for the change
+  performedBy   String         @db.ObjectId // User who made the change
+  performedAt   DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([eventType])
+  @@index([performedAt])
+}
+
+// Staff Document - stores staff documents with categorization
+// Requirements: 14.1 - Document storage with categorization
+model StaffDocument {
+  id         String                @id @default(auto()) @map("_id") @db.ObjectId
+  staffId    String                @db.ObjectId
+  category   StaffDocumentCategory
+  fileName   String
+  fileUrl    String
+  fileSize   Int?
+  mimeType   String?
+  uploadedBy String                @db.ObjectId
+  uploadedAt DateTime              @default(now())
+  createdAt  DateTime              @default(now())
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([category])
+}
+
+// Staff Task - tracks tasks assigned to staff members
+// Requirements: 12.1, 12.2 - Task management with status and module linking
+model StaffTask {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  staffId          String       @db.ObjectId
+  schoolId         String       @db.ObjectId
+  title            String
+  description      String?
+  type             TaskType
+  linkedModule     LinkedModule
+  linkedResourceId String?      @db.ObjectId // Reference to specific resource (exam, report, etc.)
+  deadline         DateTime
+  status           TaskStatus   @default(PENDING)
+  completedAt      DateTime?
+  createdBy        String       @db.ObjectId
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([schoolId])
+  @@index([status])
+  @@index([deadline])
+  @@index([type])
+  @@index([linkedModule])
+}
+
+// ============================================
+// ATTENDANCE
+// ============================================
+
+model Attendance {
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId  String           @db.ObjectId
+  classId    String           @db.ObjectId
+  date       DateTime
+  period     Int
+  status     AttendanceStatus
+  recordedBy String           @db.ObjectId
+  recordedAt DateTime
+  remarks    String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  // Relations
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class    Class   @relation(fields: [classId], references: [id])
+  recorder Staff   @relation(fields: [recordedBy], references: [id])
+
+  @@unique([studentId, date, period])
+  @@index([studentId])
+  @@index([classId])
+  @@index([date])
+  @@index([recordedBy])
+}
+
+// ============================================
+// TIMETABLE
+// ============================================
+
+model TimetableEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  staffId   String   @db.ObjectId
+  dayOfWeek Int // 1-7 (Monday-Sunday)
+  period    Int
+  room      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id])
+  staff   Staff   @relation(fields: [staffId], references: [id])
+
+  @@unique([classId, dayOfWeek, period])
+  @@unique([staffId, dayOfWeek, period])
+  @@index([classId])
+  @@index([staffId])
+  @@index([subjectId])
+}
+
+// ============================================
+// EXAMINATION
+// ============================================
+
+model Exam {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String    @db.ObjectId
+  termId    String    @db.ObjectId
+  name      String
+  type      ExamType
+  startDate DateTime?
+  endDate   DateTime?
+  isOpen    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  term   Term   @relation(fields: [termId], references: [id])
+  marks  Mark[]
+
+  @@index([schoolId])
+  @@index([termId])
+}
+
+model Mark {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId    String   @db.ObjectId
+  studentId String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  score     Float
+  maxScore  Float
+  grade     String?
+  enteredBy String   @db.ObjectId
+  enteredAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+  staff   Staff   @relation(fields: [enteredBy], references: [id])
+
+  @@unique([examId, studentId, subjectId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([enteredBy])
+}
+
+model Result {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId          String   @db.ObjectId
+  termId             String   @db.ObjectId
+  totalMarks         Float
+  average            Float
+  position           Int
+  totalStudents      Int?
+  grade              String?
+  teacherRemarks     String?
+  headTeacherRemarks String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  student             Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term                Term                 @relation(fields: [termId], references: [id])
+  publishedReportCard PublishedReportCard?
+
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([termId])
+}
+
+// ============================================
+// PUBLISHED REPORT CARDS
+// ============================================
+
+model PublishedReportCard {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  resultId     String   @unique @db.ObjectId
+  studentId    String   @db.ObjectId
+  termId       String   @db.ObjectId
+  schoolId     String   @db.ObjectId
+  publishedBy  String   @db.ObjectId
+  publishedAt  DateTime @default(now())
+  htmlContent  String? // Cached HTML content for quick access
+  isAccessible Boolean  @default(true) // Can be toggled to revoke access
+
+  // Relations
+  result Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([publishedAt])
+}
+
+// ============================================
+// FINANCE
+// ============================================
+
+// Fee Category Types
+enum FeeCategory {
+  TUITION
+  BOARDING
+  TRANSPORT
+  MEALS
+  UNIFORM
+  BOOKS
+  EXAMINATION
+  ACTIVITY
+  OTHER
+}
+
+// Student Type for fee differentiation
+enum StudentType {
+  DAY
+  BOARDING
+}
+
+// Discount Types
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// Discount Approval Status
+enum DiscountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Invoice Status
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Payment Status for tracking
+enum PaymentRecordStatus {
+  PENDING
+  CONFIRMED
+  REVERSED
+  CANCELLED
+}
+
+model FeeStructure {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String      @db.ObjectId
+  classId     String      @db.ObjectId
+  termId      String      @db.ObjectId
+  studentType StudentType @default(DAY)
+  totalAmount Float
+  dueDate     DateTime?
+  isActive    Boolean     @default(true)
+  createdBy   String      @db.ObjectId
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class    Class     @relation(fields: [classId], references: [id])
+  term     Term      @relation(fields: [termId], references: [id])
+  items    FeeItem[]
+  invoices Invoice[]
+
+  @@unique([schoolId, classId, termId, studentType])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([termId])
+  @@index([isActive])
+}
+
+model FeeItem {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  feeStructureId String      @db.ObjectId
+  name           String
+  category       FeeCategory @default(OTHER)
+  amount         Float
+  isOptional     Boolean     @default(false)
+  isOneTime      Boolean     @default(false)
+  description    String?
+  createdAt      DateTime    @default(now())
+
+  // Relations
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@index([feeStructureId])
+  @@index([category])
+}
+
+// Student Account - tracks individual student financial status
+model StudentAccount {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String      @unique @db.ObjectId
+  schoolId          String      @db.ObjectId
+  studentType       StudentType @default(DAY)
+  totalFees         Float       @default(0)
+  totalPaid         Float       @default(0)
+  totalDiscounts    Float       @default(0)
+  totalPenalties    Float       @default(0)
+  balance           Float       @default(0) // totalFees - totalPaid - totalDiscounts + totalPenalties
+  lastPaymentDate   DateTime?
+  lastPaymentAmount Float?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  student   Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  discounts StudentDiscount[]
+  penalties StudentPenalty[]
+
+  @@unique([studentId, schoolId])
+  @@index([schoolId])
+  @@index([balance])
+}
+
+// Discount definitions (school-wide discount rules)
+model DiscountRule {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String       @db.ObjectId
+  name             String
+  description      String?
+  type             DiscountType
+  value            Float // Percentage or fixed amount
+  maxAmount        Float? // Cap for percentage discounts
+  isActive         Boolean      @default(true)
+  requiresApproval Boolean      @default(true)
+  createdBy        String       @db.ObjectId
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  studentDiscounts StudentDiscount[]
+
+  @@index([schoolId])
+  @@index([isActive])
+}
+
+// Student-specific discounts
+model StudentDiscount {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  studentAccountId String         @db.ObjectId
+  discountRuleId   String?        @db.ObjectId
+  termId           String         @db.ObjectId
+  name             String
+  type             DiscountType
+  value            Float
+  calculatedAmount Float
+  reason           String?
+  status           DiscountStatus @default(PENDING)
+  appliedBy        String         @db.ObjectId
+  appliedAt        DateTime       @default(now())
+  approvedBy       String?        @db.ObjectId
+  approvedAt       DateTime?
+  rejectedBy       String?        @db.ObjectId
+  rejectedAt       DateTime?
+  rejectionReason  String?
+
+  // Relations
+  studentAccount StudentAccount @relation(fields: [studentAccountId], references: [id], onDelete: Cascade)
+  discountRule   DiscountRule?  @relation(fields: [discountRuleId], references: [id])
+
+  @@index([studentAccountId])
+  @@index([termId])
+  @@index([status])
+}
+
+// Penalty definitions (school-wide penalty rules)
+model PenaltyRule {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String       @db.ObjectId
+  name            String
+  description     String?
+  type            DiscountType // PERCENTAGE or FIXED_AMOUNT
+  value           Float
+  gracePeriodDays Int          @default(0)
+  isAutomatic     Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  createdBy       String       @db.ObjectId
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  studentPenalties StudentPenalty[]
+
+  @@index([schoolId])
+  @@index([isActive])
+}
+
+// Student-specific penalties
+model StudentPenalty {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  studentAccountId String    @db.ObjectId
+  penaltyRuleId    String?   @db.ObjectId
+  termId           String    @db.ObjectId
+  name             String
+  amount           Float
+  reason           String?
+  isWaived         Boolean   @default(false)
+  waivedBy         String?   @db.ObjectId
+  waivedAt         DateTime?
+  waiverReason     String?
+  appliedBy        String    @db.ObjectId
+  appliedAt        DateTime  @default(now())
+
+  // Relations
+  studentAccount StudentAccount @relation(fields: [studentAccountId], references: [id], onDelete: Cascade)
+  penaltyRule    PenaltyRule?   @relation(fields: [penaltyRuleId], references: [id])
+
+  @@index([studentAccountId])
+  @@index([termId])
+  @@index([isWaived])
+}
+
+// Invoice for students
+model Invoice {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceNumber  String        @unique
+  schoolId       String        @db.ObjectId
+  studentId      String        @db.ObjectId
+  guardianId     String?       @db.ObjectId
+  feeStructureId String        @db.ObjectId
+  termId         String        @db.ObjectId
+  subtotal       Float
+  discountAmount Float         @default(0)
+  penaltyAmount  Float         @default(0)
+  totalAmount    Float
+  paidAmount     Float         @default(0)
+  balance        Float
+  dueDate        DateTime
+  status         InvoiceStatus @default(DRAFT)
+  notes          String?
+  issuedAt       DateTime?
+  issuedBy       String?       @db.ObjectId
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  feeStructure FeeStructure        @relation(fields: [feeStructureId], references: [id])
+  items        InvoiceItem[]
+  payments     PaymentAllocation[]
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([termId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Invoice line items
+model InvoiceItem {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String      @db.ObjectId
+  description String
+  category    FeeCategory
+  amount      Float
+  isOptional  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+// Enhanced Payment model
+model Payment {
+  id             String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String              @db.ObjectId
+  studentId      String              @db.ObjectId
+  guardianId     String?             @db.ObjectId // Who paid
+  termId         String              @db.ObjectId
+  amount         Float
+  method         PaymentMethod
+  reference      String // Transaction reference
+  bankName       String? // For bank/cheque payments
+  chequeNumber   String? // For cheque payments
+  mobileNumber   String? // For mobile money
+  notes          String?
+  status         PaymentRecordStatus @default(CONFIRMED)
+  receivedBy     String              @db.ObjectId
+  receivedAt     DateTime
+  receiptId      String?             @db.ObjectId
+  reversedBy     String?             @db.ObjectId
+  reversedAt     DateTime?
+  reversalReason String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relations
+  student     Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term        Term                @relation(fields: [termId], references: [id])
+  receipt     Receipt?            @relation(fields: [receiptId], references: [id])
+  allocations PaymentAllocation[]
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([termId])
+  @@index([status])
+  @@index([receivedAt])
+  @@index([method])
+}
+
+// Payment allocation to invoices (supports partial payments)
+model PaymentAllocation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  paymentId   String   @db.ObjectId
+  invoiceId   String   @db.ObjectId
+  amount      Float
+  allocatedAt DateTime @default(now())
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([paymentId])
+  @@index([invoiceId])
+}
+
+// Immutable Receipt
+model Receipt {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNumber String        @unique
+  schoolId      String        @db.ObjectId
+  studentId     String        @db.ObjectId
+  guardianId    String?       @db.ObjectId
+  studentName   String // Snapshot at time of receipt
+  guardianName  String? // Snapshot at time of receipt
+  className     String // Snapshot at time of receipt
+  termName      String // Snapshot at time of receipt
+  amount        Float
+  amountInWords String
+  method        PaymentMethod
+  reference     String
+  balanceBefore Float
+  balanceAfter  Float
+  issuedBy      String        @db.ObjectId
+  issuedByName  String // Snapshot
+  issuedAt      DateTime      @default(now())
+  // Receipts are immutable - no updatedAt
+
+  // Relations
+  payments Payment[]
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([issuedAt])
+}
+
+// Finance Audit Log - specific to finance operations
+model FinanceAuditLog {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  userId        String   @db.ObjectId
+  action        String // PAYMENT_RECORDED, PAYMENT_REVERSED, DISCOUNT_APPLIED, etc.
+  resourceType  String // Payment, Invoice, Receipt, Discount, Penalty
+  resourceId    String   @db.ObjectId
+  previousValue Json?
+  newValue      Json?
+  reason        String? // Required for reversals/edits
+  ipAddress     String?
+  timestamp     DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+// Finance Notification Log - tracks all finance-related notifications
+// Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+model FinanceNotificationLog {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String    @db.ObjectId
+  guardianId  String    @db.ObjectId
+  studentId   String?   @db.ObjectId
+  type        String // PAYMENT_CONFIRMATION, FEE_REMINDER, PENALTY_NOTICE, BALANCE_SUMMARY
+  channel     String // SMS, WHATSAPP, EMAIL
+  content     String
+  status      String // QUEUED, SENT, DELIVERED, FAILED, BOUNCED
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  error       String?
+  metadata    String? // JSON string with additional data
+  createdAt   DateTime  @default(now())
+
+  @@index([schoolId])
+  @@index([guardianId])
+  @@index([studentId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Finance Settings per school
+model FinanceSettings {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId               String   @unique @db.ObjectId
+  currency               String   @default("UGX")
+  currencySymbol         String   @default("UGX")
+  receiptPrefix          String   @default("RCP")
+  invoicePrefix          String   @default("INV")
+  receiptNumberFormat    String   @default("{PREFIX}-{YEAR}-{NUMBER}")
+  invoiceNumberFormat    String   @default("{PREFIX}-{YEAR}-{NUMBER}")
+  nextReceiptNumber      Int      @default(1)
+  nextInvoiceNumber      Int      @default(1)
+  paymentMethods         String[] @default(["CASH", "MOBILE_MONEY", "BANK"])
+  defaultDueDays         Int      @default(30)
+  enableAutoPenalty      Boolean  @default(false)
+  latePenaltyPercentage  Float    @default(0)
+  gracePeriodDays        Int      @default(7)
+  enableDiscountApproval Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+// ============================================
+// COMMUNICATION
+// ============================================
+
+model Message {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String         @db.ObjectId
+  studentId    String         @db.ObjectId
+  guardianId   String         @db.ObjectId
+  templateType String
+  channel      MessageChannel
+  content      String
+  shortUrl     String?
+  status       MessageStatus  @default(QUEUED)
+  cost         Float?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  retryCount   Int            @default(0)
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id])
+  guardian Guardian @relation(fields: [guardianId], references: [id])
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([status])
+}
+
+model MessageTemplate {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String         @db.ObjectId
+  type      String
+  channel   MessageChannel
+  content   String
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, type, channel])
+  @@index([schoolId])
+}
+
+// ============================================
+// SECURE LINKS
+// ============================================
+
+model SecureLink {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  token        String    @unique
+  guardianId   String    @db.ObjectId
+  resourceType String
+  resourceId   String
+  expiresAt    DateTime
+  accessedAt   DateTime?
+  accessIp     String?
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+  @@index([expiresAt])
+}
+
+// ============================================
+// DISCIPLINE
+// ============================================
+
+model DisciplineCase {
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId          String           @db.ObjectId
+  reportedBy         String           @db.ObjectId
+  incidentDate       DateTime
+  description        String
+  type               DisciplineType
+  action             DisciplineAction
+  actionDuration     Int?
+  parentNotified     Boolean          @default(false)
+  parentAcknowledged Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reporter Staff   @relation(fields: [reportedBy], references: [id])
+
+  @@index([studentId])
+  @@index([reportedBy])
+}
+
+// ============================================
+// ANNOUNCEMENTS
+// ============================================
+
+model Announcement {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String    @db.ObjectId
+  title         String
+  content       String
+  targetRoles   Role[]
+  targetClasses String[]
+  isSchoolWide  Boolean   @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+// ============================================
+// AUDIT
+// ============================================
+
+model AuditLog {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  userId        String   @db.ObjectId
+  action        String
+  resource      String
+  resourceId    String
+  previousValue Json?
+  newValue      Json?
+  ipAddress     String?
+  userAgent     String?
+  timestamp     DateTime @default(now())
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([resource])
+  @@index([timestamp])
+}
+
+// ============================================
+// AUTHENTICATION AUDIT
+// ============================================
+
+enum AuthEventType {
+  LOGIN_ATTEMPT
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  ROLE_SWITCH
+  PASSWORD_CHANGE
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  SUSPICIOUS_ACTIVITY
+  // Impersonation events - Requirement 5.6
+  IMPERSONATION_START
+  IMPERSONATION_ACTION
+  IMPERSONATION_END
+}
+
+model AuthAuditLog {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?       @db.ObjectId
+  schoolId   String?       @db.ObjectId
+  eventType  AuthEventType
+  identifier String // Email/phone/username used for login
+  ipAddress  String
+  userAgent  String?
+  success    Boolean
+  errorCode  String?
+  metadata   Json?
+  timestamp  DateTime      @default(now())
+
+  // Relations
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  school School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([schoolId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@index([ipAddress])
+  @@index([identifier])
+}
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+model LoginAttempt {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  identifier   String // Email, phone, or IP address
+  ipAddress    String
+  attempts     Int       @default(1)
+  firstAttempt DateTime  @default(now())
+  lastAttempt  DateTime  @default(now())
+  lockedUntil  DateTime?
+
+  @@unique([identifier, ipAddress])
+  @@index([identifier])
+  @@index([ipAddress])
+  @@index([lockedUntil])
+}
+
+// ============================================
+// STUDENT DOCUMENTS
+// ============================================
+
+model StudentDocument {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId  String   @db.ObjectId
+  name       String
+  type       String
+  url        String
+  metadata   Json?
+  uploadedAt DateTime @default(now())
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+// ============================================
+// URL SHORTENING
+// ============================================
+
+model ShortUrl {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  code        String    @unique
+  originalUrl String
+  schoolId    String?   @db.ObjectId
+  studentId   String?   @db.ObjectId
+  messageId   String?   @db.ObjectId
+  channel     String? // SMS, WHATSAPP, EMAIL - for tracking source
+  clickCount  Int       @default(0)
+  lastClickAt DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Click tracking
+  clicks ShortUrlClick[]
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([messageId])
+  @@index([isActive])
+}
+
+model ShortUrlClick {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  shortUrlId String   @db.ObjectId
+  ipAddress  String?
+  userAgent  String?
+  referer    String?
+  clickedAt  DateTime @default(now())
+
+  // Relations
+  shortUrl ShortUrl @relation(fields: [shortUrlId], references: [id], onDelete: Cascade)
+
+  @@index([shortUrlId])
+  @@index([clickedAt])
+}
+
+// ============================================
+// BULK MESSAGING
+// ============================================
+
+enum BulkMessageJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model BulkMessageJob {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String               @db.ObjectId
+  totalMessages       Int
+  processedCount      Int                  @default(0)
+  sentCount           Int                  @default(0)
+  failedCount         Int                  @default(0)
+  status              BulkMessageJobStatus @default(PENDING)
+  errorMessage        String?
+  estimatedCompletion DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  // Relations
+  items BulkMessageItem[]
+
+  @@index([schoolId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BulkMessageItem {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  jobId        String        @db.ObjectId
+  studentId    String        @db.ObjectId
+  templateType String
+  data         Json
+  priority     String        @default("normal")
+  status       MessageStatus @default(QUEUED)
+  messageId    String?       @db.ObjectId // Reference to created Message
+  errorMessage String?
+  processedAt  DateTime?
+  createdAt    DateTime      @default(now())
+
+  // Relations
+  job BulkMessageJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([studentId])
+  @@index([status])
+}
+
+// ============================================
+// SMS BUDGET TRACKING
+// ============================================
+
+enum SMSBudgetAlertType {
+  WARNING_80
+  EXCEEDED_100
+  BUDGET_RESET
+}
+
+model SMSBudgetUsage {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String              @db.ObjectId
+  termId      String              @db.ObjectId
+  totalBudget Float // Budget limit in UGX
+  usedAmount  Float               @default(0) // Amount spent in UGX
+  smsCount    Int                 @default(0) // Number of SMS sent
+  isPaused    Boolean             @default(false) // Whether non-critical SMS is paused
+  lastAlertAt DateTime? // Last time an alert was sent
+  alertType   SMSBudgetAlertType? // Type of last alert sent
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([schoolId, termId])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([isPaused])
+}
+
+model SMSCostLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  messageId String   @db.ObjectId
+  studentId String   @db.ObjectId
+  cost      Float // Cost in UGX
+  recipient String // Phone number
+  segments  Int      @default(1) // Number of SMS segments
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([messageId])
+  @@index([studentId])
+  @@index([createdAt])
+}
+
+model SMSBudgetAlert {
+  id             String             @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String             @db.ObjectId
+  termId         String             @db.ObjectId
+  alertType      SMSBudgetAlertType
+  usedAmount     Float
+  budgetLimit    Float
+  percentage     Float
+  message        String
+  notifiedAt     DateTime           @default(now())
+  acknowledgedAt DateTime?
+  acknowledgedBy String?            @db.ObjectId
+
+  @@index([schoolId])
+  @@index([termId])
+  @@index([alertType])
+  @@index([notifiedAt])
+}
+
+// ============================================
+// OTP VERIFICATION
+// ============================================
+
+enum OTPVerificationType {
+  PHONE
+  EMAIL
+}
+
+enum OTPVerificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  FAILED
+}
+
+model OTPVerification {
+  id          String                @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId  String                @db.ObjectId
+  studentId   String?               @db.ObjectId // Optional: link to specific student
+  schoolId    String                @db.ObjectId
+  type        OTPVerificationType
+  contact     String // Phone number or email being verified
+  otpCode     String // 6-digit OTP code
+  status      OTPVerificationStatus @default(PENDING)
+  expiresAt   DateTime // 3 weeks from creation
+  verifiedAt  DateTime?
+  attempts    Int                   @default(0)
+  maxAttempts Int                   @default(3)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  // Relations
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+  @@index([studentId])
+  @@index([schoolId])
+  @@index([otpCode])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ============================================
+// CRITICAL MESSAGE OVERRIDE
+// ============================================
+
+enum CriticalOverrideStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+  FAILED
+}
+
+model CriticalOverride {
+  id               String                 @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String                 @db.ObjectId
+  adminId          String                 @db.ObjectId
+  studentId        String                 @db.ObjectId
+  reason           String // Justification for critical override (Requirement 32.4)
+  messageContent   String
+  templateType     String
+  status           CriticalOverrideStatus @default(PENDING_APPROVAL)
+  requiresApproval Boolean                @default(false) // True after 3 overrides per term (Requirement 32.3)
+  approvedBy       String?                @db.ObjectId
+  approvedAt       DateTime?
+  rejectedBy       String?                @db.ObjectId
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  messageId        String?                @db.ObjectId // Reference to sent message
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([schoolId])
+  @@index([adminId])
+  @@index([studentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// DIRECT MESSAGING (Parent-School Communication)
+// Requirements: 36.1, 36.2, 36.3, 36.4, 36.5
+// ============================================
+
+enum DirectMessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum ConversationParticipantType {
+  PARENT
+  TEACHER
+  SCHOOL_ADMIN
+}
+
+model Conversation {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  studentId     String   @db.ObjectId // The student this conversation is about
+  guardianId    String   @db.ObjectId // The parent in the conversation
+  staffId       String?  @db.ObjectId // The teacher/admin in the conversation (null for school-wide)
+  isOfficial    Boolean  @default(false) // True for School Admin official messages
+  subject       String? // Optional subject line
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  messages DirectMessage[]
+
+  @@unique([schoolId, studentId, guardianId, staffId])
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([staffId])
+  @@index([lastMessageAt])
+}
+
+model DirectMessage {
+  id                  String                      @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId      String                      @db.ObjectId
+  senderId            String                      @db.ObjectId // User ID (guardian or staff)
+  senderType          ConversationParticipantType
+  content             String
+  isOfficial          Boolean                     @default(false) // School Admin official message
+  status              DirectMessageStatus         @default(SENT)
+  readAt              DateTime?
+  notificationSent    Boolean                     @default(false) // Whether notification was sent
+  notificationChannel String? // SMS, WHATSAPP, EMAIL, IN_APP
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([senderType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// STUDENT REPORTS (School-to-Parent Reporting)
+// Requirements: 37.1, 37.2, 37.3, 37.4, 37.5
+// ============================================
+
+enum StudentReportType {
+  ACADEMIC
+  BEHAVIOR
+  HEALTH
+  GENERAL
+}
+
+enum StudentReportStatus {
+  PENDING
+  SENT
+  VIEWED
+  ACKNOWLEDGED
+  RESPONDED
+}
+
+model StudentReport {
+  id                     String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId               String              @db.ObjectId
+  studentId              String              @db.ObjectId
+  createdBy              String              @db.ObjectId // Staff ID who created the report
+  reportType             StudentReportType
+  title                  String
+  content                String
+  requiresAcknowledgment Boolean             @default(false)
+  status                 StudentReportStatus @default(PENDING)
+  notificationChannel    String? // SMS, WHATSAPP, EMAIL
+  notificationSentAt     DateTime?
+  viewedAt               DateTime?
+  acknowledgedAt         DateTime?
+  parentResponse         String?
+  respondedAt            DateTime?
+  meetingRequested       Boolean             @default(false)
+  meetingRequestedAt     DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([createdBy])
+  @@index([reportType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// CONSENT MANAGEMENT
+// Requirements: 30.1, 30.2, 30.3, 30.4, 30.5
+// ============================================
+
+enum ConsentStatus {
+  PENDING
+  GIVEN
+  WITHDRAWN
+}
+
+enum DataAccessType {
+  VIEW
+  EXPORT
+  MODIFY
+  DELETE
+}
+
+enum DataExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+model ConsentRecord {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId         String        @db.ObjectId
+  schoolId           String        @db.ObjectId
+  status             ConsentStatus @default(PENDING)
+  policyVersion      String // Version of privacy policy accepted
+  consentGivenAt     DateTime? // Timestamp when consent was given
+  consentWithdrawnAt DateTime? // Timestamp when consent was withdrawn
+  withdrawalReason   String? // Reason for withdrawal
+  ipAddress          String? // IP address when consent was given/withdrawn
+  userAgent          String? // User agent when consent was given/withdrawn
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([guardianId, schoolId])
+  @@index([guardianId])
+  @@index([schoolId])
+  @@index([status])
+  @@index([policyVersion])
+}
+
+model PersonalDataAccessLog {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId   String         @db.ObjectId
+  schoolId     String         @db.ObjectId
+  userId       String         @db.ObjectId // User who accessed the data
+  accessType   DataAccessType
+  resourceType String // Type of resource accessed (e.g., "student", "payment", "result")
+  resourceId   String?        @db.ObjectId // ID of specific resource if applicable
+  description  String // Human-readable description of access
+  ipAddress    String?
+  userAgent    String?
+  timestamp    DateTime       @default(now())
+
+  @@index([guardianId])
+  @@index([schoolId])
+  @@index([userId])
+  @@index([accessType])
+  @@index([timestamp])
+}
+
+model DataExportRequest {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  guardianId        String           @db.ObjectId
+  schoolId          String           @db.ObjectId
+  status            DataExportStatus @default(PENDING)
+  requestedAt       DateTime         @default(now())
+  dueBy             DateTime // 72 hours from request
+  completedAt       DateTime?
+  downloadUrl       String? // URL to download the export
+  downloadExpiresAt DateTime? // When the download link expires
+  errorMessage      String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([guardianId])
+  @@index([schoolId])
+  @@index([status])
+  @@index([dueBy])
+}
+
+// ============================================
+// SYSTEM SETTINGS (Super Admin Configuration)
+// Requirements: 17.1, 17.2, 17.3, 17.4
+// ============================================
+
+model SystemSettings {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  key               String   @unique
+  gracePeriodDays   Int      @default(14)
+  featureLockOrder  String[] @default(["SMS", "REPORTS", "FULL_ACCESS"])
+  pilotStudentLimit Int      @default(50)
+  pilotSmsLimit     Int      @default(100)
+  pilotDurationDays Int      @default(30)
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?  @db.ObjectId
+}
+
+// ============================================
+// COMMUNICATION SYSTEM - Enhanced Models
+// Requirements: 4.1, 6.1, 11.4, 12.1, 17.3
+// ============================================
+
+// New enums for communication system
+enum NotificationType {
+  ALERT
+  REMINDER
+  TASK
+  MESSAGE
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum TriggerType {
+  SCHEDULED
+  EVENT_ATTENDANCE
+  EVENT_PAYMENT
+  EVENT_RESULTS
+  EVENT_FEE_DUE
+  MANUAL
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RecipientType {
+  STUDENT
+  GUARDIAN
+  STAFF
+}
+
+enum DeliveryStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  BOUNCED
+}
+
+// In-App Notifications - Requirements 4.1, 4.2, 4.3, 4.4, 4.5
+model InAppNotification {
+  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String               @db.ObjectId
+  schoolId  String               @db.ObjectId
+  type      NotificationType
+  title     String
+  content   String
+  priority  NotificationPriority @default(NORMAL)
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime             @default(now())
+
+  @@index([userId])
+  @@index([schoolId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([priority])
+}
+
+// Automation Rules - Requirements 11.4
+model AutomationRule {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String         @db.ObjectId
+  name           String
+  description    String?
+  triggerType    TriggerType
+  triggerConfig  Json
+  targetType     String
+  targetCriteria Json
+  templateId     String?        @db.ObjectId
+  channel        MessageChannel
+  isActive       Boolean        @default(true)
+  lastExecutedAt DateTime?
+  executionCount Int            @default(0)
+  createdBy      String         @db.ObjectId
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  executions AutomationExecution[]
+
+  @@index([schoolId])
+  @@index([triggerType])
+  @@index([isActive])
+}
+
+// Automation Execution History
+model AutomationExecution {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  ruleId         String          @db.ObjectId
+  triggeredAt    DateTime        @default(now())
+  completedAt    DateTime?
+  status         ExecutionStatus
+  recipientCount Int
+  successCount   Int             @default(0)
+  failureCount   Int             @default(0)
+  errorMessage   String?
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([triggeredAt])
+  @@index([status])
+}
+
+// Enhanced Communication Log - Requirements 12.1, 12.2, 12.3, 12.4
+model CommunicationLog {
+  id                String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String         @db.ObjectId
+  messageId         String         @unique
+  senderId          String         @db.ObjectId
+  senderRole        Role
+  channel           MessageChannel
+  recipientId       String         @db.ObjectId
+  recipientType     RecipientType
+  recipientContact  String
+  content           String
+  templateId        String?        @db.ObjectId
+  status            DeliveryStatus
+  statusReason      String?
+  cost              Float?
+  externalMessageId String?
+  fallbackAttempts  Json?
+  metadata          Json?
+  statusHistory     Json           @default("[]")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([schoolId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Enhanced Announcement - Requirements 6.1, 6.2, 6.3, 6.4, 6.5
+model EnhancedAnnouncement {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String           @db.ObjectId
+  title          String
+  content        String
+  targetType     String
+  targetCriteria Json
+  channels       MessageChannel[]
+  isPinned       Boolean          @default(false)
+  pinnedUntil    DateTime?
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  createdBy      String           @db.ObjectId
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  deliveries AnnouncementDelivery[]
+
+  @@index([schoolId])
+  @@index([isPinned])
+  @@index([publishedAt])
+  @@index([scheduledAt])
+}
+
+// Announcement Delivery Tracking
+model AnnouncementDelivery {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  announcementId String         @db.ObjectId
+  recipientId    String         @db.ObjectId
+  recipientType  RecipientType
+  channel        MessageChannel
+  status         DeliveryStatus
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime       @default(now())
+
+  announcement EnhancedAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId])
+  @@index([recipientId])
+  @@index([status])
+}
+
+// Fallback Configuration - Requirements 17.1, 17.2, 17.3, 17.4, 17.5
+model FallbackConfig {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String           @unique @db.ObjectId
+  enabled           Boolean          @default(true)
+  fallbackOrder     MessageChannel[]
+  maxAttempts       Int              @default(3)
+  retryDelayMinutes Int              @default(5)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// ============================================
+// SCHOOL SETTINGS - Requirements 10.1, 17.1
+// ============================================
+
+model SchoolSettings {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  category  String // e.g., "identity", "academic", "communication", "attendance", "grading", "finance", "guardian", "security"
+  settings  Json // Flexible JSON storage for category-specific settings
+  updatedBy String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, category])
+  @@index([schoolId])
+}
+
+// ============================================
+// SUPPORT REQUESTS
+// Requirements: Contact Admin Messages Storage
+// ============================================
+
+enum SupportRequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportRequestType {
+  ACCOUNT_ACCESS
+  PASSWORD_RESET
+  TECHNICAL_ISSUE
+  BILLING_INQUIRY
+  GENERAL_INQUIRY
+  OTHER
+}
+
+model SupportRequest {
+  id         String               @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String               @db.ObjectId
+  name       String // Requester name
+  email      String // Requester email
+  phone      String? // Requester phone (optional)
+  issueType  SupportRequestType
+  message    String
+  status     SupportRequestStatus @default(PENDING)
+  priority   Int                  @default(1) // 1=Low, 2=Medium, 3=High
+  assignedTo String?              @db.ObjectId // Admin user assigned
+  resolvedBy String?              @db.ObjectId
+  resolvedAt DateTime?
+  resolution String? // Resolution notes
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([schoolId])
+  @@index([status])
+  @@index([issueType])
+  @@index([createdAt])
+}
+
+// ============================================
+// SUPER ADMIN COMMUNICATION HUB
+// Requirements: 1.1-1.9, 2.1-2.9, 3.1-3.7, 4.1-4.8, 5.1-5.7, 6.1-6.8, 7.1-7.7, 8.1-8.8, 9.1-9.7
+// ============================================
+
+// Alert Types for Communication Hub
+enum HubAlertType {
+  DELIVERY_FAILURE
+  QUEUE_STUCK
+  QUOTA_EXCEEDED
+  LOW_BALANCE
+  ABNORMAL_USAGE
+  SYSTEM_ERROR
+}
+
+// Alert Severity Levels
+enum HubAlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// Audit Action Types for Communication Hub
+enum HubAuditActionType {
+  PAUSE_SCHOOL_MESSAGING
+  RESUME_SCHOOL_MESSAGING
+  UPDATE_QUOTA
+  ADD_CREDITS
+  CANCEL_MESSAGES
+  RETRY_MESSAGES
+  PAUSE_QUEUE
+  RESUME_QUEUE
+  CREATE_TEMPLATE
+  UPDATE_TEMPLATE
+  ACKNOWLEDGE_ALERT
+  EMERGENCY_OVERRIDE
+}
+
+// Queue Health Status
+enum QueueHealthStatus {
+  HEALTHY
+  SLOW
+  STUCK
+}
+
+// Report Frequency
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// Report Type
+enum HubReportType {
+  USAGE
+  DELIVERY
+  COST
+}
+
+// Hub Alert - Requirements 6.1-6.8
+model HubAlert {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  type           HubAlertType
+  severity       HubAlertSeverity
+  title          String
+  message        String
+  schoolId       String?          @db.ObjectId
+  school         School?          @relation(fields: [schoolId], references: [id])
+  channel        MessageChannel?
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  acknowledgedAt DateTime?
+  acknowledgedBy String?          @db.ObjectId
+  dismissedAt    DateTime?
+
+  @@index([schoolId])
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// Hub Audit Log - Requirements 9.1-9.7 (Immutable)
+model HubAuditLog {
+  id         String             @id @default(auto()) @map("_id") @db.ObjectId
+  timestamp  DateTime           @default(now())
+  adminId    String             @db.ObjectId
+  adminEmail String
+  action     HubAuditActionType
+  targetType String // school, queue, template, quota, alert
+  targetId   String
+  targetName String?
+  details    Json // Contains before/after values and reason
+  ipAddress  String
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([timestamp])
+}
+
+// Hub Template - Requirements 5.1-5.7
+model HubTemplate {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  channel     MessageChannel
+  content     String
+  variables   Json // string[] - extracted {{variable}} placeholders
+  isMandatory Boolean        @default(false)
+  version     Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   String         @db.ObjectId
+
+  versions    HubTemplateVersion[]
+  assignments HubTemplateAssignment[]
+
+  @@unique([name, channel])
+  @@index([channel])
+  @@index([isMandatory])
+}
+
+// Hub Template Version - Requirements 5.3, 5.4
+model HubTemplateVersion {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  templateId String      @db.ObjectId
+  template   HubTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version    Int
+  content    String
+  createdAt  DateTime    @default(now())
+  createdBy  String      @db.ObjectId
+
+  @@index([templateId])
+  @@index([version])
+}
+
+// Hub Template Assignment - Requirements 5.6, 5.7
+model HubTemplateAssignment {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  templateId String      @db.ObjectId
+  template   HubTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  schoolId   String      @db.ObjectId
+  assignedAt DateTime    @default(now())
+  assignedBy String      @db.ObjectId
+
+  @@unique([templateId, schoolId])
+  @@index([templateId])
+  @@index([schoolId])
+}
+
+// School Messaging Config - Requirements 2.7, 2.8, 4.1-4.7
+model SchoolMessagingConfig {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId             String    @unique @db.ObjectId
+  isPaused             Boolean   @default(false)
+  pausedAt             DateTime?
+  pausedBy             String?   @db.ObjectId
+  pauseReason          String?
+  smsLimitDaily        Int?
+  smsLimitMonthly      Int?
+  whatsappLimitDaily   Int?
+  whatsappLimitMonthly Int?
+  emailLimitDaily      Int?
+  emailLimitMonthly    Int?
+  smsCredits           Int       @default(0)
+  whatsappCredits      Int       @default(0)
+  emailCredits         Int       @default(0)
+  emergencyOverride    Boolean   @default(false)
+  updatedAt            DateTime  @updatedAt
+
+  @@index([isPaused])
+  @@index([emergencyOverride])
+}
+
+// Hub Alert Settings - Requirements 6.4-6.6
+model HubAlertSettings {
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  deliveryFailureThreshold Int      @default(10) // percentage
+  queueStuckThreshold      Int      @default(300) // seconds
+  lowBalanceThreshold      Int      @default(100) // messages
+  abnormalUsageMultiplier  Float    @default(2.0)
+  emailNotifications       Boolean  @default(true)
+  slackNotifications       Boolean  @default(false)
+  slackWebhookUrl          String?
+  notificationEmails       Json // string[]
+  updatedAt                DateTime @updatedAt
+}
+
+// Scheduled Report - Requirements 8.7
+model HubScheduledReport {
+  id         String          @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  reportType HubReportType
+  frequency  ReportFrequency
+  recipients Json // string[] - email addresses
+  filters    Json // ReportParams
+  isActive   Boolean         @default(true)
+  lastRunAt  DateTime?
+  nextRunAt  DateTime
+  createdAt  DateTime        @default(now())
+  createdBy  String          @db.ObjectId
+
+  @@index([reportType])
+  @@index([frequency])
+  @@index([isActive])
+  @@index([nextRunAt])
+}
+
+// ============================================
+// TEACHER MANAGEMENT
+// Requirements: 1.1-1.6, 2.1-2.9, 3.1-3.9, 4.1-4.8, 5.1-5.8, 6.1-6.7, 7.1-7.7, 8.1-8.5
+// ============================================
+
+// Teacher Employment Types - Requirement 2.1
+enum TeacherEmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  VOLUNTEER
+}
+
+// Teacher Job Titles - Requirement 2.2
+enum TeacherJobTitle {
+  CLASS_TEACHER
+  SUBJECT_TEACHER
+  HEAD_OF_DEPARTMENT
+  SENIOR_TEACHER
+  ASSISTANT_TEACHER
+}
+
+// Teacher Employment Status - Requirement 2.5
+enum TeacherEmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  LEFT
+}
+
+// Examination Roles - Requirement 3.5
+enum TeacherExaminationRole {
+  SETTER
+  MARKER
+  MODERATOR
+}
+
+// Salary Types - Requirement 8.1
+enum TeacherSalaryType {
+  FIXED
+  HOURLY
+}
+
+// Payroll Payment Status - Requirement 8.4
+enum TeacherPaymentStatus {
+  ACTIVE
+  HOLD
+}
+
+// Teacher Document Types - Requirements 7.1-7.4
+enum TeacherDocumentType {
+  APPOINTMENT_LETTER
+  CERTIFICATE
+  NATIONAL_ID
+  CONTRACT
+  OTHER
+}
+
+// Teacher Access Levels - Requirements 4.1-4.3
+enum TeacherAccessLevel {
+  NONE // Record-only mode - no system access
+  TEACHER // Standard teacher access
+  TEACHER_ADMIN // Teacher + limited admin (rare cases)
+}
+
+// Teacher Event Types for Audit Trail - Requirement 2.9
+enum TeacherEventType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  ACCESS_GRANTED
+  ACCESS_REVOKED
+  PERMISSIONS_UPDATED
+  SUBJECT_ASSIGNED
+  SUBJECT_REMOVED
+  CLASS_ASSIGNED
+  CLASS_REMOVED
+  CLASS_TEACHER_DESIGNATED
+  EXAM_ROLE_ASSIGNED
+  DOCUMENT_UPLOADED
+  PAYROLL_UPDATED
+}
+
+// Teacher Model - Requirements 1.1-1.6, 2.1-2.9, 3.1-3.9, 4.1-4.8
+model Teacher {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
+
+  // Personal Information - Requirement 1.1
+  firstName   String
+  lastName    String
+  gender      Gender
+  nationalId  String // National ID/Passport/Staff ID - unique per school
+  phone       String
+  email       String // Unique per school
+  dateOfBirth DateTime
+  photo       String?
+  address     String?
+
+  // Employment Details - Requirements 2.1-2.5
+  employmentType    TeacherEmploymentType
+  jobTitle          TeacherJobTitle
+  department        String
+  dateOfAppointment DateTime
+  employmentStatus  TeacherEmploymentStatus @default(ACTIVE)
+
+  // System Access - Requirements 4.1-4.8
+  userId             String?            @db.ObjectId // Linked user account (if access granted)
+  hasSystemAccess    Boolean            @default(false)
+  accessLevel        TeacherAccessLevel @default(NONE)
+  canTakeAttendance  Boolean            @default(true)
+  canEnterMarks      Boolean            @default(true)
+  canViewReports     Boolean            @default(true)
+  canSendMessages    Boolean            @default(false)
+  forcePasswordReset Boolean            @default(true)
+
+  // Communication Channels - Requirements 5.1-5.2
+  inAppMessagingEnabled Boolean @default(true)
+  smsEnabled            Boolean @default(false) // Disabled by default per Requirement 5.2
+  whatsappEnabled       Boolean @default(false) // Disabled by default per Requirement 5.2
+  emailEnabled          Boolean @default(true)
+
+  // Academic Assignments - Requirements 3.1-3.5
+  assignedSubjectIds String[] @db.ObjectId // Subject IDs
+  assignedClassIds   String[] @db.ObjectId // Class IDs
+  assignedStreamIds  String[] @db.ObjectId // Stream IDs
+  classTeacherForIds String[] @db.ObjectId // Class IDs where designated as class teacher
+
+  // Payroll Preparation - Requirements 8.1-8.5
+  salaryType          TeacherSalaryType?
+  payGrade            String?
+  paymentStatus       TeacherPaymentStatus?
+  bankName            String?
+  bankAccountNumber   String?
+  bankAccountName     String?
+  mobileMoneyProvider String?
+  mobileMoneyPhone    String?
+  mobileMoneyName     String?
+
+  // Metadata
+  createdBy String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school             School                             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  documents          TeacherDocument[]
+  historyEntries     TeacherHistoryEntry[]
+  examinationRoles   TeacherExaminationRoleAssignment[]
+  performanceMetrics TeacherPerformanceMetric[]
+  assignments        Assignment[]
+
+  @@unique([schoolId, email])
+  @@unique([schoolId, nationalId])
+  @@index([schoolId])
+  @@index([employmentStatus])
+  @@index([department])
+  @@index([employmentType])
+  @@index([hasSystemAccess])
+}
+
+// Teacher Document Model - Requirements 7.1-7.7
+model TeacherDocument {
+  id           String              @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId    String              @db.ObjectId
+  documentType TeacherDocumentType
+  fileName     String
+  fileUrl      String // ImageKit URL - Requirement 7.5
+  fileSize     Int
+  mimeType     String
+  uploadedBy   String              @db.ObjectId
+  uploadedAt   DateTime            @default(now())
+
+  // Relations
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+  @@index([documentType])
+}
+
+// Teacher History Entry Model - Requirement 2.9, 3.9
+model TeacherHistoryEntry {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId     String           @db.ObjectId
+  eventType     TeacherEventType
+  previousValue String?
+  newValue      String?
+  reason        String?
+  performedBy   String           @db.ObjectId
+  performedAt   DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  // Relations
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+  @@index([eventType])
+  @@index([performedAt])
+}
+
+// Teacher Examination Role Assignment - Requirement 3.5
+model TeacherExaminationRoleAssignment {
+  id         String                 @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId  String                 @db.ObjectId
+  examId     String                 @db.ObjectId
+  role       TeacherExaminationRole
+  assignedAt DateTime               @default(now())
+  assignedBy String                 @db.ObjectId
+
+  // Relations
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, examId, role])
+  @@index([teacherId])
+  @@index([examId])
+}
+
+// Teacher Draft Model - Requirement 9.2
+model TeacherDraft {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+  data        Json // Partial<CreateTeacherInput>
+  currentStep Int      @default(1) // 1-5 for the form steps
+  createdBy   String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([createdBy])
+}
+
+// Teacher Performance Metric - Requirements 6.1-6.7
+model TeacherPerformanceMetric {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId   String   @db.ObjectId
+  schoolId    String   @db.ObjectId
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Attendance Submission Tracking - Requirement 6.1
+  attendanceExpected  Int @default(0)
+  attendanceSubmitted Int @default(0)
+  attendanceOnTime    Int @default(0)
+  attendanceLate      Int @default(0)
+
+  // Mark Entry Tracking - Requirement 6.2
+  marksExpected Int @default(0)
+  marksEntered  Int @default(0)
+  marksOnTime   Int @default(0)
+  marksLate     Int @default(0)
+
+  // Missed Classes Tracking - Requirement 6.3
+  missedClassCount Int @default(0)
+
+  // Login Activity - Requirement 6.4
+  loginCount          Int       @default(0)
+  lastLoginAt         DateTime?
+  totalSessionMinutes Int       @default(0)
+
+  // Message Logs - Requirement 6.5
+  messagesSent       Int       @default(0)
+  messagesBySms      Int       @default(0)
+  messagesByWhatsapp Int       @default(0)
+  messagesByEmail    Int       @default(0)
+  messagesByInApp    Int       @default(0)
+  lastMessageAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, periodStart, periodEnd])
+  @@index([teacherId])
+  @@index([schoolId])
+  @@index([periodStart])
+  @@index([periodEnd])
+}
+
+// ============================================
+// SCHOOL ASSETS - ImageKit Integration
+// ============================================
+
+// School Asset Types
+enum SchoolAssetType {
+  LOGO
+  LETTERHEAD
+  CERTIFICATE_TEMPLATE
+  REPORT_TEMPLATE
+  GENERAL
+}
+
+// School Asset Model - stores school documents and templates
+model SchoolAsset {
+  id         String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String          @db.ObjectId
+  assetType  SchoolAssetType
+  name       String
+  fileName   String
+  fileUrl    String // ImageKit URL
+  fileSize   Int             @default(0)
+  mimeType   String
+  fileId     String? // ImageKit file ID for deletion
+  uploadedBy String          @db.ObjectId
+  uploadedAt DateTime        @default(now())
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([schoolId])
+  @@index([assetType])
+  @@index([uploadedAt])
+}
+
+// ============================================
+// STAFF ATTENDANCE TRACKING
+// Requirements: Staff performance metrics
+// ============================================
+
+enum StaffAttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+}
+
+model StaffAttendance {
+  id         String                @id @default(auto()) @map("_id") @db.ObjectId
+  staffId    String                @db.ObjectId
+  schoolId   String                @db.ObjectId
+  date       DateTime
+  status     StaffAttendanceStatus
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  lateMinutes Int                  @default(0)
+  remarks    String?
+  recordedBy String                @db.ObjectId
+  recordedAt DateTime              @default(now())
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@index([schoolId])
+  @@index([date])
+  @@index([status])
+}
+
+// ============================================
+// TEACHER ASSIGNMENTS (Homework/Tasks)
+// Requirements: 7.1-7.5 - Assignment Management Module
+// ============================================
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  LATE
+  GRADED
+}
+
+// Assignment Model - Teacher-created homework/tasks
+model Assignment {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String           @db.ObjectId
+  teacherId   String           @db.ObjectId
+  classId     String           @db.ObjectId
+  subjectId   String           @db.ObjectId
+  title       String
+  description String
+  deadline    DateTime
+  attachments String[]         // File URLs
+  status      AssignmentStatus @default(PUBLISHED)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  teacher     Teacher                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([deadline])
+  @@index([status])
+}
+
+// Assignment Submission - Student submission tracking
+model AssignmentSubmission {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  assignmentId String           @db.ObjectId
+  studentId    String           @db.ObjectId
+  status       SubmissionStatus @default(NOT_SUBMITTED)
+  submittedAt  DateTime?
+  attachments  String[]         // File URLs
+  grade        String?
+  feedback     String?
+  gradedAt     DateTime?
+  gradedBy     String?          @db.ObjectId
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+}
