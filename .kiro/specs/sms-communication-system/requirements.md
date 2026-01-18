@@ -31,12 +31,25 @@ SchoolOffice SMS Communication System is designed for the Ugandan education mark
 4. WHEN saving a template, THE SMS_System SHALL validate that all variables are properly formatted
 5. WHERE role-based permissions are enabled, THE SMS_System SHALL restrict template editing based on user roles
 6. WHEN a template exceeds 320 characters, THE Template_Editor SHALL prevent saving and display a warning
- the billling will be like this on payment the school will be given the number of sms in the relation to the total students where by the sms operation chances will be 9 times or muliplied by the number of students they have nd also the school nor admin oor any stuff is allowed to see the real sms count or any thing like the sms cost because it will cost issues if they calculate that he cost for an sms id cheaper than they are paying for it so the sms will be sent and the chances of sending sms wll be or sms counts deep in the application and only shown by the super admin the original costs and prices and also the remaing counts plus that will depend if school is paid full aount , but if paid half amount then the number of sms will be half the original ones and will be allowed to operate or use the application for one onth before everything on it is clossed and restricted from use plus if paid the quatar price then the number of sms given will be also a quater with also the same sms sending logic as the half and i want strict enforcing of these rules and if the schools has not paid any thing then they will not have acess to any thing or program or feature and i want these restrictions to be tight and every strong 
-2. WHEN SMS credits are insufficient, THE SMS_System SHALL block all non-emergency messages
-3. WHEN credits fall below a threshold, THE SMS_System SHALL notify administrators
-4. WHEN calculating costs, THE SMS_System SHALL count each 160-character segment as one SMS unit at UGX 45
-5. WHERE emergency reserves are configured, THE SMS_System SHALL allow emergency messages even with zero credits
-6. WHEN daily or term limits are reached, THE SMS_System SHALL prevent further sending until limits reset
+
+### Requirement 2: SMS Credit Management and Subscription Enforcement
+
+**User Story:** As a super administrator, I want to control SMS credit allocation based on school payment status, so that schools receive appropriate access levels and costs remain hidden from school users.
+
+#### Acceptance Criteria
+
+1. WHEN a school pays the full subscription amount, THE Credit_Manager SHALL allocate SMS credits equal to 9 times the total student count
+2. WHEN a school pays half the subscription amount, THE Credit_Manager SHALL allocate SMS credits equal to 4.5 times the total student count and grant one month of system access
+3. WHEN a school pays a quarter of the subscription amount, THE Credit_Manager SHALL allocate SMS credits equal to 2.25 times the total student count and grant one month of system access
+4. WHEN a school has not made any payment, THE SMS_System SHALL block access to all features and functionality
+5. WHEN a school with partial payment reaches the one-month access limit, THE SMS_System SHALL automatically close and restrict all system access
+6. WHEN any school user views the system, THE SMS_System SHALL hide all actual SMS costs and credit counts from display
+7. WHEN a super administrator views credit information, THE SMS_System SHALL display actual SMS costs, credit counts, and remaining balances
+8. WHEN SMS credits are insufficient, THE SMS_System SHALL block all non-emergency messages
+9. WHEN credits fall below a configured threshold percentage, THE SMS_System SHALL notify school administrators
+10. WHEN calculating costs, THE SMS_System SHALL count each 160-character segment as one SMS unit at UGX 45
+11. WHERE emergency reserves are configured, THE SMS_System SHALL allow emergency messages even with zero regular credits
+12. WHEN daily or term limits are reached, THE SMS_System SHALL prevent further sending until limits reset
 
 ### Requirement 3: Automated SMS Triggers
 

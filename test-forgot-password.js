@@ -44,8 +44,8 @@ async function testForgotPasswordFlow() {
       })
     });
 
-    const sendCodeData = await sendCodeRponse.json();
-    console cose:', sendCodeData);
+    const sendCodeData = await sendCodeResponse.json();
+    console.log('Send code response:', sendCodeData);
 
     if (!sendCodeResponse.ok) {
       console.error('❌ Send code step failed');

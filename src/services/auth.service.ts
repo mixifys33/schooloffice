@@ -749,16 +749,6 @@ export class AuthService {
   // ============================================
 
   /**
-   * Staff profile verification result
-   */
-  interface StaffVerificationResult {
-    hasProfile: boolean
-    isActive: boolean
-    staffId?: string
-    profile?: StaffProfileInfo
-  }
-
-  /**
    * Verify staff profile linkage and status
    * Requirements: 1.1 - Verify user is linked to active Staff profile
    * Requirements: 1.2 - Check if staff profile exists

@@ -433,29 +433,29 @@ model ClassSubject {
 // ============================================
 
 model User {
-  id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId       String?       @db.ObjectId // Nullable for Super Admin users
-  email          String
-  phone          String?
-  username       String? // Alternative login identifier
-  passwordHash   String?
-  role           Role // Primary role (kept for backward compatibility)
-  roles          Role[] // Support multiple roles
-  activeRole     Role? // Currently active role in session
-  isActive       Boolean       @default(true)
-  lastLogin      DateTime?
-  failedAttempts Int           @default(0) // For rate limiting
-  lockedUntil    DateTime? // Account lockout timestamp
-  forcePasswordReset Boolean   @default(false) // Force password change on next login
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String?       @db.ObjectId // Nullable for Super Admin users
+  email              String
+  phone              String?
+  username           String? // Alternative login identifier
+  passwordHash       String?
+  role               Role // Primary role (kept for backward compatibility)
+  roles              Role[] // Support multiple roles
+  activeRole         Role? // Currently active role in session
+  isActive           Boolean       @default(true)
+  lastLogin          DateTime?
+  failedAttempts     Int           @default(0) // For rate limiting
+  lockedUntil        DateTime? // Account lockout timestamp
+  forcePasswordReset Boolean       @default(false) // Force password change on next login
   // Account lifecycle fields - Requirements 17.3, 17.4, 17.5
-  status         AccountStatus @default(ACTIVE)
-  deletedAt      DateTime? // Soft delete timestamp
-  deletedBy      String?       @db.ObjectId // User who performed the deletion
-  suspendedAt    DateTime? // Suspension timestamp
-  suspendedBy    String?       @db.ObjectId // User who performed the suspension
-  suspendReason  String? // Reason for suspension
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  status             AccountStatus @default(ACTIVE)
+  deletedAt          DateTime? // Soft delete timestamp
+  deletedBy          String?       @db.ObjectId // User who performed the deletion
+  suspendedAt        DateTime? // Suspension timestamp
+  suspendedBy        String?       @db.ObjectId // User who performed the suspension
+  suspendReason      String? // Reason for suspension
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   // Relations
   school        School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -2936,19 +2936,19 @@ enum StaffAttendanceStatus {
 }
 
 model StaffAttendance {
-  id         String                @id @default(auto()) @map("_id") @db.ObjectId
-  staffId    String                @db.ObjectId
-  schoolId   String                @db.ObjectId
-  date       DateTime
-  status     StaffAttendanceStatus
-  checkInAt  DateTime?
-  checkOutAt DateTime?
-  lateMinutes Int                  @default(0)
-  remarks    String?
-  recordedBy String                @db.ObjectId
-  recordedAt DateTime              @default(now())
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
+  id          String                @id @default(auto()) @map("_id") @db.ObjectId
+  staffId     String                @db.ObjectId
+  schoolId    String                @db.ObjectId
+  date        DateTime
+  status      StaffAttendanceStatus
+  checkInAt   DateTime?
+  checkOutAt  DateTime?
+  lateMinutes Int                   @default(0)
+  remarks     String?
+  recordedBy  String                @db.ObjectId
+  recordedAt  DateTime              @default(now())
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
 
   @@unique([staffId, date])
   @@index([staffId])
@@ -2985,7 +2985,7 @@ model Assignment {
   title       String
   description String
   deadline    DateTime
-  attachments String[]         // File URLs
+  attachments String[] // File URLs
   status      AssignmentStatus @default(PUBLISHED)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -3009,7 +3009,7 @@ model AssignmentSubmission {
   studentId    String           @db.ObjectId
   status       SubmissionStatus @default(NOT_SUBMITTED)
   submittedAt  DateTime?
-  attachments  String[]         // File URLs
+  attachments  String[] // File URLs
   grade        String?
   feedback     String?
   gradedAt     DateTime?
@@ -3024,4 +3024,102 @@ model AssignmentSubmission {
   @@index([assignmentId])
   @@index([studentId])
   @@index([status])
+}
+
+// ============================================
+// SMS COMMUNICATION SYSTEM
+// Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3
+// ============================================
+
+// Payment Tier for SMS Credit Allocation
+enum PaymentTier {
+  FULL // 100% payment → 9x student count
+  HALF // 50% payment → 4.5x student count, 1 month access
+  QUARTER // 25% payment → 2.25x student count, 1 month access
+  NONE // No payment → 0 credits, no access
+}
+
+// Trigger Event Types for Auto Triggers
+enum TriggerEventType {
+  FEES_OVERDUE
+  PAYMENT_RECEIVED
+  REPORT_PUBLISHED
+  ATTENDANCE_ABSENT
+  EXAM_SCHEDULED
+}
+
+// SMS Credit Allocation (Super Admin visibility only)
+// Requirements: 2.1, 2.2, 2.3, 2.6, 2.7
+model SMSCreditAllocation {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String      @unique @db.ObjectId
+  paymentTier      PaymentTier
+  studentCount     Int
+  creditsAllocated Int
+  creditsUsed      Int         @default(0)
+  creditsRemaining Int
+  accessExpiresAt  DateTime? // For HALF and QUARTER tiers
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([paymentTier])
+}
+
+// School Subscription Status
+// Requirements: 2.4, 2.5
+model SchoolSubscription {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String      @unique @db.ObjectId
+  paymentTier     PaymentTier
+  paymentAmount   Float
+  studentCount    Int
+  isActive        Boolean     @default(true)
+  accessExpiresAt DateTime? // For HALF and QUARTER tiers
+  lastPaymentDate DateTime
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([isActive])
+  @@index([accessExpiresAt])
+}
+
+// Auto Trigger Configuration
+// Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+model AutoTrigger {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String           @db.ObjectId
+  name           String
+  eventType      TriggerEventType
+  conditions     Json // Array of TriggerCondition
+  templateId     String           @db.ObjectId
+  enabled        Boolean          @default(true)
+  maxPerTerm     Int? // Maximum reminders per term
+  intervalDays   Int? // Days between reminders
+  lastExecutedAt DateTime?
+  executionCount Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([schoolId])
+  @@index([eventType])
+  @@index([enabled])
+}
+
+// Trigger Execution Log
+// Requirements: 3.6
+model TriggerExecutionLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  triggerId  String   @db.ObjectId
+  schoolId   String   @db.ObjectId
+  studentId  String   @db.ObjectId
+  eventData  Json
+  messageId  String?  @db.ObjectId // Reference to created Message
+  success    Boolean
+  error      String?
+  executedAt DateTime @default(now())
+
+  @@index([triggerId])
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([executedAt])
 }

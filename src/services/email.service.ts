@@ -411,28 +411,37 @@ export class EmailService {
    * Initialize Gmail SMTP transporter
    */
   private initializeGmailTransporter(): void {
-    console.log('Initializing Gmail SMTP transporter...')
-    console.log('SMTP_USER configured:', !!this.config.gmail.user)
-    console.log('SMTP_PASS configured:', !!this.config.gmail.pass)
-    console.log('SMTP_HOST:', this.config.gmail.host)
-    console.log('SMTP_PORT:', this.config.gmail.port)
-    console.log('SMTP_SERVICE:', this.config.gmail.service)
+    console.log('🔧 [Email Service] Initializing Gmail SMTP transporter...')
+    console.log('🔧 [Email Service] SMTP_USER:', this.config.gmail.user)
+    console.log('🔧 [Email Service] SMTP_PASS configured:', !!this.config.gmail.pass)
+    console.log('🔧 [Email Service] SMTP_HOST:', this.config.gmail.host)
+    console.log('🔧 [Email Service] SMTP_PORT:', this.config.gmail.port)
+    console.log('🔧 [Email Service] SMTP_SERVICE:', this.config.gmail.service)
+    console.log('🔧 [Email Service] EMAIL_FROM:', this.config.fromEmail)
+    console.log('🔧 [Email Service] EMAIL_FROM_NAME:', this.config.fromName)
     
     if (!this.config.gmail.user || !this.config.gmail.pass) {
-      console.warn('Gmail SMTP credentials not configured')
+      console.warn('⚠️ [Email Service] Gmail SMTP credentials not configured')
+      console.warn('⚠️ [Email Service] SMTP_USER empty:', !this.config.gmail.user)
+      console.warn('⚠️ [Email Service] SMTP_PASS empty:', !this.config.gmail.pass)
       return
     }
 
-    this.gmailTransporter = nodemailer.createTransport({
-      service: this.config.gmail.service,
-      host: this.config.gmail.host,
-      port: this.config.gmail.port,
-      secure: this.config.gmail.port === 465,
-      auth: {
-        user: this.config.gmail.user,
-        pass: this.config.gmail.pass,
-      },
-    })
+    try {
+      this.gmailTransporter = nodemailer.createTransport({
+        service: this.config.gmail.service,
+        host: this.config.gmail.host,
+        port: this.config.gmail.port,
+        secure: this.config.gmail.port === 465,
+        auth: {
+          user: this.config.gmail.user,
+          pass: this.config.gmail.pass,
+        },
+      })
+      console.log('✅ [Email Service] Gmail transporter created successfully')
+    } catch (error) {
+      console.error('❌ [Email Service] Failed to create Gmail transporter:', error)
+    }
   }
 
   /**
@@ -575,11 +584,14 @@ export class EmailService {
    * Send email via Gmail SMTP (Nodemailer)
    */
   private async sendViaGmail(options: SendEmailOptions, recipients: string[]): Promise<EmailResult> {
-    console.log('sendViaGmail called')
-    console.log('Gmail transporter initialized:', !!this.gmailTransporter)
+    console.log('🔧 [Email Service] sendViaGmail called')
+    console.log('🔧 [Email Service] Gmail transporter initialized:', !!this.gmailTransporter)
+    console.log('🔧 [Email Service] Recipients:', recipients)
     
     if (!this.gmailTransporter) {
-      throw new Error('Gmail SMTP not configured')
+      const error = 'Gmail SMTP not configured'
+      console.error('❌ [Email Service]', error)
+      throw new Error(error)
     }
 
     const mailOptions = {
@@ -597,23 +609,28 @@ export class EmailService {
       })),
     }
 
-    console.log('Sending email with options:', {
+    console.log('🔧 [Email Service] Sending email with options:', {
       from: mailOptions.from,
       to: mailOptions.to,
       subject: mailOptions.subject,
     })
 
-    const info = await this.gmailTransporter.sendMail(mailOptions)
-    
-    console.log('Email sent successfully, messageId:', info.messageId)
+    try {
+      const info = await this.gmailTransporter.sendMail(mailOptions)
+      
+      console.log('✅ [Email Service] Email sent successfully, messageId:', info.messageId)
 
-    return {
-      success: true,
-      messageId: info.messageId,
-      status: MessageStatus.SENT,
-      recipient: recipients[0],
-      provider: 'gmail',
-      usedFallback: false,
+      return {
+        success: true,
+        messageId: info.messageId,
+        status: MessageStatus.SENT,
+        recipient: recipients[0],
+        provider: 'gmail',
+        usedFallback: false,
+      }
+    } catch (error) {
+      console.error('❌ [Email Service] Gmail send error:', error)
+      throw error
     }
   }
 

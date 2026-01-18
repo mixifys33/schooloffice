@@ -67,6 +67,10 @@ export async function POST(request: NextRequest) {
     const codeKey = `${schoolCode}:${identifier}`.toLowerCase()
     storeVerificationCode(codeKey, { code, expires, userId: user.id })
 
+    // ALWAYS log the code for debugging/testing purposes
+    console.log(`🔧 [FORGOT PASSWORD DEBUG] Code for ${identifier} (${schoolCode}): ${code}`)
+    console.log(`🔧 [FORGOT PASSWORD DEBUG] Code expires at: ${expires.toISOString()}`)
+
     let maskedContact = ''
     let sendSuccess = false
 
@@ -75,7 +79,14 @@ export async function POST(request: NextRequest) {
       
       // Send email using email service (Gmail primary, SendGrid fallback)
       try {
-        const { emailService } = await import('@/services/email.service')
+        console.log(`🔧 [Password Reset] Importing email service...`)
+        const { getEmailService } = await import('@/services/email.service')
+        const emailService = getEmailService()
+        
+        console.log(`🔧 [Password Reset] Email service imported successfully`)
+        console.log(`🔧 [Password Reset] Attempting to send email to ${user.email}`)
+        console.log(`🔧 [Password Reset] Using code: ${code}`)
+        console.log(`🔧 [Password Reset] Active provider: ${emailService.getActiveProvider()}`)
         
         const emailResult = await emailService.sendPasswordReset(
           user.email,
@@ -85,16 +96,25 @@ export async function POST(request: NextRequest) {
           15 // expiryMinutes
         )
         
+        console.log(`🔧 [Password Reset] Email result:`, {
+          success: emailResult.success,
+          provider: emailResult.provider,
+          usedFallback: emailResult.usedFallback,
+          error: emailResult.error,
+          messageId: emailResult.messageId
+        })
+        
         if (emailResult.success) {
-          console.log(`[Password Reset] Email sent to ${maskEmail(user.email)} via ${emailResult.provider}${emailResult.usedFallback ? ' (fallback)' : ''}`)
+          console.log(`✅ [Password Reset] Email sent successfully to ${maskEmail(user.email)} via ${emailResult.provider}${emailResult.usedFallback ? ' (fallback)' : ''}`)
           sendSuccess = true
         } else {
-          console.error('Email send failed:', emailResult.error)
+          console.error('❌ [Password Reset] Email send failed:', emailResult.error)
+          console.log(`🔧 [Password Reset] FALLBACK - Check console for code above`)
         }
       } catch (emailError) {
-        console.error('Failed to send email:', emailError)
-        // Log code to console as fallback for testing
-        console.log(`[Password Reset] FALLBACK - Email code for ${user.email}: ${code}`)
+        console.error('❌ [Password Reset] Failed to send email:', emailError)
+        console.error('❌ [Password Reset] Error stack:', emailError instanceof Error ? emailError.stack : 'No stack trace')
+        console.log(`🔧 [Password Reset] FALLBACK - Check console for code above`)
       }
     } else if (method === 'phone' && user.phone) {
       maskedContact = maskPhone(user.phone)

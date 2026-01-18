@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '../lib/db'
-import { financeService } from './finance.service'
+import { PaymentService as financeService } from './finance.service'
 import { messageOrchestratorService } from './message-orchestrator.service'
 import { messageTemplateService } from './message-template.service'
 import { contactManagementService } from './contact-management.service'
