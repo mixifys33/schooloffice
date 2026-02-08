@@ -33,13 +33,13 @@ function SeverityBadge({ severity }: { severity: HubAlertSeverity }) {
   const getSeverityColor = (severity: HubAlertSeverity) => {
     switch (severity) {
       case HubAlertSeverity.CRITICAL:
-        return 'bg-red-900/50 text-red-400 border-red-700'
+        return 'bg-[var(--danger-dark)]/50 text-[var(--danger)] border-[var(--chart-red)]'
       case HubAlertSeverity.WARNING:
-        return 'bg-amber-900/50 text-amber-400 border-amber-700'
+        return 'bg-[var(--warning-dark)]/50 text-[var(--warning)] border-[var(--warning)]'
       case HubAlertSeverity.INFO:
-        return 'bg-blue-900/50 text-blue-400 border-blue-700'
+        return 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)] border-[var(--accent-hover)]'
       default:
-        return 'bg-slate-900/50 text-slate-400 border-slate-700'
+        return 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border-strong)]'
     }
   }
 
@@ -54,31 +54,31 @@ function AlertTypeIcon({ type }: { type: AlertType }) {
   switch (type) {
     case AlertType.DELIVERY_FAILURE:
       return (
-        <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     case AlertType.QUEUE_STUCK:
       return (
-        <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     case AlertType.QUOTA_EXCEEDED:
       return (
-        <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       )
     case AlertType.LOW_BALANCE:
       return (
-        <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     default:
       return (
-        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
@@ -98,38 +98,38 @@ function AlertCard({
   const getSeverityBorder = (severity: HubAlertSeverity) => {
     switch (severity) {
       case HubAlertSeverity.CRITICAL:
-        return 'border-l-red-500'
+        return 'border-l-[var(--chart-red)]'
       case HubAlertSeverity.WARNING:
-        return 'border-l-amber-500'
+        return 'border-l-[var(--warning)]'
       case HubAlertSeverity.INFO:
-        return 'border-l-blue-500'
+        return 'border-l-[var(--chart-blue)]'
       default:
-        return 'border-l-slate-500'
+        return 'border-l-[var(--border-strong)]'
     }
   }
 
   return (
-    <div className={`bg-slate-800 border border-slate-700 border-l-4 ${getSeverityBorder(alert.severity)} rounded-lg p-4`}>
+    <div className={`bg-[var(--bg-surface)] border border-[var(--border-strong)] border-l-4 ${getSeverityBorder(alert.severity)} rounded-lg p-4`}>
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
           <AlertTypeIcon type={alert.type} />
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-1">
-              <h4 className="text-sm font-medium text-slate-100">{alert.title}</h4>
+              <h4 className="text-sm font-medium text-[var(--text-primary)]">{alert.title}</h4>
               <SeverityBadge severity={alert.severity} />
             </div>
-            <p className="text-sm text-slate-400">{alert.message}</p>
+            <p className="text-sm text-[var(--text-muted)]">{alert.message}</p>
             {alert.schoolName && (
-              <p className="text-xs text-slate-500 mt-1">School: {alert.schoolName}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">School: {alert.schoolName}</p>
             )}
             {alert.channel && (
-              <p className="text-xs text-slate-500">Channel: {alert.channel}</p>
+              <p className="text-xs text-[var(--text-muted)]">Channel: {alert.channel}</p>
             )}
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-[var(--text-muted)] mt-2">
               {new Date(alert.createdAt).toLocaleString()}
             </p>
             {alert.acknowledgedAt && (
-              <p className="text-xs text-emerald-500 mt-1">
+              <p className="text-xs text-[var(--success)] mt-1">
                 Acknowledged at {new Date(alert.acknowledgedAt).toLocaleString()}
                 {alert.acknowledgedBy && ` by ${alert.acknowledgedBy}`}
               </p>
@@ -142,17 +142,17 @@ function AlertCard({
               size="sm"
               variant="outline"
               onClick={() => onAcknowledge(alert.id)}
-              className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--border-default)]"
             >
               Acknowledge
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDismiss(alert.id)}
-            className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
-          >
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDismiss(alert.id)}
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--border-default)]"
+            >
             Dismiss
           </Button>
         </div>
@@ -213,64 +213,64 @@ function AlertSettingsPanel({
   }
 
 
-  return (
-    <Card className="bg-slate-800 border-slate-700">
+   return (
+    <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
       <CardHeader>
-        <CardTitle className="text-slate-200">Alert Settings</CardTitle>
+        <CardTitle className="text-[var(--text-secondary)]">Alert Settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Thresholds */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Delivery Failure Threshold (%)</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Delivery Failure Threshold (%)</label>
             <Input
               type="number"
               value={formData.deliveryFailureThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, deliveryFailureThreshold: parseInt(e.target.value) || 0 }))}
-              className="bg-slate-700 border-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
             />
-            <p className="text-xs text-slate-500 mt-1">Alert when failure rate exceeds this percentage</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Alert when failure rate exceeds this percentage</p>
           </div>
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Queue Stuck Threshold (seconds)</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Queue Stuck Threshold (seconds)</label>
             <Input
               type="number"
               value={formData.queueStuckThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, queueStuckThreshold: parseInt(e.target.value) || 0 }))}
-              className="bg-slate-700 border-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
             />
-            <p className="text-xs text-slate-500 mt-1">Alert when oldest message exceeds this age</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Alert when oldest message exceeds this age</p>
           </div>
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Low Balance Threshold</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Low Balance Threshold</label>
             <Input
               type="number"
               value={formData.lowBalanceThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, lowBalanceThreshold: parseInt(e.target.value) || 0 }))}
-              className="bg-slate-700 border-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
             />
-            <p className="text-xs text-slate-500 mt-1">Alert when credits fall below this number</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Alert when credits fall below this number</p>
           </div>
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Abnormal Usage Multiplier</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Abnormal Usage Multiplier</label>
             <Input
               type="number"
               step="0.1"
               value={formData.abnormalUsageMultiplier}
               onChange={(e) => setFormData(prev => ({ ...prev, abnormalUsageMultiplier: parseFloat(e.target.value) || 1 }))}
-              className="bg-slate-700 border-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
             />
-            <p className="text-xs text-slate-500 mt-1">Alert when usage exceeds average by this factor</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Alert when usage exceeds average by this factor</p>
           </div>
         </div>
 
         {/* Notification Toggles */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium text-slate-200">Notification Channels</h4>
-          <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+          <h4 className="text-sm font-medium text-[var(--text-secondary)]">Notification Channels</h4>
+          <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-lg">
             <div>
-              <p className="text-sm text-slate-200">Email Notifications</p>
-              <p className="text-xs text-slate-400">Send alerts to configured email addresses</p>
+              <p className="text-sm text-[var(--text-secondary)]">Email Notifications</p>
+              <p className="text-xs text-[var(--text-muted)]">Send alerts to configured email addresses</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -279,13 +279,13 @@ function AlertSettingsPanel({
                 onChange={(e) => setFormData(prev => ({ ...prev, emailNotifications: e.target.checked }))}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-[var(--border-strong)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--bg-main)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--chart-blue)]"></div>
             </label>
           </div>
-          <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-lg">
             <div>
-              <p className="text-sm text-slate-200">Slack Notifications</p>
-              <p className="text-xs text-slate-400">Send alerts to Slack channel</p>
+              <p className="text-sm text-[var(--text-secondary)]">Slack Notifications</p>
+              <p className="text-xs text-[var(--text-muted)]">Send alerts to Slack channel</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -294,7 +294,7 @@ function AlertSettingsPanel({
                 onChange={(e) => setFormData(prev => ({ ...prev, slackNotifications: e.target.checked }))}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-[var(--border-strong)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--bg-main)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--chart-blue)]"></div>
             </label>
           </div>
         </div>
@@ -303,13 +303,13 @@ function AlertSettingsPanel({
         {/* Slack Webhook URL */}
         {formData.slackNotifications && (
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Slack Webhook URL</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Slack Webhook URL</label>
             <Input
               type="url"
               value={formData.slackWebhookUrl || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, slackWebhookUrl: e.target.value || null }))}
               placeholder="https://hooks.slack.com/services/..."
-              className="bg-slate-700 border-slate-600"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
             />
           </div>
         )}
@@ -317,16 +317,16 @@ function AlertSettingsPanel({
         {/* Email Recipients */}
         {formData.emailNotifications && (
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Notification Email Recipients</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Notification Email Recipients</label>
             <div className="flex space-x-2 mb-2">
               <Input
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 placeholder="admin@example.com"
-                className="bg-slate-700 border-slate-600"
+                className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
               />
-              <Button onClick={handleAddEmail} variant="outline" className="bg-slate-700 border-slate-600">
+              <Button onClick={handleAddEmail} variant="outline"                   className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
                 Add
               </Button>
             </div>
@@ -334,12 +334,12 @@ function AlertSettingsPanel({
               {formData.notificationEmails.map((email) => (
                 <span
                   key={email}
-                  className="inline-flex items-center px-2 py-1 bg-slate-700 rounded text-xs text-slate-300"
+                  className="inline-flex items-center px-2 py-1 bg-[var(--bg-surface)] rounded text-xs text-[var(--text-muted)]"
                 >
                   {email}
                   <button
                     onClick={() => handleRemoveEmail(email)}
-                    className="ml-2 text-slate-400 hover:text-red-400"
+                    className="ml-2 text-[var(--text-muted)] hover:text-[var(--danger)]"
                   >
                     ×
                   </button>
@@ -353,7 +353,7 @@ function AlertSettingsPanel({
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)] text-[var(--white-pure)]"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
@@ -442,28 +442,28 @@ export default function AlertsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Alert Management</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Alert Management</h2>
+          <p className="text-sm text-[var(--text-muted)]">
             Monitor, acknowledge, and configure system alerts
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="flex bg-slate-800 rounded-lg p-1">
+          <div className="flex bg-[var(--bg-surface)] rounded-lg p-1">
             <button
               onClick={() => setView('active')}
-              className={`px-3 py-1 text-sm rounded ${view === 'active' ? 'bg-slate-700 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1 text-sm rounded ${view === 'active' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
             >
               Active ({activeAlerts.length})
             </button>
             <button
               onClick={() => setView('history')}
-              className={`px-3 py-1 text-sm rounded ${view === 'history' ? 'bg-slate-700 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1 text-sm rounded ${view === 'history' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
             >
               History
             </button>
             <button
               onClick={() => setView('settings')}
-              className={`px-3 py-1 text-sm rounded ${view === 'settings' ? 'bg-slate-700 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-3 py-1 text-sm rounded ${view === 'settings' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
             >
               Settings
             </button>
@@ -473,7 +473,7 @@ export default function AlertsTab({
               onClick={onRefresh}
               variant="outline"
               size="sm"
-              className="bg-slate-700 border-slate-600 text-slate-300"
+              className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-muted)]"
             >
               Refresh
             </Button>
@@ -485,13 +485,13 @@ export default function AlertsTab({
       {view === 'active' && (
         <div className="space-y-4">
           {activeAlerts.length === 0 ? (
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="py-12 text-center">
-                <svg className="w-12 h-12 text-emerald-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-12 h-12 text-[var(--success)] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-slate-200 text-lg mb-2">No Active Alerts</p>
-                <p className="text-slate-400 text-sm">All systems are operating normally</p>
+                <p className="text-[var(--text-secondary)] text-lg mb-2">No Active Alerts</p>
+                <p className="text-[var(--text-muted)] text-sm">All systems are operating normally</p>
               </CardContent>
             </Card>
           ) : (
@@ -509,36 +509,36 @@ export default function AlertsTab({
 
           {/* Alert Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="p-4">
-                <div className="text-2xl font-semibold text-red-400">
+                <div className="text-2xl font-semibold text-[var(--danger)]">
                   {activeAlerts.filter(a => a.severity === HubAlertSeverity.CRITICAL).length}
                 </div>
-                <p className="text-xs text-slate-400">Critical</p>
+                <p className="text-xs text-[var(--text-muted)]">Critical</p>
               </CardContent>
             </Card>
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="p-4">
-                <div className="text-2xl font-semibold text-amber-400">
+                <div className="text-2xl font-semibold text-[var(--warning)]">
                   {activeAlerts.filter(a => a.severity === HubAlertSeverity.WARNING).length}
                 </div>
-                <p className="text-xs text-slate-400">Warning</p>
+                <p className="text-xs text-[var(--text-muted)]">Warning</p>
               </CardContent>
             </Card>
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="p-4">
-                <div className="text-2xl font-semibold text-blue-400">
+                <div className="text-2xl font-semibold text-[var(--chart-blue)]">
                   {activeAlerts.filter(a => a.severity === HubAlertSeverity.INFO).length}
                 </div>
-                <p className="text-xs text-slate-400">Info</p>
+                <p className="text-xs text-[var(--text-muted)]">Info</p>
               </CardContent>
             </Card>
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="p-4">
-                <div className="text-2xl font-semibold text-emerald-400">
+                <div className="text-2xl font-semibold text-[var(--success)]">
                   {activeAlerts.filter(a => a.acknowledgedAt).length}
                 </div>
-                <p className="text-xs text-slate-400">Acknowledged</p>
+                <p className="text-xs text-[var(--text-muted)]">Acknowledged</p>
               </CardContent>
             </Card>
           </div>
@@ -550,13 +550,13 @@ export default function AlertsTab({
       {view === 'history' && (
         <div className="space-y-4">
           {/* Filters */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <select
                   value={historyFilters.type || ''}
                   onChange={(e) => setHistoryFilters(prev => ({ ...prev, type: e.target.value as AlertType || undefined }))}
-                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 text-sm"
+                  className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-md text-[var(--text-muted)] text-sm"
                 >
                   <option value="">All Types</option>
                   <option value={AlertType.DELIVERY_FAILURE}>Delivery Failure</option>
@@ -569,7 +569,7 @@ export default function AlertsTab({
                 <select
                   value={historyFilters.severity || ''}
                   onChange={(e) => setHistoryFilters(prev => ({ ...prev, severity: e.target.value as HubAlertSeverity || undefined }))}
-                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 text-sm"
+                  className="px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-md text-[var(--text-muted)] text-sm"
                 >
                   <option value="">All Severities</option>
                   <option value={HubAlertSeverity.CRITICAL}>Critical</option>
@@ -579,12 +579,12 @@ export default function AlertsTab({
                 <Input
                   type="date"
                   onChange={(e) => setHistoryFilters(prev => ({ ...prev, startDate: e.target.value ? new Date(e.target.value) : undefined }))}
-                  className="bg-slate-700 border-slate-600"
+                  className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
                 />
                 <Input
                   type="date"
                   onChange={(e) => setHistoryFilters(prev => ({ ...prev, endDate: e.target.value ? new Date(e.target.value) : undefined }))}
-                  className="bg-slate-700 border-slate-600"
+                  className="bg-[var(--bg-surface)] border-[var(--border-strong)]"
                 />
               </div>
             </CardContent>
@@ -605,13 +605,13 @@ export default function AlertsTab({
               ))}
             </div>
           ) : (
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
               <CardContent className="py-12 text-center">
-                <svg className="w-12 h-12 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-12 h-12 text-[var(--text-secondary)] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p className="text-slate-400 text-lg mb-2">No Alert History</p>
-                <p className="text-slate-500 text-sm">No alerts match your filter criteria</p>
+                <p className="text-[var(--text-muted)] text-lg mb-2">No Alert History</p>
+                <p className="text-[var(--text-muted)] text-sm">No alerts match your filter criteria</p>
               </CardContent>
             </Card>
           )}

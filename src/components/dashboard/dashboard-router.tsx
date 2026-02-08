@@ -32,13 +32,13 @@ export function getDashboardPathForRole(role: StaffRole | Role): string {
     // Role paths
     [Role.SUPER_ADMIN]: '/super-admin',
     [Role.SCHOOL_ADMIN]: '/dashboard/school-admin',
-    [Role.DEPUTY]: '/dashboard',
+    [Role.DEPUTY]: '/dashboard/school-admin',
     [Role.TEACHER]: '/dashboard/teacher',
     [Role.ACCOUNTANT]: '/dashboard/bursar',
     [Role.STUDENT]: '/student',
     [Role.PARENT]: '/parent',
   }
-  return paths[role] || '/dashboard'
+  return paths[role] || '/dashboard/school-admin'
 }
 
 /**
@@ -102,8 +102,8 @@ export function DashboardRouter({ children, fallback }: DashboardRouterProps) {
     let targetRole: Role | StaffRole = activeRole
     
     // If there's a stored role and it's valid for this user, use it
-    if (storedRole && userRoles.includes(storedRole as Role)) {
-      targetRole = storedRole
+    if (storedRole && userRoles.some(role => role.toString() === storedRole.toString())) {
+      targetRole = storedRole as Role | StaffRole
     }
 
     // Get the dashboard path for the target role
@@ -123,8 +123,8 @@ export function DashboardRouter({ children, fallback }: DashboardRouterProps) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--chart-blue)]" />
+          <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             Loading your dashboard...
           </p>
         </div>
@@ -155,8 +155,8 @@ export function useEffectiveRole(): {
     const activeRole = session.user.activeRole || session.user.role
 
     // If stored role is valid, use it
-    if (storedRole && userRoles.includes(storedRole as Role)) {
-      setEffectiveRole(storedRole)
+    if (storedRole && userRoles.some(role => role.toString() === storedRole.toString())) {
+      setEffectiveRole(storedRole as Role | StaffRole)
     } else {
       setEffectiveRole(activeRole)
     }

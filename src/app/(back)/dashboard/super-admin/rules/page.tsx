@@ -158,8 +158,8 @@ export default function SystemRulesPage() {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">System Rules</h1>
-          <p className="text-gray-600">Configure system-wide payment enforcement rules</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">System Rules</h1>
+          <p className="text-[var(--text-secondary)]">Configure system-wide payment enforcement rules</p>
         </div>
         <SkeletonLoader variant="card" count={3} />
       </div>
@@ -170,14 +170,14 @@ export default function SystemRulesPage() {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">System Rules</h1>
-          <p className="text-gray-600">Configure system-wide payment enforcement rules</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">System Rules</h1>
+          <p className="text-[var(--text-secondary)]">Configure system-wide payment enforcement rules</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
+          <p className="text-[var(--chart-red)]">{error}</p>
           <button
             onClick={fetchRules}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -197,25 +197,25 @@ export default function SystemRulesPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">System Rules</h1>
-        <p className="text-gray-600">Configure system-wide payment enforcement rules</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">System Rules</h1>
+        <p className="text-[var(--text-secondary)]">Configure system-wide payment enforcement rules</p>
         {rules && (
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             Last updated: {new Date(rules.updatedAt).toLocaleString()}
           </p>
         )}
       </div>
 
       {/* Grace Period Configuration - Requirement 17.1, 17.2 */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">Payment Grace Period</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Payment Grace Period</h2>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Number of days after payment due date before a school is suspended. 
           During the grace period, SMS and report features will be disabled.
         </p>
         
         <div className="flex items-center gap-4">
-          <label htmlFor="gracePeriod" className="text-sm font-medium text-gray-700">
+          <label htmlFor="gracePeriod" className="text-sm font-medium text-[var(--text-primary)]">
             Grace Period Days:
           </label>
           <input
@@ -225,14 +225,14 @@ export default function SystemRulesPage() {
             max="90"
             value={gracePeriodDays}
             onChange={(e) => setGracePeriodDays(parseInt(e.target.value) || 0)}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-24 px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
           />
-          <span className="text-sm text-gray-500">days (0-90)</span>
+          <span className="text-sm text-[var(--text-muted)]">days (0-90)</span>
         </div>
 
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">How it works:</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="mt-4 p-4 bg-[var(--info-light)] rounded-lg">
+          <h3 className="text-sm font-medium text-[var(--info-dark)] mb-2">How it works:</h3>
+          <ul className="text-sm text-[var(--accent-hover)] space-y-1">
             <li>• Day 0: Payment due date passes</li>
             <li>• Day 1 to {gracePeriodDays}: Grace period - SMS and reports disabled</li>
             <li>• Day {gracePeriodDays + 1}+: School suspended - all access blocked</li>
@@ -241,9 +241,9 @@ export default function SystemRulesPage() {
       </div>
 
       {/* Feature Lock Order - Requirement 17.3 */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">Feature Restriction Order</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Feature Restriction Order</h2>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Define the order in which features are disabled when a school fails to pay. 
           Features at the top are disabled first.
         </p>
@@ -252,13 +252,13 @@ export default function SystemRulesPage() {
           {featureLockOrder.map((feature, index) => (
             <div 
               key={feature}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+              className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-lg border"
             >
               <div className="flex items-center gap-3">
-                <span className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full text-sm font-medium">
+                <span className="w-6 h-6 flex items-center justify-center bg-[var(--bg-surface)] rounded-full text-sm font-medium">
                   {index + 1}
                 </span>
-                <span className="font-medium text-gray-700">
+                <span className="font-medium text-[var(--text-primary)]">
                   {feature === 'SMS' && '📱 SMS Messaging'}
                   {feature === 'REPORTS' && '📊 Report Cards'}
                   {feature === 'FULL_ACCESS' && '🔒 Full Dashboard Access'}
@@ -268,7 +268,7 @@ export default function SystemRulesPage() {
                 <button
                   onClick={() => moveFeatureUp(index)}
                   disabled={index === 0}
-                  className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Move up"
                 >
                   ↑
@@ -276,7 +276,7 @@ export default function SystemRulesPage() {
                 <button
                   onClick={() => moveFeatureDown(index)}
                   disabled={index === featureLockOrder.length - 1}
-                  className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Move down"
                 >
                   ↓
@@ -286,8 +286,8 @@ export default function SystemRulesPage() {
           ))}
         </div>
 
-        <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-4 p-4 bg-[var(--warning-light)] rounded-lg">
+          <p className="text-sm text-[var(--warning-dark)]">
             <strong>Note:</strong> During the grace period, features are progressively disabled 
             in this order. Full access suspension only occurs after the grace period expires.
           </p>
@@ -295,15 +295,15 @@ export default function SystemRulesPage() {
       </div>
 
       {/* Pilot School Limits - Requirement 17.1 */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">Pilot School Limits</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Pilot School Limits</h2>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Configure default limits for schools on free pilot/trial period.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label htmlFor="pilotStudents" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="pilotStudents" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Student Limit
             </label>
             <input
@@ -313,13 +313,13 @@ export default function SystemRulesPage() {
               max="500"
               value={pilotStudentLimit}
               onChange={(e) => setPilotStudentLimit(parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             />
-            <p className="text-xs text-gray-500 mt-1">Max students per pilot school</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Max students per pilot school</p>
           </div>
 
           <div>
-            <label htmlFor="pilotSms" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="pilotSms" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               SMS Limit
             </label>
             <input
@@ -329,13 +329,13 @@ export default function SystemRulesPage() {
               max="1000"
               value={pilotSmsLimit}
               onChange={(e) => setPilotSmsLimit(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             />
-            <p className="text-xs text-gray-500 mt-1">Max SMS per pilot school</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Max SMS per pilot school</p>
           </div>
 
           <div>
-            <label htmlFor="pilotDuration" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="pilotDuration" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Trial Duration
             </label>
             <input
@@ -345,46 +345,46 @@ export default function SystemRulesPage() {
               max="365"
               value={pilotDurationDays}
               onChange={(e) => setPilotDurationDays(parseInt(e.target.value) || 7)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             />
-            <p className="text-xs text-gray-500 mt-1">Days before pilot expires</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Days before pilot expires</p>
           </div>
         </div>
       </div>
 
       {/* Suspension Trigger Conditions - Requirement 17.1 */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">Suspension Trigger Conditions</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Suspension Trigger Conditions</h2>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Schools are automatically suspended when any of these conditions are met:
         </p>
 
         <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-            <span className="text-red-500 mt-0.5">⚠️</span>
+          <div className="flex items-start gap-3 p-3 bg-[var(--danger-light)] rounded-lg">
+            <span className="text-[var(--danger)] mt-0.5">⚠️</span>
             <div>
-              <p className="font-medium text-red-800">Payment Overdue + Grace Period Expired</p>
-              <p className="text-sm text-red-700">
+              <p className="font-medium text-[var(--danger-dark)]">Payment Overdue + Grace Period Expired</p>
+              <p className="text-sm text-[var(--chart-red)]">
                 School has not paid and {gracePeriodDays} days have passed since due date
               </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-            <span className="text-red-500 mt-0.5">⚠️</span>
+          <div className="flex items-start gap-3 p-3 bg-[var(--danger-light)] rounded-lg">
+            <span className="text-[var(--danger)] mt-0.5">⚠️</span>
             <div>
-              <p className="font-medium text-red-800">Pilot Period Expired</p>
-              <p className="text-sm text-red-700">
+              <p className="font-medium text-[var(--danger-dark)]">Pilot Period Expired</p>
+              <p className="text-sm text-[var(--chart-red)]">
                 Pilot school has exceeded {pilotDurationDays} days without converting to paid
               </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg">
-            <span className="text-orange-500 mt-0.5">📋</span>
+          <div className="flex items-start gap-3 p-3 bg-[var(--warning-light)] rounded-lg">
+            <span className="text-[var(--warning)] mt-0.5">📋</span>
             <div>
-              <p className="font-medium text-orange-800">Manual Suspension by Super Admin</p>
-              <p className="text-sm text-orange-700">
+              <p className="font-medium text-[var(--warning-dark)]">Manual Suspension by Super Admin</p>
+              <p className="text-sm text-[var(--warning)]">
                 Super Admin can manually suspend any school at any time
               </p>
             </div>
@@ -393,12 +393,12 @@ export default function SystemRulesPage() {
       </div>
 
       {/* Rule Propagation Notice - Requirement 17.4 */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+      <div className="bg-[var(--info-light)] border border-[var(--info-light)] rounded-lg p-4 mb-6">
         <div className="flex items-start gap-3">
-          <span className="text-purple-500 text-xl">🔄</span>
+          <span className="text-[var(--chart-purple)] text-xl">🔄</span>
           <div>
-            <h3 className="font-medium text-purple-800">Rule Propagation</h3>
-            <p className="text-sm text-purple-700 mt-1">
+            <h3 className="font-medium text-[var(--info-dark)]">Rule Propagation</h3>
+            <p className="text-sm text-[var(--chart-purple)] mt-1">
               Changes to system rules will be applied to all schools on the next daily enforcement check.
               The daily check runs automatically at midnight and can also be triggered manually from the 
               Subscriptions page.
@@ -412,14 +412,14 @@ export default function SystemRulesPage() {
         <button
           onClick={handleReset}
           disabled={!hasChanges || saving}
-          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-[var(--text-primary)] bg-[var(--bg-surface)] rounded-lg hover:bg-[var(--bg-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Reset Changes
         </button>
         <button
           onClick={handleSave}
           disabled={!hasChanges || saving}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-6 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {saving ? (
             <>

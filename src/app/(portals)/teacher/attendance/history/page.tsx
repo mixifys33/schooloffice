@@ -129,14 +129,14 @@ export default function TeacherAttendanceHistoryPage() {
       <div className="space-y-6 p-4 sm:p-6">
         <div className="flex items-center gap-2">
           <Link 
-            href="/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            href="/portals/teacher/attendance"
+            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Attendance
           </Link>
         </div>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Attendance History</h1>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Attendance History</h1>
         <SkeletonLoader variant="card" count={4} />
       </div>
     )
@@ -147,15 +147,15 @@ export default function TeacherAttendanceHistoryPage() {
       <div className="p-4 sm:p-6">
         <div className="mb-4">
           <Link 
-            href="/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            href="/portals/teacher/attendance"
+            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Attendance
           </Link>
         </div>
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
           </div>
@@ -169,14 +169,14 @@ export default function TeacherAttendanceHistoryPage() {
       {/* Header */}
       <div>
         <Link 
-          href="/teacher/attendance"
-          className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-2"
+          href="/portals/teacher/attendance"
+          className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Attendance
         </Link>
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             Attendance History
           </h1>
           <Button
@@ -191,21 +191,21 @@ export default function TeacherAttendanceHistoryPage() {
           </Button>
         </div>
         {data?.dateRange && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
             Showing records from {formatDate(data.dateRange.startDate)} to {formatDate(data.dateRange.endDate)}
           </p>
         )}
       </div>
 
       {/* Read-only Notice - Requirement 5.3 */}
-      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 border border-[var(--info-light)] dark:border-[var(--info-dark)] rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+          <Clock className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)] mt-0.5" />
           <div>
-            <p className="font-medium text-blue-800 dark:text-blue-200">
+            <p className="font-medium text-[var(--info-dark)] dark:text-[var(--info)]">
               Read-Only View
             </p>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)] mt-1">
               Historical attendance records cannot be modified. Contact administration if corrections are needed.
             </p>
           </div>
@@ -214,17 +214,17 @@ export default function TeacherAttendanceHistoryPage() {
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Class Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                 Class
               </label>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
               >
                 <option value="">All Classes</option>
                 {data?.assignedClasses.map((cls) => (
@@ -237,27 +237,27 @@ export default function TeacherAttendanceHistoryPage() {
 
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                 Start Date
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
               />
             </div>
 
             {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                 End Date
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
               />
             </div>
           </div>
@@ -281,14 +281,14 @@ export default function TeacherAttendanceHistoryPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
-          <div className="mx-auto w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-            <Calendar className="h-6 w-6 text-gray-400" />
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8 text-center">
+          <div className="mx-auto w-12 h-12 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-full flex items-center justify-center mb-4">
+            <Calendar className="h-6 w-6 text-[var(--text-muted)]" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2">
             No Attendance Records
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+          <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)] max-w-sm mx-auto">
             No attendance records found for the selected date range and filters.
           </p>
         </div>
@@ -296,10 +296,10 @@ export default function TeacherAttendanceHistoryPage() {
 
       {/* Loading overlay for filter changes */}
       {loading && data && (
-        <div className="fixed inset-0 bg-black/20 dark:bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-lg">
-            <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto" />
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading...</p>
+        <div className="fixed inset-0 bg-[var(--text-primary)]/20 dark:bg-[var(--text-primary)]/40 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg p-4 shadow-lg">
+            <div className="animate-spin h-6 w-6 border-2 border-[var(--chart-blue)] border-t-transparent rounded-full mx-auto" />
+            <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-2">Loading...</p>
           </div>
         </div>
       )}
@@ -340,11 +340,11 @@ function formatTimestamp(timestamp: string): string {
 function StatusIcon({ status }: { status: AttendanceStatus }) {
   switch (status) {
     case 'PRESENT':
-      return <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+      return <CheckCircle2 className="h-4 w-4 text-[var(--chart-green)] dark:text-[var(--success)]" />
     case 'ABSENT':
-      return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+      return <XCircle className="h-4 w-4 text-[var(--chart-red)] dark:text-[var(--danger)]" />
     case 'LATE':
-      return <Clock3 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      return <Clock3 className="h-4 w-4 text-[var(--chart-yellow)] dark:text-[var(--warning)]" />
     default:
       return null
   }
@@ -356,13 +356,13 @@ function StatusIcon({ status }: { status: AttendanceStatus }) {
 function getStatusBadgeClass(status: AttendanceStatus): string {
   switch (status) {
     case 'PRESENT':
-      return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+      return 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 text-[var(--chart-green)] dark:text-[var(--success)]'
     case 'ABSENT':
-      return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+      return 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 text-[var(--chart-red)] dark:text-[var(--danger)]'
     case 'LATE':
-      return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+      return 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 text-[var(--warning-dark)] dark:text-[var(--warning)]'
     default:
-      return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+      return 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-muted)]'
   }
 }
 
@@ -392,26 +392,26 @@ function ClassHistorySection({ classHistory }: ClassHistorySectionProps) {
   )
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] overflow-hidden">
       {/* Class Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950">
-            <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 rounded-lg bg-[var(--info-light)] dark:bg-[var(--info-dark)]">
+            <Calendar className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
           </div>
           <div className="text-left">
-            <h3 className="font-medium text-gray-900 dark:text-white">
+            <h3 className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
               {classHistory.className}
               {classHistory.streamName && (
-                <span className="text-gray-500 dark:text-gray-400 font-normal">
+                <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)] font-normal">
                   {' '}({classHistory.streamName})
                 </span>
               )}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
               {classHistory.summary.totalRecords} records
             </p>
           </div>
@@ -420,33 +420,33 @@ function ClassHistorySection({ classHistory }: ClassHistorySectionProps) {
         <div className="flex items-center gap-4">
           {/* Summary Stats */}
           <div className="hidden sm:flex items-center gap-3 text-sm">
-            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+            <span className="flex items-center gap-1 text-[var(--chart-green)] dark:text-[var(--success)]">
               <CheckCircle2 className="h-4 w-4" />
               {classHistory.summary.presentCount}
             </span>
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+            <span className="flex items-center gap-1 text-[var(--chart-red)] dark:text-[var(--danger)]">
               <XCircle className="h-4 w-4" />
               {classHistory.summary.absentCount}
             </span>
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+            <span className="flex items-center gap-1 text-[var(--chart-yellow)] dark:text-[var(--warning)]">
               <Clock3 className="h-4 w-4" />
               {classHistory.summary.lateCount}
             </span>
           </div>
           <ChevronDown 
-            className={`h-5 w-5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} 
+            className={`h-5 w-5 text-[var(--text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`} 
           />
         </div>
       </button>
 
       {/* Records List */}
       {expanded && (
-        <div className="border-t border-gray-200 dark:border-gray-800">
+        <div className="border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
           {sortedDates.map((date) => (
-            <div key={date} className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+            <div key={date} className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)] last:border-b-0">
               {/* Date Header */}
-              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="px-4 py-2 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50">
+                <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
                   {formatDate(date)}
                 </span>
               </div>
@@ -475,16 +475,16 @@ interface AttendanceRecordRowProps {
  */
 function AttendanceRecordRow({ record }: AttendanceRecordRowProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+    <div className="flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/30">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-          <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center">
+          <User className="h-4 w-4 text-[var(--text-muted)] dark:text-[var(--text-muted)]" />
         </div>
         <div>
-          <div className="font-medium text-gray-900 dark:text-white text-sm">
+          <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm">
             {record.studentName}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {record.admissionNumber}
           </div>
         </div>
@@ -498,7 +498,7 @@ function AttendanceRecordRow({ record }: AttendanceRecordRowProps) {
         </span>
 
         {/* Recording Timestamp */}
-        <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 text-right">
+        <div className="hidden sm:block text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] text-right">
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatTimestamp(record.recordedAt)}

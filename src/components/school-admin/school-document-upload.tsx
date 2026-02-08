@@ -206,7 +206,7 @@ export function SchoolDocumentUpload({
                   className="h-24 w-24 object-contain border rounded-lg"
                 />
               ) : (
-                <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400">
+                <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center text-[var(--text-muted)]">
                   <ImageIcon className="h-8 w-8" />
                 </div>
               )}
@@ -251,7 +251,7 @@ export function SchoolDocumentUpload({
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className="flex items-center gap-2 p-3 bg-[var(--danger-light)] text-[var(--chart-red)] rounded-lg text-sm">
               <AlertCircle className="h-4 w-4" />
               {error}
             </div>
@@ -259,7 +259,7 @@ export function SchoolDocumentUpload({
 
           {/* Upload Form */}
           {showUploadForm && !readOnly && (
-            <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 space-y-4">
+            <div className="p-4 border rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--text-primary)] space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium">Upload New Document</h4>
                 <Button
@@ -316,7 +316,7 @@ export function SchoolDocumentUpload({
               />
 
               {isUploading && (
-                <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="flex items-center gap-2 text-sm text-[var(--chart-blue)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Saving document...
                 </div>
@@ -326,7 +326,7 @@ export function SchoolDocumentUpload({
 
           {/* Asset List */}
           {assets.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-[var(--text-muted)] text-center py-4">
               No documents uploaded yet
             </p>
           ) : (
@@ -334,13 +334,13 @@ export function SchoolDocumentUpload({
               {assets.map((asset) => (
                 <div
                   key={asset.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900"
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--text-primary)]"
                 >
                   <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-blue-600" />
+                    <FileText className="h-8 w-8 text-[var(--chart-blue)]" />
                     <div>
                       <p className="font-medium text-sm">{asset.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-[var(--text-muted)]">
                         {ASSET_TYPE_LABELS[asset.assetType]} • {formatFileSize(asset.fileSize)} • {formatDate(asset.uploadedAt)}
                       </p>
                     </div>
@@ -374,7 +374,7 @@ export function SchoolDocumentUpload({
                         onClick={() => handleDelete(asset.id)}
                         disabled={deletingId === asset.id}
                         title="Delete"
-                        className="text-red-500 hover:text-red-700"
+                        className="text-[var(--danger)] hover:text-[var(--chart-red)]"
                       >
                         {deletingId === asset.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

@@ -344,7 +344,7 @@ export function getFieldClasses(
   touched: boolean
 ): string {
   if (error && touched) {
-    return 'border-red-500 focus-visible:ring-red-500'
+    return 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
   }
   return ''
 }
@@ -562,7 +562,7 @@ export function useFormValidation<T extends Record<string, unknown>>(
   const getFieldClassesForField = useCallback(<K extends keyof T>(field: K): string => {
     const error = getFieldError(field)
     if (error) {
-      return 'border-red-500 focus-visible:ring-red-500'
+      return 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
     }
     return ''
   }, [getFieldError])

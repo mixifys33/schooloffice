@@ -80,140 +80,45 @@ export interface WhatsAppTemplateValidationResult {
  */
 const DEFAULT_SMS_TEMPLATES: Record<MessageTemplateType, string> = {
   [MessageTemplateType.TERM_START]: 
-    'Dear Parent, Term started. {{studentName}} is in {{className}}. Portal: {{link}}',
+    'Welcome back! {{studentName}} is in {{className}} for new term. Portal: {{link}}',
   [MessageTemplateType.ATTENDANCE_ALERT]: 
-    '{{studentName}} absent {{date}}. Periods: {{periods}}. Reply: {{link}}',
+    '{{studentName}} absent {{date}}. Please confirm safety. {{link}}',
   [MessageTemplateType.FEES_REMINDER]: 
-    '{{studentName}} balance: UGX {{balance}}. Pay: {{link}}',
+    '{{studentName}} owes UGX {{balance}}. Pay now or child may be sent home. {{link}}',
   [MessageTemplateType.MID_TERM_PROGRESS]: 
-    '{{studentName}} mid-term: {{average}}%. Details: {{link}}',
+    '{{studentName}} average: {{average}}%. Keep it up! Details: {{link}}',
   [MessageTemplateType.REPORT_READY]: 
     '{{studentName}} report ready. View: {{link}}',
   [MessageTemplateType.TERM_SUMMARY]: 
-    '{{studentName}}: Pos {{position}}, Avg {{average}}%. Report: {{link}}',
+    '{{studentName}}: Pos {{position}}, Avg {{average}}%. Excellent! Report: {{link}}',
   [MessageTemplateType.DISCIPLINE_NOTICE]: 
-    '{{studentName}} discipline notice. Details: {{link}}',
+    'Regarding {{studentName}}: {{description}}. Let\'s work together. {{link}}',
   [MessageTemplateType.GENERAL_ANNOUNCEMENT]: 
     '{{content}} More: {{link}}',
 }
 
-/**
- * Default WhatsApp templates (can be longer with formatting)
- */
-const DEFAULT_WHATSAPP_TEMPLATES: Record<MessageTemplateType, string> = {
-  [MessageTemplateType.TERM_START]: 
-    `*Term Start Notice*\n\nDear Parent,\n\nThe new term has started. {{studentName}} is enrolled in {{className}}.\n\nView details: {{link}}`,
-  [MessageTemplateType.ATTENDANCE_ALERT]: 
-    `*Attendance Alert*\n\n{{studentName}} was marked absent on {{date}}.\n\nPeriods missed: {{periods}}\n\nPlease respond: {{link}}`,
-  [MessageTemplateType.FEES_REMINDER]: 
-    `*Fees Reminder*\n\n{{studentName}} has an outstanding balance of UGX {{balance}}.\n\nMake payment: {{link}}`,
-  [MessageTemplateType.MID_TERM_PROGRESS]: 
-    `*Mid-Term Progress Report*\n\n{{studentName}}'s mid-term average: {{average}}%\n\nView full report: {{link}}`,
-  [MessageTemplateType.REPORT_READY]: 
-    `*Report Card Ready*\n\n{{studentName}}'s report card is now available.\n\nDownload: {{link}}`,
-  [MessageTemplateType.TERM_SUMMARY]: 
-    `*Term Summary*\n\n{{studentName}}\nPosition: {{position}}\nAverage: {{average}}%\n\nFull report: {{link}}`,
-  [MessageTemplateType.DISCIPLINE_NOTICE]: 
-    `*Discipline Notice*\n\nRegarding {{studentName}}:\n\n{{description}}\n\nDetails: {{link}}`,
-  [MessageTemplateType.GENERAL_ANNOUNCEMENT]: 
-    `*School Announcement*\n\n{{content}}\n\nMore info: {{link}}`,
-}
+
 
 /**
  * Default Email templates (HTML formatted)
  */
 const DEFAULT_EMAIL_TEMPLATES: Record<MessageTemplateType, string> = {
   [MessageTemplateType.TERM_START]: 
-    `<h2>Term Start Notice</h2><p>Dear Parent,</p><p>The new term has started. <strong>{{studentName}}</strong> is enrolled in <strong>{{className}}</strong>.</p><p><a href="{{link}}">View Details</a></p>`,
+    `<h2>Term Start Notice</h2><p>Welcome back!</p><p><strong>{{studentName}}</strong> is enrolled in <strong>{{className}}</strong> for the new term.</p><p><a href="{{link}}">View Details</a></p>`,
   [MessageTemplateType.ATTENDANCE_ALERT]: 
-    `<h2>Attendance Alert</h2><p><strong>{{studentName}}</strong> was marked absent on <strong>{{date}}</strong>.</p><p>Periods missed: {{periods}}</p><p><a href="{{link}}">Respond Here</a></p>`,
+    `<h2>Attendance Alert</h2><p><strong>{{studentName}}</strong> was absent on <strong>{{date}}</strong>.</p><p>Periods missed: {{periods}}</p><p><a href="{{link}}">Respond Here</a></p>`,
   [MessageTemplateType.FEES_REMINDER]: 
-    `<h2>Fees Reminder</h2><p><strong>{{studentName}}</strong> has an outstanding balance of <strong>UGX {{balance}}</strong>.</p><p><a href="{{link}}">Make Payment</a></p>`,
+    `<h2>Fees Reminder</h2><p><strong>{{studentName}}</strong> has an outstanding balance of <strong>UGX {{balance}}</strong>.</p><p>Please pay now or child may be sent home.</p><p><a href="{{link}}">Make Payment</a></p>`,
   [MessageTemplateType.MID_TERM_PROGRESS]: 
-    `<h2>Mid-Term Progress Report</h2><p><strong>{{studentName}}</strong>'s mid-term average: <strong>{{average}}%</strong></p><p><a href="{{link}}">View Full Report</a></p>`,
+    `<h2>Mid-Term Progress</h2><p><strong>{{studentName}}</strong> average: <strong>{{average}}%</strong></p><p>Keep it up!</p><p><a href="{{link}}">View Full Report</a></p>`,
   [MessageTemplateType.REPORT_READY]: 
-    `<h2>Report Card Ready</h2><p><strong>{{studentName}}</strong>'s report card is now available.</p><p><a href="{{link}}">Download Report</a></p>`,
+    `<h2>Report Card Ready</h2><p><strong>{{studentName}}</strong>'s report card is ready.</p><p><a href="{{link}}">Download Report</a></p>`,
   [MessageTemplateType.TERM_SUMMARY]: 
-    `<h2>Term Summary</h2><p><strong>{{studentName}}</strong></p><ul><li>Position: {{position}}</li><li>Average: {{average}}%</li></ul><p><a href="{{link}}">View Full Report</a></p>`,
+    `<h2>Term Summary</h2><p><strong>{{studentName}}</strong></p><ul><li>Position: {{position}}</li><li>Average: {{average}}%</li></ul><p>Excellent work!</p><p><a href="{{link}}">View Full Report</a></p>`,
   [MessageTemplateType.DISCIPLINE_NOTICE]: 
-    `<h2>Discipline Notice</h2><p>Regarding <strong>{{studentName}}</strong>:</p><p>{{description}}</p><p><a href="{{link}}">View Details</a></p>`,
+    `<h2>Discipline Notice</h2><p>Regarding <strong>{{studentName}}</strong>:</p><p>{{description}}</p><p>Let's work together.</p><p><a href="{{link}}">View Details</a></p>`,
   [MessageTemplateType.GENERAL_ANNOUNCEMENT]: 
     `<h2>School Announcement</h2><p>{{content}}</p><p><a href="{{link}}">More Information</a></p>`,
-}
-
-/**
- * Approved WhatsApp Business API templates
- * These templates must be pre-approved by WhatsApp before use
- * Requirements: 2.1, 13.4
- */
-export interface ApprovedWhatsAppTemplate {
-  name: string
-  type: MessageTemplateType
-  content: string
-  variables: string[]
-}
-
-export const APPROVED_WHATSAPP_TEMPLATES: Map<string, ApprovedWhatsAppTemplate> = new Map([
-  ['term_start_notice', {
-    name: 'term_start_notice',
-    type: MessageTemplateType.TERM_START,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.TERM_START],
-    variables: ['studentName', 'className', 'link'],
-  }],
-  ['attendance_alert', {
-    name: 'attendance_alert',
-    type: MessageTemplateType.ATTENDANCE_ALERT,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.ATTENDANCE_ALERT],
-    variables: ['studentName', 'date', 'periods', 'link'],
-  }],
-  ['fees_reminder', {
-    name: 'fees_reminder',
-    type: MessageTemplateType.FEES_REMINDER,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.FEES_REMINDER],
-    variables: ['studentName', 'balance', 'link'],
-  }],
-  ['mid_term_progress', {
-    name: 'mid_term_progress',
-    type: MessageTemplateType.MID_TERM_PROGRESS,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.MID_TERM_PROGRESS],
-    variables: ['studentName', 'average', 'link'],
-  }],
-  ['report_ready', {
-    name: 'report_ready',
-    type: MessageTemplateType.REPORT_READY,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.REPORT_READY],
-    variables: ['studentName', 'link'],
-  }],
-  ['term_summary', {
-    name: 'term_summary',
-    type: MessageTemplateType.TERM_SUMMARY,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.TERM_SUMMARY],
-    variables: ['studentName', 'position', 'average', 'link'],
-  }],
-  ['discipline_notice', {
-    name: 'discipline_notice',
-    type: MessageTemplateType.DISCIPLINE_NOTICE,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.DISCIPLINE_NOTICE],
-    variables: ['studentName', 'description', 'link'],
-  }],
-  ['general_announcement', {
-    name: 'general_announcement',
-    type: MessageTemplateType.GENERAL_ANNOUNCEMENT,
-    content: DEFAULT_WHATSAPP_TEMPLATES[MessageTemplateType.GENERAL_ANNOUNCEMENT],
-    variables: ['content', 'link'],
-  }],
-])
-
-/**
- * Get approved WhatsApp template by type
- */
-function getApprovedWhatsAppTemplateByType(type: MessageTemplateType): ApprovedWhatsAppTemplate | undefined {
-  for (const template of APPROVED_WHATSAPP_TEMPLATES.values()) {
-    if (template.type === type) {
-      return template
-    }
-  }
-  return undefined
 }
 
 // ============================================
@@ -252,8 +157,6 @@ function getDefaultTemplate(type: MessageTemplateType, channel: MessageChannel):
   switch (channel) {
     case MessageChannel.SMS:
       return DEFAULT_SMS_TEMPLATES[type] || '{{content}}'
-    case MessageChannel.WHATSAPP:
-      return DEFAULT_WHATSAPP_TEMPLATES[type] || '{{content}}'
     case MessageChannel.EMAIL:
       return DEFAULT_EMAIL_TEMPLATES[type] || '{{content}}'
     default:
@@ -301,6 +204,15 @@ export class MessageTemplateService {
    * Get template by ID
    */
   async getTemplateById(id: string): Promise<MessageTemplate | null> {
+    // Check if the ID is a valid MongoDB ObjectId format
+    // MongoDB ObjectIds are 24-character hexadecimal strings
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/
+    
+    if (!objectIdRegex.test(id)) {
+      // If not a valid ObjectId, return null to prevent database errors
+      return null
+    }
+    
     const template = await prisma.messageTemplate.findUnique({
       where: { id },
     })
@@ -689,148 +601,8 @@ export class MessageTemplateService {
 
     return this.renderTemplateStrict(templateContent, data, type)
   }
-
-  // ============================================
-  // WHATSAPP TEMPLATE VALIDATION
-  // Requirements: 2.1, 13.4
-  // ============================================
-
-  /**
-   * Validate that a WhatsApp template is from the approved list
-   * Requirement 2.1: Use only pre-approved message templates for WhatsApp
-   * Requirement 13.4: Ensure WhatsApp template matches an approved template
-   */
-  validateWhatsAppTemplate(
-    templateName: string
-  ): WhatsAppTemplateValidationResult {
-    const approvedTemplate = APPROVED_WHATSAPP_TEMPLATES.get(templateName)
-
-    if (!approvedTemplate) {
-      return {
-        valid: false,
-        error: `Template '${templateName}' is not in the approved WhatsApp templates list`,
-        isApproved: false,
-      }
-    }
-
-    return {
-      valid: true,
-      templateName: approvedTemplate.name,
-      isApproved: true,
-    }
-  }
-
-  /**
-   * Validate WhatsApp template by type
-   * Requirement 2.1, 13.4
-   */
-  validateWhatsAppTemplateByType(
-    type: MessageTemplateType
-  ): WhatsAppTemplateValidationResult {
-    const approvedTemplate = getApprovedWhatsAppTemplateByType(type)
-
-    if (!approvedTemplate) {
-      return {
-        valid: false,
-        error: `No approved WhatsApp template found for type '${type}'`,
-        isApproved: false,
-      }
-    }
-
-    return {
-      valid: true,
-      templateName: approvedTemplate.name,
-      isApproved: true,
-    }
-  }
-
-  /**
-   * Validate WhatsApp template content matches an approved template
-   * Requirement 2.1, 13.4
-   */
-  validateWhatsAppTemplateContent(
-    content: string
-  ): WhatsAppTemplateValidationResult {
-    // Check if the content matches any approved template
-    for (const [name, template] of APPROVED_WHATSAPP_TEMPLATES) {
-      // Normalize content for comparison (remove extra whitespace)
-      const normalizedContent = content.replace(/\s+/g, ' ').trim()
-      const normalizedTemplate = template.content.replace(/\s+/g, ' ').trim()
-      
-      if (normalizedContent === normalizedTemplate) {
-        return {
-          valid: true,
-          templateName: name,
-          isApproved: true,
-        }
-      }
-    }
-
-    return {
-      valid: false,
-      error: 'Template content does not match any approved WhatsApp template',
-      isApproved: false,
-    }
-  }
-
-  /**
-   * Get list of all approved WhatsApp template names
-   */
-  getApprovedWhatsAppTemplateNames(): string[] {
-    return Array.from(APPROVED_WHATSAPP_TEMPLATES.keys())
-  }
-
-  /**
-   * Get approved WhatsApp template by name
-   */
-  getApprovedWhatsAppTemplate(name: string): ApprovedWhatsAppTemplate | undefined {
-    return APPROVED_WHATSAPP_TEMPLATES.get(name)
-  }
-
-  /**
-   * Render WhatsApp template with validation
-   * Combines template validation and variable validation
-   * Requirements: 2.1, 13.2, 13.3, 13.4
-   */
-  renderWhatsAppTemplateStrict(
-    type: MessageTemplateType,
-    data: TemplateRenderData
-  ): StrictRenderResult {
-    // First validate that we have an approved template for this type
-    const templateValidation = this.validateWhatsAppTemplateByType(type)
-    
-    if (!templateValidation.valid) {
-      return {
-        success: false,
-        error: templateValidation.error,
-        validationResult: {
-          valid: false,
-          missingVariables: [],
-          unreplacedPlaceholders: [],
-          errors: [templateValidation.error || 'WhatsApp template not approved'],
-        },
-      }
-    }
-
-    // Get the approved template
-    const approvedTemplate = getApprovedWhatsAppTemplateByType(type)
-    if (!approvedTemplate) {
-      return {
-        success: false,
-        error: `No approved WhatsApp template found for type '${type}'`,
-        validationResult: {
-          valid: false,
-          missingVariables: [],
-          unreplacedPlaceholders: [],
-          errors: [`No approved WhatsApp template found for type '${type}'`],
-        },
-      }
-    }
-
-    // Now render with strict variable validation
-    return this.renderTemplateStrict(approvedTemplate.content, data, type)
-  }
 }
+
 
 // Export singleton instance
 export const messageTemplateService = new MessageTemplateService()

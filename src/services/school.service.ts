@@ -12,28 +12,22 @@ import {
 } from '@/types'
 import { LicenseType } from '@/types/enums'
 
-// Default feature flags based on license type
+// Default feature flags based on license type - SIMPLIFIED
 const DEFAULT_FEATURES_BY_LICENSE: Record<LicenseType, FeatureFlags> = {
   [LicenseType.FREE_PILOT]: {
     smsEnabled: true,
-    whatsappEnabled: true,
-    paymentIntegration: false,
-    advancedReporting: false,
-    bulkMessaging: false,
+    emailEnabled: true,
+    paymentIntegration: true,
   },
   [LicenseType.BASIC]: {
     smsEnabled: true,
-    whatsappEnabled: true,
+    emailEnabled: true,
     paymentIntegration: true,
-    advancedReporting: false,
-    bulkMessaging: true,
   },
   [LicenseType.PREMIUM]: {
     smsEnabled: true,
-    whatsappEnabled: true,
+    emailEnabled: true,
     paymentIntegration: true,
-    advancedReporting: true,
-    bulkMessaging: true,
   },
 }
 

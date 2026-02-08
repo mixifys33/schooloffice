@@ -87,25 +87,25 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-main)] rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Record Payment</h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-[var(--text-secondary)] mb-4">
           Recording payment for <span className="font-semibold">{school.schoolName}</span>
         </p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Outstanding Balance
             </label>
-            <p className="text-lg font-bold text-red-600">
+            <p className="text-lg font-bold text-[var(--chart-red)]">
               UGX {school.outstandingBalance.toLocaleString()}
             </p>
           </div>
 
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="amount" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Amount (UGX)
             </label>
             <input
@@ -113,7 +113,7 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
               id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               placeholder="Enter amount"
               required
               min="1"
@@ -121,14 +121,14 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
           </div>
 
           <div>
-            <label htmlFor="method" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="method" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Payment Method
             </label>
             <select
               id="method"
               value={method}
               onChange={(e) => setMethod(e.target.value as 'CASH' | 'MOBILE_MONEY' | 'BANK')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             >
               <option value="MOBILE_MONEY">Mobile Money</option>
               <option value="BANK">Bank Transfer</option>
@@ -137,7 +137,7 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
           </div>
 
           <div>
-            <label htmlFor="reference" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="reference" className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Reference Number
             </label>
             <input
@@ -145,7 +145,7 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
               id="reference"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               placeholder="Transaction reference"
               required
             />
@@ -155,14 +155,14 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="flex-1 px-4 py-2 border border-[var(--border-default)] rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[var(--chart-green)] text-[var(--white-pure)] rounded-md hover:bg-[var(--chart-green)] disabled:opacity-50"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Recording...' : 'Record Payment'}
@@ -176,11 +176,11 @@ function PaymentModal({ school, onClose, onSubmit, isSubmitting }: PaymentModalP
 
 function SubscriptionStatusBadge({ status }: { status: SubscriptionData['status'] }) {
   const statusConfig = {
-    PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-    PAID: { bg: 'bg-green-100', text: 'text-green-800', label: 'Paid' },
-    OVERDUE: { bg: 'bg-red-100', text: 'text-red-800', label: 'Overdue' },
-    GRACE_PERIOD: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Grace Period' },
-    SUSPENDED: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Suspended' },
+    PENDING: { bg: 'bg-[var(--warning-light)]', text: 'text-[var(--warning-dark)]', label: 'Pending' },
+    PAID: { bg: 'bg-[var(--success-light)]', text: 'text-[var(--success-dark)]', label: 'Paid' },
+    OVERDUE: { bg: 'bg-[var(--danger-light)]', text: 'text-[var(--danger-dark)]', label: 'Overdue' },
+    GRACE_PERIOD: { bg: 'bg-[var(--warning-light)]', text: 'text-[var(--warning-dark)]', label: 'Grace Period' },
+    SUSPENDED: { bg: 'bg-[var(--bg-surface)]', text: 'text-[var(--text-primary)]', label: 'Suspended' },
   }
 
   const config = statusConfig[status] || statusConfig.PENDING
@@ -377,8 +377,8 @@ export default function SubscriptionsPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Subscriptions & Payments</h1>
-          <p className="text-gray-600">Manage school subscriptions and payment enforcement</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Subscriptions & Payments</h1>
+          <p className="text-[var(--text-secondary)]">Manage school subscriptions and payment enforcement</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[1, 2, 3, 4].map((i) => (
@@ -394,8 +394,8 @@ export default function SubscriptionsPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Subscriptions & Payments</h1>
-          <p className="text-gray-600">Manage school subscriptions and payment enforcement</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Subscriptions & Payments</h1>
+          <p className="text-[var(--text-secondary)]">Manage school subscriptions and payment enforcement</p>
         </div>
         <AlertBanner
           type="danger"
@@ -410,15 +410,15 @@ export default function SubscriptionsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Subscriptions & Payments</h1>
-          <p className="text-gray-600">Manage school subscriptions and payment enforcement</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Subscriptions & Payments</h1>
+          <p className="text-[var(--text-secondary)]">Manage school subscriptions and payment enforcement</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Requirement 14.4: Run enforcement button */}
           <button
             onClick={handleRunEnforcement}
             disabled={isRunningEnforcement}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--chart-red)] text-[var(--white-pure)] rounded-md hover:bg-[var(--chart-red)] disabled:opacity-50"
           >
             {isRunningEnforcement ? 'Running...' : 'Run Enforcement'}
           </button>
@@ -426,7 +426,7 @@ export default function SubscriptionsPage() {
           <button
             onClick={handleCheckPaymentStatus}
             disabled={isCheckingPayments}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-md hover:bg-[var(--accent-hover)] disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${isCheckingPayments ? 'animate-spin' : ''}`} />
             {isCheckingPayments ? 'Checking...' : 'Check Payment Status'}
@@ -437,7 +437,7 @@ export default function SubscriptionsPage() {
               setShowPaymentHistory(true)
               fetchPaymentHistory()
             }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className="flex items-center gap-2 px-4 py-2 border border-[var(--border-default)] rounded-md hover:bg-[var(--bg-surface)]"
           >
             <History className="h-4 w-4" />
             Payment History
@@ -447,18 +447,18 @@ export default function SubscriptionsPage() {
 
       {/* Payment Check Result Banner */}
       {paymentCheckResult && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-6 p-4 bg-[var(--info-light)] border border-[var(--info-light)] rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-blue-900">Last Payment Check</p>
-              <p className="text-sm text-blue-700">
+              <p className="font-medium text-[var(--info-dark)]">Last Payment Check</p>
+              <p className="text-sm text-[var(--accent-hover)]">
                 Checked {paymentCheckResult.totalChecked} schools • 
                 {paymentCheckResult.overdueSchools} overdue • 
                 {paymentCheckResult.gracePeriodSchools} in grace period • 
                 {paymentCheckResult.suspendedSchools} suspended
               </p>
             </div>
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-[var(--chart-blue)]">
               {formatDate(paymentCheckResult.lastChecked)}
             </p>
           </div>
@@ -467,39 +467,39 @@ export default function SubscriptionsPage() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border shadow-sm">
-          <p className="text-sm text-gray-600">Total Schools</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+        <div className="bg-[var(--bg-main)] p-4 rounded-lg border shadow-sm">
+          <p className="text-sm text-[var(--text-secondary)]">Total Schools</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.total}</p>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <p className="text-sm text-green-600">Paid</p>
-          <p className="text-2xl font-bold text-green-700">{stats.paid}</p>
+        <div className="bg-[var(--success-light)] p-4 rounded-lg border border-[var(--success-light)]">
+          <p className="text-sm text-[var(--chart-green)]">Paid</p>
+          <p className="text-2xl font-bold text-[var(--chart-green)]">{stats.paid}</p>
         </div>
-        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-          <p className="text-sm text-orange-600">Grace Period</p>
-          <p className="text-2xl font-bold text-orange-700">{stats.gracePeriod}</p>
+        <div className="bg-[var(--warning-light)] p-4 rounded-lg border border-[var(--warning-light)]">
+          <p className="text-sm text-[var(--chart-yellow)]">Grace Period</p>
+          <p className="text-2xl font-bold text-[var(--warning)]">{stats.gracePeriod}</p>
         </div>
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <p className="text-sm text-red-600">Suspended</p>
-          <p className="text-2xl font-bold text-red-700">{stats.suspended}</p>
+        <div className="bg-[var(--danger-light)] p-4 rounded-lg border border-[var(--danger-light)]">
+          <p className="text-sm text-[var(--chart-red)]">Suspended</p>
+          <p className="text-2xl font-bold text-[var(--chart-red)]">{stats.suspended}</p>
         </div>
       </div>
 
       {/* Revenue Summary */}
-      <div className="bg-white p-4 rounded-lg border shadow-sm mb-6">
+      <div className="bg-[var(--bg-main)] p-4 rounded-lg border shadow-sm mb-6">
         <h2 className="text-lg font-semibold mb-3">Revenue Summary</h2>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-gray-600">Expected Revenue</p>
-            <p className="text-xl font-bold text-gray-900">{formatCurrency(stats.totalExpected)}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Expected Revenue</p>
+            <p className="text-xl font-bold text-[var(--text-primary)]">{formatCurrency(stats.totalExpected)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Received</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalReceived)}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Received</p>
+            <p className="text-xl font-bold text-[var(--chart-green)]">{formatCurrency(stats.totalReceived)}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Outstanding</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalOutstanding)}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Outstanding</p>
+            <p className="text-xl font-bold text-[var(--chart-red)]">{formatCurrency(stats.totalOutstanding)}</p>
           </div>
         </div>
       </div>
@@ -517,8 +517,8 @@ export default function SubscriptionsPage() {
             onClick={() => setFilter(tab.key as typeof filter)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filter === tab.key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-[var(--chart-blue)] text-[var(--white-pure)]'
+                : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
             }`}
           >
             {tab.label}
@@ -527,37 +527,37 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Subscriptions Table */}
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      <div className="bg-[var(--bg-main)] rounded-lg border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-[var(--bg-surface)] border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">School</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Students</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Per Student</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Bill</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">School</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Students</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Per Student</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Total Bill</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Paid</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Balance</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Due Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredSubscriptions.map((sub) => (
-                <tr key={sub.id} className="hover:bg-gray-50">
+                <tr key={sub.id} className="hover:bg-[var(--bg-surface)]">
                   <td className="px-4 py-3">
                     <div>
-                      <p className="font-medium text-gray-900">{sub.schoolName}</p>
-                      <p className="text-sm text-gray-500">{sub.schoolCode}</p>
+                      <p className="font-medium text-[var(--text-primary)]">{sub.schoolName}</p>
+                      <p className="text-sm text-[var(--text-muted)]">{sub.schoolCode}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-900">{sub.studentCount}</td>
-                  <td className="px-4 py-3 text-gray-900">{formatCurrency(sub.amountPerStudent)}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{formatCurrency(sub.totalBill)}</td>
-                  <td className="px-4 py-3 text-green-600">{formatCurrency(sub.amountPaid)}</td>
-                  <td className="px-4 py-3 font-medium text-red-600">{formatCurrency(sub.outstandingBalance)}</td>
-                  <td className="px-4 py-3 text-gray-900">{formatDate(sub.dueDate)}</td>
+                  <td className="px-4 py-3 text-[var(--text-primary)]">{sub.studentCount}</td>
+                  <td className="px-4 py-3 text-[var(--text-primary)]">{formatCurrency(sub.amountPerStudent)}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{formatCurrency(sub.totalBill)}</td>
+                  <td className="px-4 py-3 text-[var(--chart-green)]">{formatCurrency(sub.amountPaid)}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--chart-red)]">{formatCurrency(sub.outstandingBalance)}</td>
+                  <td className="px-4 py-3 text-[var(--text-primary)]">{formatDate(sub.dueDate)}</td>
                   <td className="px-4 py-3">
                     <SubscriptionStatusBadge status={sub.status} />
                   </td>
@@ -565,13 +565,13 @@ export default function SubscriptionsPage() {
                     {sub.licenseType !== 'FREE_PILOT' && sub.outstandingBalance > 0 && (
                       <button
                         onClick={() => setSelectedSchool(sub)}
-                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                        className="px-3 py-1 bg-[var(--chart-green)] text-[var(--white-pure)] text-sm rounded hover:bg-[var(--chart-green)]"
                       >
                         Record Payment
                       </button>
                     )}
                     {sub.licenseType === 'FREE_PILOT' && (
-                      <span className="text-sm text-gray-500">Pilot</span>
+                      <span className="text-sm text-[var(--text-muted)]">Pilot</span>
                     )}
                   </td>
                 </tr>
@@ -581,7 +581,7 @@ export default function SubscriptionsPage() {
         </div>
 
         {filteredSubscriptions.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-[var(--text-muted)]">
             No subscriptions found matching the selected filter.
           </div>
         )}
@@ -597,13 +597,13 @@ export default function SubscriptionsPage() {
 
       {/* Payment History Modal - Requirement 14.6 */}
       {showPaymentHistory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-main)] rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Payment History</h2>
               <button
                 onClick={() => setShowPaymentHistory(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
                 ✕
               </button>
@@ -611,38 +611,38 @@ export default function SubscriptionsPage() {
             
             {loadingHistory ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--chart-blue)]" />
               </div>
             ) : paymentHistory.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-[var(--text-muted)]">
                 No payment history found
               </div>
             ) : (
               <div className="overflow-auto flex-1">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b sticky top-0">
+                  <thead className="bg-[var(--bg-surface)] border-b sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">School</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recorded By</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">School</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Method</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Reference</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase">Recorded By</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paymentHistory.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-900">{formatDate(payment.recordedAt)}</td>
-                        <td className="px-4 py-3 text-gray-900">{payment.schoolName}</td>
-                        <td className="px-4 py-3 font-medium text-green-600">{formatCurrency(payment.amount)}</td>
+                      <tr key={payment.id} className="hover:bg-[var(--bg-surface)]">
+                        <td className="px-4 py-3 text-[var(--text-primary)]">{formatDate(payment.recordedAt)}</td>
+                        <td className="px-4 py-3 text-[var(--text-primary)]">{payment.schoolName}</td>
+                        <td className="px-4 py-3 font-medium text-[var(--chart-green)]">{formatCurrency(payment.amount)}</td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                          <span className="px-2 py-1 text-xs rounded-full bg-[var(--bg-surface)] text-[var(--text-primary)]">
                             {payment.method.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{payment.reference}</td>
-                        <td className="px-4 py-3 text-gray-600">{payment.recordedBy}</td>
+                        <td className="px-4 py-3 text-[var(--text-secondary)]">{payment.reference}</td>
+                        <td className="px-4 py-3 text-[var(--text-secondary)]">{payment.recordedBy}</td>
                       </tr>
                     ))}
                   </tbody>

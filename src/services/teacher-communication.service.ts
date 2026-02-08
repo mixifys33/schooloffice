@@ -110,7 +110,6 @@ export class TeacherCommunicationService {
         hasSystemAccess: true,
         inAppMessagingEnabled: true,
         smsEnabled: true,
-        whatsappEnabled: true,
         emailEnabled: true,
       },
     })
@@ -136,7 +135,7 @@ export class TeacherCommunicationService {
     const previousConfig: ChannelConfig = {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: teacher.whatsappEnabled,
+      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
 
@@ -154,7 +153,7 @@ export class TeacherCommunicationService {
       data: {
         inAppMessagingEnabled: newConfig.inAppMessaging,
         smsEnabled: newConfig.sms,
-        whatsappEnabled: newConfig.whatsapp,
+        // whatsappEnabled removed from schema
         emailEnabled: newConfig.email,
       },
     })
@@ -201,7 +200,7 @@ export class TeacherCommunicationService {
       select: {
         inAppMessagingEnabled: true,
         smsEnabled: true,
-        whatsappEnabled: true,
+        // whatsappEnabled removed from schema
         emailEnabled: true,
       },
     })
@@ -213,7 +212,7 @@ export class TeacherCommunicationService {
     return {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: teacher.whatsappEnabled,
+      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
   }

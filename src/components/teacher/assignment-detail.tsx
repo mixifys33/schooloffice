@@ -135,11 +135,11 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
     switch (status) {
       case 'SUBMITTED':
       case 'GRADED':
-        return <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        return <CheckCircle className="h-4 w-4 text-[var(--chart-green)] dark:text-[var(--success)]" />
       case 'LATE':
-        return <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+        return <Clock className="h-4 w-4 text-[var(--chart-yellow)] dark:text-[var(--warning)]" />
       default:
-        return <XCircle className="h-4 w-4 text-slate-400" />
+        return <XCircle className="h-4 w-4 text-[var(--text-muted)]" />
     }
   }
 
@@ -201,7 +201,7 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
             isLoading={deleting}
             variant="outline"
             size="sm"
-            className="text-rose-600 hover:text-rose-700 dark:text-rose-400"
+            className="text-[var(--chart-red)] hover:text-[var(--chart-red)] dark:text-[var(--danger)]"
           />
         </ButtonGroup>
       </div>
@@ -236,9 +236,9 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
                 onChange={(e) => setEditData({ ...editData, title: e.target.value })}
                 className={cn(
                   'w-full px-3 py-2 rounded-md border',
-                  'bg-white dark:bg-slate-800',
+                  'bg-[var(--bg-main)] dark:bg-slate-800',
                   'border-slate-300 dark:border-slate-600',
-                  'text-slate-900 dark:text-white',
+                  'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                   'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                   transitions.color
                 )}
@@ -254,9 +254,9 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 className={cn(
                   'w-full px-3 py-2 rounded-md border min-h-[100px]',
-                  'bg-white dark:bg-slate-800',
+                  'bg-[var(--bg-main)] dark:bg-slate-800',
                   'border-slate-300 dark:border-slate-600',
-                  'text-slate-900 dark:text-white',
+                  'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                   'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                   transitions.color
                 )}
@@ -266,7 +266,7 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
               <label htmlFor="edit-deadline" className={cn(typography.label, 'block mb-1')}>
                 Deadline
                 {deadlinePassed && (
-                  <span className="ml-2 text-xs text-rose-600 dark:text-rose-400">
+                  <span className="ml-2 text-xs text-[var(--chart-red)] dark:text-[var(--danger)]">
                     (Cannot modify - deadline passed)
                   </span>
                 )}
@@ -279,9 +279,9 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
                 disabled={deadlinePassed}
                 className={cn(
                   'w-full px-3 py-2 rounded-md border',
-                  'bg-white dark:bg-slate-800',
+                  'bg-[var(--bg-main)] dark:bg-slate-800',
                   'border-slate-300 dark:border-slate-600',
-                  'text-slate-900 dark:text-white',
+                  'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                   'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                   deadlinePassed && 'opacity-60 cursor-not-allowed',
                   transitions.color
@@ -333,19 +333,19 @@ export function AssignmentDetail({ assignment, onBack, onUpdate }: AssignmentDet
       {/* Submission Stats - Requirement 12.1: Dense layout */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className={cn(cardStyles.base, cardStyles.compact, 'text-center')}>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{stats.total}</div>
           <div className={typography.caption}>Total Students</div>
         </div>
         <div className={cn(cardStyles.base, cardStyles.compact, 'text-center')}>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.submitted}</div>
+          <div className="text-2xl font-bold text-[var(--chart-green)] dark:text-[var(--success)]">{stats.submitted}</div>
           <div className={typography.caption}>Submitted</div>
         </div>
         <div className={cn(cardStyles.base, cardStyles.compact, 'text-center')}>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.late}</div>
+          <div className="text-2xl font-bold text-[var(--chart-yellow)] dark:text-[var(--warning)]">{stats.late}</div>
           <div className={typography.caption}>Late</div>
         </div>
         <div className={cn(cardStyles.base, cardStyles.compact, 'text-center')}>
-          <div className="text-2xl font-bold text-slate-400">{stats.notSubmitted}</div>
+          <div className="text-2xl font-bold text-[var(--text-muted)]">{stats.notSubmitted}</div>
           <div className={typography.caption}>Not Submitted</div>
         </div>
       </div>

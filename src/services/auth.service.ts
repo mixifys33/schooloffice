@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword } from '@/lib/auth'
 import { User, CreateUserInput, UserSession } from '@/types'
 import { Role, LicenseType, AuthEventType, StaffRole, StaffStatus } from '@/types/enums'
 import { roleResolutionService } from './role-resolution.service'
+import { getUserFriendlyError } from '@/lib/error-messages'
 
 // ============================================
 // TYPES
@@ -548,9 +549,9 @@ export class AuthService {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: identifier },
-          { phone: identifier },
-          { username: identifier },
+          { email: { equals: identifier, mode: 'insensitive' } },
+          { phone: identifier }, // Phone numbers don't need case-insensitive matching
+          { username: { equals: identifier, mode: 'insensitive' } },
         ],
         schoolId: null, // Super Admin has no school
         role: Role.SUPER_ADMIN,
@@ -697,9 +698,9 @@ export class AuthService {
       where: {
         schoolId,
         OR: [
-          { email: identifier },
-          { phone: identifier },
-          { username: identifier },
+          { email: { equals: identifier, mode: 'insensitive' } },
+          { phone: identifier }, // Phone numbers don't need case-insensitive matching
+          { username: { equals: identifier, mode: 'insensitive' } },
         ],
       },
     })
@@ -833,7 +834,7 @@ export class AuthService {
   private getStaffDashboardPath(role: StaffRole | Role): string {
     const staffDashboardPaths: Record<string, string> = {
       [StaffRole.CLASS_TEACHER]: '/dashboard/classes',
-      [StaffRole.DOS]: '/dashboard/academics',
+      [StaffRole.DOS]: '/dashboard/dos',
       [StaffRole.HOSTEL_STAFF]: '/dashboard/hostel',
       [StaffRole.SUPPORT_STAFF]: '/dashboard/tasks',
       [StaffRole.BURSAR]: '/dashboard/fees',
@@ -998,24 +999,43 @@ export class AuthService {
   // ============================================
 
   /**
+   * Generate a unique username based on email
+   */
+  private generateUsername(email: string, schoolId: string): string {
+    const emailPrefix = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+    const schoolSuffix = schoolId.slice(-6) // Last 6 chars of schoolId for uniqueness
+    return `${emailPrefix}.${schoolSuffix}`
+  }
+
+  /**
    * Create a new user
    */
   async createUser(data: CreateUserInput): Promise<User> {
-    const passwordHash = await hashPassword(data.password)
+    try {
+      const passwordHash = await hashPassword(data.password)
+      
+      // Generate unique username to avoid constraint violations
+      const username = this.generateUsername(data.email, data.schoolId)
 
-    const user = await prisma.user.create({
-      data: {
-        schoolId: data.schoolId,
-        email: data.email,
-        phone: data.phone,
-        passwordHash,
-        role: data.role,
-        roles: [data.role], // Initialize roles array with primary role
-        isActive: true,
-      },
-    })
+      const user = await prisma.user.create({
+        data: {
+          schoolId: data.schoolId,
+          email: data.email,
+          phone: data.phone,
+          username,
+          passwordHash,
+          role: data.role,
+          roles: [data.role], // Initialize roles array with primary role
+          isActive: true,
+        },
+      })
 
-    return mapPrismaUserToDomain(user)
+      return mapPrismaUserToDomain(user)
+    } catch (error) {
+      // Convert technical errors to user-friendly messages
+      const userError = getUserFriendlyError(error)
+      throw new Error(userError.message)
+    }
   }
 
   /**

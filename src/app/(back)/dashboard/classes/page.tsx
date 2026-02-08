@@ -23,7 +23,7 @@ interface ClassItem {
   id: string
   name: string
   level: number
-  streams: StreamItem[]
+  streams?: StreamItem[] // Make streams optional since it might be undefined
 }
 
 export default function ClassesPage() {
@@ -133,7 +133,7 @@ export default function ClassesPage() {
       {/* Primary Classes Section */}
       {primaryClasses.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             Primary Classes
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -151,7 +151,7 @@ export default function ClassesPage() {
       {/* Secondary Classes Section */}
       {secondaryClasses.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             Secondary Classes
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -175,9 +175,12 @@ interface ClassCardProps {
 }
 
 function ClassCard({ classItem, onClick }: ClassCardProps) {
+  // Safely handle streams array - it might be undefined or null
+  const streams = classItem.streams || [];
+  
   return (
     <Card 
-      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      className="cursor-pointer hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
       onClick={onClick}
     >
       <CardHeader className="pb-2">
@@ -192,14 +195,14 @@ function ClassCard({ classItem, onClick }: ClassCardProps) {
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {classItem.streams.length} stream{classItem.streams.length !== 1 ? 's' : ''}
+              {streams.length} stream{streams.length !== 1 ? 's' : ''}
             </span>
           </div>
           
           {/* Stream badges */}
-          {classItem.streams.length > 0 && (
+          {streams.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {classItem.streams.map((stream) => (
+              {streams.map((stream) => (
                 <Badge key={stream.id} variant="secondary" className="text-xs">
                   {stream.name}
                 </Badge>
@@ -207,7 +210,7 @@ function ClassCard({ classItem, onClick }: ClassCardProps) {
             </div>
           )}
           
-          {classItem.streams.length === 0 && (
+          {streams.length === 0 && (
             <p className="text-xs text-muted-foreground italic">
               No streams configured
             </p>

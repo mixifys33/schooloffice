@@ -74,16 +74,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Get class teacher dashboard data
+    console.log('🔍 [API] /api/dashboard/class-teacher - Fetching dashboard data for staff:', staff.id)
     const dashboardData = await dashboardService.getClassTeacherDashboardData(
       staff.id,
       schoolId
     )
 
+    console.log('✅ [API] /api/dashboard/class-teacher - Successfully retrieved dashboard data')
     return NextResponse.json(dashboardData)
   } catch (error) {
-    console.error('Error fetching class teacher dashboard:', error)
+    console.error('❌ [API] /api/dashboard/class-teacher - Error:', error)
+    
+    // Return structured error response instead of generic error
     return NextResponse.json(
-      { error: 'Failed to fetch class teacher dashboard data' },
+      { 
+        error: 'Failed to load dashboard data',
+        details: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     )
   }

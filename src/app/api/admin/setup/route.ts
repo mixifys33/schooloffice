@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { formatApiError, SUCCESS_MESSAGES } from '@/lib/error-messages'
 
 /**
  * Check if a super admin already exists
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     if (existingAdmin) {
       return NextResponse.json(
-        { error: 'Super Admin already exists. Registration is disabled.' },
+        { error: 'Super Admin already exists. Setup has already been completed.' },
         { status: 403 }
       )
     }
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!email || !password || !confirmPassword) {
       return NextResponse.json(
-        { error: 'Email, password, and confirm password are required' },
+        { error: 'Please fill in all required fields: email, password, and confirm password' },
         { status: 400 }
       )
     }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
       return NextResponse.json(
-        { error: 'Password must contain uppercase, lowercase, number, and special character' },
+        { error: 'Password must include uppercase letters, lowercase letters, numbers, and special characters for security' },
         { status: 400 }
       )
     }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email is already in use' },
+        { error: 'This email address is already registered. Please use a different email.' },
         { status: 400 }
       )
     }
@@ -122,10 +123,15 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
 
+    // Generate unique username for super admin
+    const emailPrefix = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+    const username = `superadmin.${emailPrefix}`
+
     // Create super admin (User model doesn't have a name field)
     const superAdmin = await prisma.user.create({
       data: {
         email: email.toLowerCase().trim(),
+        username,
         passwordHash,
         role: 'SUPER_ADMIN',
         roles: ['SUPER_ADMIN'],
@@ -139,14 +145,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Super Admin account created successfully',
+      message: SUCCESS_MESSAGES.USER_CREATED,
       userId: superAdmin.id,
     })
   } catch (error) {
     console.error('Error creating super admin:', error)
-    return NextResponse.json(
-      { error: 'Failed to create super admin account' },
-      { status: 500 }
-    )
+    
+    // Use centralized error formatting
+    const apiError = formatApiError(error)
+    
+    return NextResponse.json(apiError, { status: 500 })
   }
 }

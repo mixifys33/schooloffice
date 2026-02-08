@@ -74,11 +74,14 @@ function NavItemComponent({
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
             'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-            'hover:bg-gray-100 dark:hover:bg-gray-800',
+            'hover:opacity-80',
             'min-h-[44px]', // Touch-friendly height
-            isChildActive && 'bg-gray-100 dark:bg-gray-800',
             depth > 0 && 'pl-8'
           )}
+          style={{
+            backgroundColor: isChildActive ? 'var(--bg-surface)' : 'transparent',
+            color: 'var(--text-primary)',
+          }}
         >
           <span className="flex items-center gap-3">
             {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
@@ -111,20 +114,27 @@ function NavItemComponent({
       href={item.href}
       className={cn(
         'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-        'hover:bg-gray-100 dark:hover:bg-gray-800',
+        'hover:opacity-80',
         'min-h-[44px]', // Touch-friendly height
-        isActive
-          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-          : 'text-gray-700 dark:text-gray-300',
         depth > 0 && 'pl-8'
       )}
+      style={{
+        backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
+        color: isActive ? 'var(--accent-contrast)' : 'var(--text-primary)',
+      }}
     >
       <span className="flex items-center gap-3">
         {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
         <span>{item.label}</span>
       </span>
       {item.badge && (
-        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+        <span 
+          className="rounded-full px-2 py-0.5 text-xs font-medium"
+          style={{
+            backgroundColor: isActive ? 'var(--accent-contrast)' : 'var(--accent-primary)',
+            color: isActive ? 'var(--accent-primary)' : 'var(--accent-contrast)',
+          }}
+        >
           {item.badge}
         </span>
       )}
@@ -145,13 +155,26 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       {/* Brand */}
-      <div className="flex items-center gap-2 border-b px-4 py-4">
+      <div 
+        className="flex items-center gap-2 border-b px-4 py-4"
+        style={{ borderColor: 'var(--border-default)' }}
+      >
         {brand}
         {brandText && (
-          <span className="text-lg font-bold text-blue-600">{brandText}</span>
+          <span 
+            className="text-lg font-bold"
+            style={{ color: 'var(--accent-primary)' }}
+          >
+            {brandText}
+          </span>
         )}
         {subtitle && (
-          <span className="ml-2 text-sm text-gray-500">{subtitle}</span>
+          <span 
+            className="ml-2 text-sm"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {subtitle}
+          </span>
         )}
       </div>
 
@@ -170,7 +193,10 @@ function SidebarContent({
 
       {/* Footer */}
       {footer && (
-        <div className="border-t p-4">
+        <div 
+          className="border-t p-4"
+          style={{ borderColor: 'var(--border-default)' }}
+        >
           {footer}
         </div>
       )}
@@ -227,9 +253,13 @@ export function Sidebar(props: SidebarProps) {
         className={cn(
           'hidden lg:flex lg:flex-col',
           'fixed inset-y-0 left-0 z-30',
-          'w-64 border-r bg-white dark:bg-gray-900',
+          'w-64 border-r',
           props.className
         )}
+        style={{
+          backgroundColor: 'var(--bg-elevated)',
+          borderColor: 'var(--border-default)',
+        }}
       >
         <SidebarContent {...props} />
       </aside>
@@ -254,10 +284,14 @@ export function BottomNav({ items, className }: BottomNavProps) {
     <nav
       className={cn(
         'fixed bottom-0 left-0 right-0 z-40',
-        'border-t bg-white dark:bg-gray-900',
+        'border-t',
         'lg:hidden', // Only show on mobile/tablet
         className
       )}
+      style={{
+        backgroundColor: 'var(--bg-elevated)',
+        borderColor: 'var(--border-default)',
+      }}
     >
       <div className="flex items-center justify-around">
         {visibleItems.map((item) => {
@@ -269,18 +303,24 @@ export function BottomNav({ items, className }: BottomNavProps) {
               className={cn(
                 'flex flex-1 flex-col items-center justify-center py-2',
                 'min-h-[56px]', // Touch-friendly height
-                'transition-colors',
-                isActive
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-600 dark:text-gray-400'
+                'transition-colors'
               )}
+              style={{
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              }}
             >
               {item.icon && (
                 <span className="mb-1">{item.icon}</span>
               )}
               <span className="text-xs font-medium">{item.label}</span>
               {item.badge && (
-                <span className="absolute -top-1 right-1/4 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                <span 
+                  className="absolute -top-1 right-1/4 flex h-4 w-4 items-center justify-center rounded-full text-[10px]"
+                  style={{
+                    backgroundColor: 'var(--danger)',
+                    color: 'var(--accent-contrast)',
+                  }}
+                >
                   {item.badge}
                 </span>
               )}

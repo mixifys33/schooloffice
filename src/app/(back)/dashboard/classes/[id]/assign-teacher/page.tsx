@@ -225,8 +225,8 @@ export default function AssignTeacherPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="h-10 w-10 rounded-full bg-[var(--info-light)] dark:bg-[var(--info-dark)] flex items-center justify-center">
+                  <User className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
                 </div>
                 <div>
                   <p className="font-medium">
@@ -273,21 +273,21 @@ export default function AssignTeacherPage() {
                     className={cn(
                       'flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors',
                       isSelected
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'border-[var(--accent-primary)] bg-[var(--info-light)] dark:bg-[var(--info-dark)]/20'
+                        : 'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]'
                     )}
                   >
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         'h-10 w-10 rounded-full flex items-center justify-center',
                         isSelected
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800'
+                          ? 'bg-[var(--accent-primary)] text-[var(--white-pure)]'
+                          : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]'
                       )}>
                         {isSelected ? (
                           <Check className="h-5 w-5" />
                         ) : (
-                          <User className="h-5 w-5 text-gray-500" />
+                          <User className="h-5 w-5 text-[var(--text-muted)]" />
                         )}
                       </div>
                       <div>
@@ -307,7 +307,7 @@ export default function AssignTeacherPage() {
                       </div>
                     </div>
                     {isCurrentTeacher && (
-                      <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">
+                      <span className="text-xs bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)] dark:text-[var(--info)] px-2 py-1 rounded">
                         Current
                       </span>
                     )}

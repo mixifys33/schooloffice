@@ -74,25 +74,27 @@ function FeeDefaultersTable({ defaulters }: { defaulters: FeeDefaulterInfo[] }) 
         {defaulters.map((defaulter) => (
           <div
             key={defaulter.studentId}
-            className="bg-white dark:bg-gray-800 rounded-lg border p-4"
+            className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4"
           >
-            <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
-              {defaulter.studentName}
+            <div className="font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-2">
+              {typeof defaulter.studentName === 'string' ? defaulter.studentName : 'Unknown Student'}
             </div>
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Adm. No.</span>
-                <span className="text-gray-900 dark:text-gray-100">{defaulter.admissionNumber}</span>
+                <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">Adm. No.</span>
+                <span className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                  {typeof defaulter.admissionNumber === 'string' ? defaulter.admissionNumber : 'N/A'}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Outstanding</span>
-                <span className="font-medium text-red-600 dark:text-red-400">
+                <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">Outstanding</span>
+                <span className="font-medium text-[var(--chart-red)] dark:text-[var(--danger)]">
                   KES {defaulter.outstandingBalance.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Last Payment</span>
-                <span className="text-gray-900 dark:text-gray-100">
+                <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">Last Payment</span>
+                <span className="text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                   {defaulter.lastPaymentDate 
                     ? new Date(defaulter.lastPaymentDate).toLocaleDateString() 
                     : 'Never'}
@@ -107,17 +109,17 @@ function FeeDefaultersTable({ defaulters }: { defaulters: FeeDefaulterInfo[] }) 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50 dark:bg-gray-800">
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
+            <tr className="border-b bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+              <th className="py-3 px-4 font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] text-left">
                 Student Name
               </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
+              <th className="py-3 px-4 font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] text-left">
                 Adm. No.
               </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-right">
+              <th className="py-3 px-4 font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] text-right">
                 Outstanding
               </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
+              <th className="py-3 px-4 font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] text-left">
                 Last Payment
               </th>
             </tr>
@@ -126,19 +128,23 @@ function FeeDefaultersTable({ defaulters }: { defaulters: FeeDefaulterInfo[] }) 
             {defaulters.map((defaulter) => (
               <tr
                 key={defaulter.studentId}
-                className="border-b hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="border-b hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
               >
-                <td className="py-3 px-4">{defaulter.studentName}</td>
-                <td className="py-3 px-4">{defaulter.admissionNumber}</td>
+                <td className="py-3 px-4">
+                  {typeof defaulter.studentName === 'string' ? defaulter.studentName : 'Unknown Student'}
+                </td>
+                <td className="py-3 px-4">
+                  {typeof defaulter.admissionNumber === 'string' ? defaulter.admissionNumber : 'N/A'}
+                </td>
                 <td className="py-3 px-4 text-right">
-                  <span className="font-medium text-red-600 dark:text-red-400">
+                  <span className="font-medium text-[var(--chart-red)] dark:text-[var(--danger)]">
                     KES {defaulter.outstandingBalance.toLocaleString()}
                   </span>
                 </td>
                 <td className="py-3 px-4">
                   {defaulter.lastPaymentDate 
                     ? new Date(defaulter.lastPaymentDate).toLocaleDateString() 
-                    : <span className="text-gray-400">Never</span>}
+                    : <span className="text-[var(--text-muted)]">Never</span>}
                 </td>
               </tr>
             ))}
@@ -223,7 +229,7 @@ export default function ClassTeacherDashboardPage() {
     return (
       <div className="space-y-6 p-4 sm:p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Class Teacher Dashboard
           </h1>
         </div>
@@ -247,7 +253,7 @@ export default function ClassTeacherDashboardPage() {
       id: alert.id,
       type: AlertType.ABSENT_STUDENT,
       severity: alert.severity,
-      message: alert.message,
+      message: typeof alert.message === 'string' ? alert.message : 'Student absent',
       actionUrl: `/dashboard/students/${alert.studentId}`,
       actionLabel: 'View Student',
     })),
@@ -255,7 +261,7 @@ export default function ClassTeacherDashboardPage() {
       id: alert.id,
       type: AlertType.CHRONIC_LATENESS,
       severity: alert.severity,
-      message: alert.message,
+      message: typeof alert.message === 'string' ? alert.message : 'Student chronically late',
       actionUrl: `/dashboard/students/${alert.studentId}`,
       actionLabel: 'View Student',
     })),
@@ -265,7 +271,7 @@ export default function ClassTeacherDashboardPage() {
       severity: new Date(alert.deadline) < new Date() 
         ? AlertSeverity.CRITICAL 
         : AlertSeverity.WARNING,
-      message: alert.message,
+      message: typeof alert.message === 'string' ? alert.message : 'Report pending',
       actionUrl: `/dashboard/reports?classId=${alert.classId}`,
       actionLabel: 'Submit Report',
     })),
@@ -285,16 +291,30 @@ export default function ClassTeacherDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Class Teacher Dashboard
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {classSnapshot.className} - Overview and management
-          </p>
+          <div className="mt-1 space-y-1">
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+              {typeof classSnapshot.className === 'string' ? classSnapshot.className : 'Unknown Class'} - Overview and management
+            </p>
+            {classSnapshot.streams && classSnapshot.streams.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {classSnapshot.streams.map((stream) => (
+                  <span
+                    key={stream.id}
+                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-primary)]"
+                  >
+                    {typeof stream.name === 'string' ? stream.name : 'Unknown Stream'}: {stream.studentCount || 0} students
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <button
           onClick={fetchDashboardData}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           aria-label="Refresh dashboard"
         >
           <RefreshCw className="h-5 w-5" />
@@ -303,7 +323,7 @@ export default function ClassTeacherDashboardPage() {
 
       {/* Class Snapshot Stats - Requirements: 3.2 */}
       <section aria-label="Class Snapshot">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h2 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">
           Class Snapshot
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -338,7 +358,7 @@ export default function ClassTeacherDashboardPage() {
 
       {/* Quick Actions Row - Requirements: 3.3 */}
       <section aria-label="Quick Actions">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h2 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -357,7 +377,7 @@ export default function ClassTeacherDashboardPage() {
       {/* Alerts Section - Requirements: 3.4 */}
       {allAlerts.length > 0 && (
         <section aria-label="Alerts">
-          <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          <h2 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">
             Alerts
           </h2>
           <div className="space-y-3">
@@ -386,26 +406,26 @@ export default function ClassTeacherDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/50">
-                  <UserCheck className="h-5 w-5 mx-auto text-green-600 dark:text-green-400 mb-1" />
-                  <p className="text-lg font-semibold text-green-700 dark:text-green-300">
+                <div className="p-3 rounded-lg bg-[var(--success-light)] dark:bg-[var(--success-dark)]/50">
+                  <UserCheck className="h-5 w-5 mx-auto text-[var(--chart-green)] dark:text-[var(--success)] mb-1" />
+                  <p className="text-lg font-semibold text-[var(--chart-green)] dark:text-[var(--success)]">
                     {classSnapshot.attendanceToday.present}
                   </p>
-                  <p className="text-xs text-green-600 dark:text-green-400">Present</p>
+                  <p className="text-xs text-[var(--chart-green)] dark:text-[var(--success)]">Present</p>
                 </div>
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/50">
-                  <UserX className="h-5 w-5 mx-auto text-red-600 dark:text-red-400 mb-1" />
-                  <p className="text-lg font-semibold text-red-700 dark:text-red-300">
+                <div className="p-3 rounded-lg bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50">
+                  <UserX className="h-5 w-5 mx-auto text-[var(--chart-red)] dark:text-[var(--danger)] mb-1" />
+                  <p className="text-lg font-semibold text-[var(--chart-red)] dark:text-[var(--danger)]">
                     {classSnapshot.attendanceToday.absent}
                   </p>
-                  <p className="text-xs text-red-600 dark:text-red-400">Absent</p>
+                  <p className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)]">Absent</p>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/50">
-                  <Clock className="h-5 w-5 mx-auto text-amber-600 dark:text-amber-400 mb-1" />
-                  <p className="text-lg font-semibold text-amber-700 dark:text-amber-300">
+                <div className="p-3 rounded-lg bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/50">
+                  <Clock className="h-5 w-5 mx-auto text-[var(--chart-yellow)] dark:text-[var(--warning)] mb-1" />
+                  <p className="text-lg font-semibold text-[var(--warning-dark)] dark:text-[var(--warning)]">
                     {classSnapshot.attendanceToday.late}
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Late</p>
+                  <p className="text-xs text-[var(--chart-yellow)] dark:text-[var(--warning)]">Late</p>
                 </div>
               </div>
             </CardContent>
@@ -420,10 +440,10 @@ export default function ClassTeacherDashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-red-500" />
+                <DollarSign className="h-5 w-5 text-[var(--danger)]" />
                 Fee Defaulters
               </CardTitle>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                 {feeDefaulters.length} student{feeDefaulters.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -431,11 +451,11 @@ export default function ClassTeacherDashboardPage() {
           <CardContent>
             {feeDefaulters.length === 0 ? (
               <div className="text-center py-8">
-                <DollarSign className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">
+                <DollarSign className="h-12 w-12 mx-auto text-[var(--text-muted)] dark:text-[var(--text-secondary)] mb-3" />
+                <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                   No fee defaulters in your class
                 </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                   All students are up to date with their fees
                 </p>
               </div>
@@ -446,7 +466,7 @@ export default function ClassTeacherDashboardPage() {
                   No payment recording capability - class teachers can only view
                 */}
                 <FeeDefaultersTable defaulters={feeDefaulters} />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 text-center">
+                <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-3 text-center">
                   Contact the bursar for payment-related actions
                 </p>
               </>

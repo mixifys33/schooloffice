@@ -20,7 +20,7 @@ export interface SkeletonLoaderProps {
 const Skeleton = ({ className }: { className?: string }) => (
   <div
     className={cn(
-      'animate-pulse rounded-md bg-gray-200 dark:bg-gray-700',
+      'animate-pulse rounded-md bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]',
       className
     )}
   />
@@ -89,6 +89,11 @@ export function SkeletonLoader({
   className,
 }: SkeletonLoaderProps) {
   const SkeletonComponent = skeletonComponents[variant]
+
+  if (!SkeletonComponent) {
+    console.warn(`Unknown skeleton variant: ${variant}`)
+    return null
+  }
 
   return (
     <div className={cn('space-y-4', className)}>

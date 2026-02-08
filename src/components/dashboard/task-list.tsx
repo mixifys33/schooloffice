@@ -94,8 +94,8 @@ function TaskItem({ task, showStatus, onClick }: TaskItemProps) {
               variant={statusConfig.variant}
               className={cn(
                 'text-xs',
-                task.status === TaskStatus.PENDING && 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
-                task.status === TaskStatus.COMPLETED && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                task.status === TaskStatus.PENDING && 'bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)]/50 dark:text-[var(--warning)]',
+                task.status === TaskStatus.COMPLETED && 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)]/50 dark:text-[var(--success)]'
               )}
             >
               {statusConfig.label}
@@ -109,7 +109,7 @@ function TaskItem({ task, showStatus, onClick }: TaskItemProps) {
         )}
         <div className={cn(
           'flex items-center gap-1 text-xs',
-          isOverdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+          isOverdue ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : 'text-muted-foreground'
         )}>
           <Clock className="h-3 w-3" aria-hidden="true" />
           <span>{formatDeadline(task.deadline)}</span>

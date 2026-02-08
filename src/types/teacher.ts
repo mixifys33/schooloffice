@@ -430,6 +430,12 @@ export interface CreateTeacherInput {
   department: string
   dateOfAppointment: Date
 
+  // Academic Assignments (Optional)
+  assignedSubjects?: string[]
+  assignedClasses?: string[]
+  assignedStreams?: string[]
+  classTeacherFor?: string[]
+
   // Optional
   photo?: string
   address?: string
@@ -449,6 +455,11 @@ export interface UpdateTeacherInput {
   department?: string
   photo?: string
   address?: string
+  // Academic Assignments
+  assignedSubjects?: string[]
+  assignedClasses?: string[]
+  assignedStreams?: string[]
+  classTeacherFor?: string[]
 }
 
 /**

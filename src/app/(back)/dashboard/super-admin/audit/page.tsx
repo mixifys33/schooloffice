@@ -116,24 +116,24 @@ const RESOURCE_LABELS: Record<string, string> = {
 
 // Action type colors
 const ACTION_COLORS: Record<string, string> = {
-  payment_recorded: 'bg-green-100 text-green-700',
-  payment_updated: 'bg-blue-100 text-blue-700',
-  payment_deleted: 'bg-red-100 text-red-700',
-  payment_status_changed: 'bg-yellow-100 text-yellow-700',
-  marks_entered: 'bg-purple-100 text-purple-700',
-  marks_updated: 'bg-purple-100 text-purple-700',
-  user_created: 'bg-green-100 text-green-700',
-  user_deleted: 'bg-red-100 text-red-700',
-  role_changed: 'bg-yellow-100 text-yellow-700',
-  student_enrolled: 'bg-green-100 text-green-700',
-  student_suspended: 'bg-red-100 text-red-700',
-  school_activated: 'bg-green-100 text-green-700',
-  school_suspended: 'bg-red-100 text-red-700',
-  school_updated: 'bg-blue-100 text-blue-700',
-  sms_sent: 'bg-blue-100 text-blue-700',
-  create: 'bg-green-100 text-green-700',
-  update: 'bg-blue-100 text-blue-700',
-  delete: 'bg-red-100 text-red-700',
+  payment_recorded: 'bg-[var(--success-light)] text-[var(--chart-green)]',
+  payment_updated: 'bg-[var(--info-light)] text-[var(--accent-hover)]',
+  payment_deleted: 'bg-[var(--danger-light)] text-[var(--chart-red)]',
+  payment_status_changed: 'bg-[var(--warning-light)] text-[var(--warning)]',
+  marks_entered: 'bg-[var(--info-light)] text-[var(--chart-purple)]',
+  marks_updated: 'bg-[var(--info-light)] text-[var(--chart-purple)]',
+  user_created: 'bg-[var(--success-light)] text-[var(--chart-green)]',
+  user_deleted: 'bg-[var(--danger-light)] text-[var(--chart-red)]',
+  role_changed: 'bg-[var(--warning-light)] text-[var(--warning)]',
+  student_enrolled: 'bg-[var(--success-light)] text-[var(--chart-green)]',
+  student_suspended: 'bg-[var(--danger-light)] text-[var(--chart-red)]',
+  school_activated: 'bg-[var(--success-light)] text-[var(--chart-green)]',
+  school_suspended: 'bg-[var(--danger-light)] text-[var(--chart-red)]',
+  school_updated: 'bg-[var(--info-light)] text-[var(--accent-hover)]',
+  sms_sent: 'bg-[var(--info-light)] text-[var(--accent-hover)]',
+  create: 'bg-[var(--success-light)] text-[var(--chart-green)]',
+  update: 'bg-[var(--info-light)] text-[var(--accent-hover)]',
+  delete: 'bg-[var(--danger-light)] text-[var(--chart-red)]',
 }
 
 function formatDate(dateString: string): string {
@@ -156,7 +156,7 @@ function getResourceLabel(resource: string): string {
 }
 
 function getActionColor(action: string): string {
-  return ACTION_COLORS[action] || 'bg-gray-100 text-gray-700'
+  return ACTION_COLORS[action] || 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
 }
 
 export default function AuditLogsPage() {
@@ -270,8 +270,8 @@ export default function AuditLogsPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600">View all system events and changes</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Audit Logs</h1>
+          <p className="text-[var(--text-secondary)]">View all system events and changes</p>
         </div>
         <SkeletonLoader variant="table" count={10} />
       </div>
@@ -282,14 +282,14 @@ export default function AuditLogsPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600">View all system events and changes</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Audit Logs</h1>
+          <p className="text-[var(--text-secondary)]">View all system events and changes</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
+          <p className="text-[var(--chart-red)]">{error}</p>
           <button
             onClick={() => fetchLogs(1)}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -314,13 +314,13 @@ export default function AuditLogsPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600">View all system events and changes</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Audit Logs</h1>
+          <p className="text-[var(--text-secondary)]">View all system events and changes</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => fetchLogs(pagination.page)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] rounded-lg"
             title="Refresh"
           >
             <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
@@ -329,14 +329,14 @@ export default function AuditLogsPage() {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
               hasActiveFilters
-                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                ? 'bg-[var(--info-light)] border-[var(--info-light)] text-[var(--accent-hover)]'
+                : 'bg-[var(--bg-main)] border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
             }`}
           >
             <Filter className="h-4 w-4" />
             Filters
             {hasActiveFilters && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-full">
                 {[selectedSchool, selectedAction, selectedResource, dateFrom, dateTo].filter(Boolean).length}
               </span>
             )}
@@ -346,13 +346,13 @@ export default function AuditLogsPage() {
 
       {/* Filters Panel - Requirement 18.2 */}
       {showFilters && (
-        <div className="mb-6 bg-white rounded-lg shadow-sm border p-4">
+        <div className="mb-6 bg-[var(--bg-main)] rounded-lg shadow-sm border p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium text-gray-900">Filter Logs</h3>
+            <h3 className="font-medium text-[var(--text-primary)]">Filter Logs</h3>
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                className="text-sm text-[var(--chart-blue)] hover:text-[var(--accent-hover)]"
               >
                 Clear all filters
               </button>
@@ -362,14 +362,14 @@ export default function AuditLogsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* School Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 <Building2 className="inline h-4 w-4 mr-1" />
                 School
               </label>
               <select
                 value={selectedSchool}
                 onChange={(e) => setSelectedSchool(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               >
                 <option value="">All Schools</option>
                 {schools.map((school) => (
@@ -382,14 +382,14 @@ export default function AuditLogsPage() {
 
             {/* Action Type Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 <Activity className="inline h-4 w-4 mr-1" />
                 Action Type
               </label>
               <select
                 value={selectedAction}
                 onChange={(e) => setSelectedAction(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               >
                 <option value="">All Actions</option>
                 {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -402,14 +402,14 @@ export default function AuditLogsPage() {
 
             {/* Resource Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 <FileText className="inline h-4 w-4 mr-1" />
                 Resource
               </label>
               <select
                 value={selectedResource}
                 onChange={(e) => setSelectedResource(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               >
                 <option value="">All Resources</option>
                 {Object.entries(RESOURCE_LABELS).map(([value, label]) => (
@@ -422,7 +422,7 @@ export default function AuditLogsPage() {
 
             {/* Date From */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 <Calendar className="inline h-4 w-4 mr-1" />
                 From Date
               </label>
@@ -430,13 +430,13 @@ export default function AuditLogsPage() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               />
             </div>
 
             {/* Date To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 <Calendar className="inline h-4 w-4 mr-1" />
                 To Date
               </label>
@@ -444,7 +444,7 @@ export default function AuditLogsPage() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               />
             </div>
           </div>
@@ -462,48 +462,48 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Stats Summary */}
-      <div className="mb-4 text-sm text-gray-500">
+      <div className="mb-4 text-sm text-[var(--text-muted)]">
         Showing {filteredLogs.length} of {pagination.totalCount} audit log entries
       </div>
 
       {/* Audit Logs Table - Requirement 18.1 */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-[var(--bg-surface)] border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Timestamp
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Action
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Resource
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   School
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Details
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
+                <tr key={log.id} className="hover:bg-[var(--bg-surface)]">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-[var(--text-primary)]">
                       {formatDate(log.timestamp)}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900 truncate max-w-[150px]" title={log.userName}>
+                      <User className="h-4 w-4 text-[var(--text-muted)]" />
+                      <span className="text-sm text-[var(--text-primary)] truncate max-w-[150px]" title={log.userName}>
                         {log.userName}
                       </span>
                     </div>
@@ -514,28 +514,28 @@ export default function AuditLogsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-[var(--text-primary)]">
                       {getResourceLabel(log.resource)}
                     </div>
-                    <div className="text-xs text-gray-500 truncate max-w-[150px]" title={log.resourceId}>
+                    <div className="text-xs text-[var(--text-muted)] truncate max-w-[150px]" title={log.resourceId}>
                       ID: {log.resourceId.substring(0, 8)}...
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-gray-400" />
+                      <Building2 className="h-4 w-4 text-[var(--text-muted)]" />
                       <div>
-                        <div className="text-sm text-gray-900 truncate max-w-[120px]" title={log.schoolName}>
+                        <div className="text-sm text-[var(--text-primary)] truncate max-w-[120px]" title={log.schoolName}>
                           {log.schoolName}
                         </div>
-                        <div className="text-xs text-gray-500">{log.schoolCode}</div>
+                        <div className="text-xs text-[var(--text-muted)]">{log.schoolCode}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setSelectedLog(log)}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      className="text-[var(--chart-blue)] hover:text-[var(--accent-hover)] text-sm font-medium"
                     >
                       View
                     </button>
@@ -545,7 +545,7 @@ export default function AuditLogsPage() {
 
               {filteredLogs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
                     {hasActiveFilters || searchQuery
                       ? 'No audit logs match your filters'
                       : 'No audit logs found'}
@@ -558,25 +558,25 @@ export default function AuditLogsPage() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
+          <div className="px-4 py-3 border-t bg-[var(--bg-surface)] flex items-center justify-between">
+            <div className="text-sm text-[var(--text-muted)]">
               Page {pagination.page} of {pagination.totalPages} ({pagination.totalCount} total)
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border bg-[var(--bg-main)] hover:bg-[var(--bg-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-[var(--text-primary)]">
                 {pagination.page}
               </span>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border bg-[var(--bg-main)] hover:bg-[var(--bg-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -587,13 +587,13 @@ export default function AuditLogsPage() {
 
       {/* Detail Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--bg-main)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">Audit Log Details</h3>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Audit Log Details</h3>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="p-1 text-gray-500 hover:text-gray-700 rounded"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -604,15 +604,15 @@ export default function AuditLogsPage() {
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Timestamp</label>
-                    <p className="text-sm text-gray-900">{formatDate(selectedLog.timestamp)}</p>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">Timestamp</label>
+                    <p className="text-sm text-[var(--text-primary)]">{formatDate(selectedLog.timestamp)}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">User</label>
-                    <p className="text-sm text-gray-900">{selectedLog.userName}</p>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">User</label>
+                    <p className="text-sm text-[var(--text-primary)]">{selectedLog.userName}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Action</label>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">Action</label>
                     <p className="text-sm">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getActionColor(selectedLog.action)}`}>
                         {getActionLabel(selectedLog.action)}
@@ -620,34 +620,34 @@ export default function AuditLogsPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Resource</label>
-                    <p className="text-sm text-gray-900">{getResourceLabel(selectedLog.resource)}</p>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">Resource</label>
+                    <p className="text-sm text-[var(--text-primary)]">{getResourceLabel(selectedLog.resource)}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">School</label>
-                    <p className="text-sm text-gray-900">{selectedLog.schoolName} ({selectedLog.schoolCode})</p>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">School</label>
+                    <p className="text-sm text-[var(--text-primary)]">{selectedLog.schoolName} ({selectedLog.schoolCode})</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase">Resource ID</label>
-                    <p className="text-sm text-gray-900 font-mono break-all">{selectedLog.resourceId}</p>
+                    <label className="text-xs font-medium text-[var(--text-muted)] uppercase">Resource ID</label>
+                    <p className="text-sm text-[var(--text-primary)] font-mono break-all">{selectedLog.resourceId}</p>
                   </div>
                 </div>
 
                 {/* IP Address and User Agent */}
                 {(selectedLog.ipAddress || selectedLog.userAgent) && (
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Request Info</h4>
+                    <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2">Request Info</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedLog.ipAddress && (
                         <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">IP Address</label>
-                          <p className="text-sm text-gray-900 font-mono">{selectedLog.ipAddress}</p>
+                          <label className="text-xs font-medium text-[var(--text-muted)] uppercase">IP Address</label>
+                          <p className="text-sm text-[var(--text-primary)] font-mono">{selectedLog.ipAddress}</p>
                         </div>
                       )}
                       {selectedLog.userAgent && (
                         <div className="col-span-2">
-                          <label className="text-xs font-medium text-gray-500 uppercase">User Agent</label>
-                          <p className="text-sm text-gray-900 font-mono text-xs break-all">{selectedLog.userAgent}</p>
+                          <label className="text-xs font-medium text-[var(--text-muted)] uppercase">User Agent</label>
+                          <p className="text-sm text-[var(--text-primary)] font-mono text-xs break-all">{selectedLog.userAgent}</p>
                         </div>
                       )}
                     </div>
@@ -657,8 +657,8 @@ export default function AuditLogsPage() {
                 {/* Previous Value */}
                 {selectedLog.previousValue && Object.keys(selectedLog.previousValue).length > 0 && (
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Previous Value</h4>
-                    <pre className="bg-red-50 p-3 rounded-lg text-xs overflow-x-auto text-red-800">
+                    <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2">Previous Value</h4>
+                    <pre className="bg-[var(--danger-light)] p-3 rounded-lg text-xs overflow-x-auto text-[var(--danger-dark)]">
                       {JSON.stringify(selectedLog.previousValue, null, 2)}
                     </pre>
                   </div>
@@ -667,8 +667,8 @@ export default function AuditLogsPage() {
                 {/* New Value */}
                 {selectedLog.newValue && Object.keys(selectedLog.newValue).length > 0 && (
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">New Value</h4>
-                    <pre className="bg-green-50 p-3 rounded-lg text-xs overflow-x-auto text-green-800">
+                    <h4 className="text-sm font-medium text-[var(--text-primary)] mb-2">New Value</h4>
+                    <pre className="bg-[var(--success-light)] p-3 rounded-lg text-xs overflow-x-auto text-[var(--success-dark)]">
                       {JSON.stringify(selectedLog.newValue, null, 2)}
                     </pre>
                   </div>
@@ -676,10 +676,10 @@ export default function AuditLogsPage() {
               </div>
             </div>
 
-            <div className="p-4 border-t bg-gray-50">
+            <div className="p-4 border-t bg-[var(--bg-surface)]">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                className="w-full px-4 py-2 bg-[var(--bg-surface)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--border-default)]"
               >
                 Close
               </button>

@@ -44,22 +44,22 @@ export interface AlertCardProps {
 
 const severityStyles = {
   [AlertSeverity.INFO]: {
-    container: 'bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:border-blue-800',
-    text: 'text-blue-800 dark:text-blue-200',
-    icon: 'text-blue-500 dark:text-blue-400',
-    button: 'text-blue-700 border-blue-300 hover:bg-blue-100 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900',
+    container: 'bg-[var(--info-light)] border-[var(--info-light)] dark:bg-[var(--info-dark)]/50 dark:border-[var(--info-dark)]',
+    text: 'text-[var(--info-dark)] dark:text-[var(--info)]',
+    icon: 'text-[var(--accent-primary)] dark:text-[var(--chart-blue)]',
+    button: 'text-[var(--accent-hover)] border-[var(--info)] hover:bg-[var(--info-light)] dark:text-[var(--info)] dark:border-[var(--accent-hover)] dark:hover:bg-[var(--info-dark)]',
   },
   [AlertSeverity.WARNING]: {
-    container: 'bg-amber-50 border-amber-200 dark:bg-amber-950/50 dark:border-amber-800',
-    text: 'text-amber-800 dark:text-amber-200',
-    icon: 'text-amber-500 dark:text-amber-400',
-    button: 'text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900',
+    container: 'bg-[var(--warning-light)] border-amber-200 dark:bg-[var(--warning-dark)]/50 dark:border-amber-800',
+    text: 'text-[var(--warning-dark)] dark:text-[var(--warning)]',
+    icon: 'text-[var(--warning)] dark:text-[var(--warning)]',
+    button: 'text-[var(--warning-dark)] border-amber-300 hover:bg-[var(--warning-light)] dark:text-[var(--warning)] dark:border-amber-700 dark:hover:bg-[var(--warning-dark)]',
   },
   [AlertSeverity.CRITICAL]: {
-    container: 'bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800',
-    text: 'text-red-800 dark:text-red-200',
-    icon: 'text-red-500 dark:text-red-400',
-    button: 'text-red-700 border-red-300 hover:bg-red-100 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-900',
+    container: 'bg-[var(--danger-light)] border-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50 dark:border-[var(--danger-dark)]',
+    text: 'text-[var(--danger-dark)] dark:text-[var(--danger)]',
+    icon: 'text-[var(--danger)] dark:text-[var(--danger)]',
+    button: 'text-[var(--chart-red)] border-[var(--danger)] hover:bg-[var(--danger-light)] dark:text-[var(--danger)] dark:border-[var(--chart-red)] dark:hover:bg-[var(--danger-dark)]',
   },
 }
 
@@ -135,7 +135,7 @@ export function AlertCard({
           type="button"
           onClick={handleDismiss}
           className={cn(
-            'flex-shrink-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
+            'flex-shrink-0 p-1 rounded-md hover:bg-[var(--text-primary)]/5 dark:hover:bg-[var(--bg-main)]/5 transition-colors',
             styles.icon
           )}
           aria-label="Dismiss alert"

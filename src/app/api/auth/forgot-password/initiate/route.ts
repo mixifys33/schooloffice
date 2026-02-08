@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       where: {
         schoolId: school.id,
         OR: [
-          { email: identifier.toLowerCase() },
+          { email: identifier.toLowerCase() }, // Remove case-insensitive mode for MongoDB
           { phone: identifier },
           { username: identifier.toLowerCase() },
         ],

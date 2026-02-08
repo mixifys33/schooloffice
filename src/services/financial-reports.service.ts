@@ -4,9 +4,12 @@
  * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 import { prisma } from '@/lib/db'
-import { Payment, StudentBalance } from '@/types'
 import { PaymentMethod } from '@/types/enums'
-import { financeService } from './finance.service'
+import { PaymentService } from './finance.service'
+
+// ============================================
+// INTERNAL TYPES FOR PRISMA QUERIES
+// ============================================
 
 // ============================================
 // REPORT DATA TYPES
@@ -152,6 +155,7 @@ export class FinancialReportsService {
         },
       },
       include: {
+        receipt: true,
         student: {
           include: {
             class: true,
@@ -164,7 +168,7 @@ export class FinancialReportsService {
     // Map to payment details
     const paymentDetails: PaymentDetail[] = payments.map((p) => ({
       id: p.id,
-      receiptNumber: p.receiptNumber,
+      receiptNumber: p.receipt?.receiptNumber || 'N/A',
       studentName: `${p.student.firstName} ${p.student.lastName}`,
       admissionNumber: p.student.admissionNumber,
       className: p.student.class.name,
@@ -176,7 +180,7 @@ export class FinancialReportsService {
     }))
 
     // Calculate totals
-    const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+    const totalAmount = payments.reduce((sum: number, p) => sum + p.amount, 0)
 
     // Group by payment method
     const byMethod = this.groupPaymentsByMethod(payments)
@@ -395,9 +399,9 @@ export class FinancialReportsService {
     let totalArrearsAmount = 0
 
     for (const student of students) {
-      const balance = await financeService.calculateStudentBalance(student.id, termId)
+      const balance = await PaymentService.calculateStudentBalance(student.id, schoolId, termId)
 
-      if (balance.hasArrears) {
+      if (balance.balance > 0) {
         // Skip if below minimum amount threshold
         if (minAmount && balance.balance < minAmount) {
           continue
@@ -482,8 +486,8 @@ export class FinancialReportsService {
       let totalArrears = 0
 
       for (const student of students) {
-        const balance = await financeService.calculateStudentBalance(student.id, termId)
-        if (balance.hasArrears) {
+        const balance = await PaymentService.calculateStudentBalance(student.id, schoolId, termId)
+        if (balance.balance > 0) {
           studentsWithArrears++
           totalArrears += balance.balance
         }
@@ -511,7 +515,7 @@ export class FinancialReportsService {
   generateDailyCollectionHTML(report: DailyCollectionReport): string {
     const paymentRows = report.payments
       .map(
-        (p) => `
+        (p: PaymentDetail) => `
         <tr>
           <td>${p.receiptNumber}</td>
           <td>${p.studentName}</td>
@@ -611,7 +615,7 @@ export class FinancialReportsService {
   generateTermSummaryHTML(report: TermFinancialSummary): string {
     const classRows = report.byClass
       .map(
-        (c) => `
+        (c: ClassFinancialSummary) => `
         <tr>
           <td>${c.className}</td>
           <td>${c.studentCount}</td>
@@ -705,7 +709,7 @@ export class FinancialReportsService {
   generateArrearsReportHTML(report: ArrearsReport): string {
     const studentRows = report.students
       .map(
-        (s) => `
+        (s: StudentArrearsDetail) => `
         <tr>
           <td>${s.studentName}</td>
           <td>${s.admissionNumber}</td>
@@ -985,7 +989,7 @@ export class FinancialReportsService {
     payments: { amount: number; method: PaymentMethod }[]
   ): Record<PaymentMethod, number> {
     return payments.reduce(
-      (acc, p) => {
+      (acc: Record<PaymentMethod, number>, p: { amount: number; method: PaymentMethod }) => {
         acc[p.method] = (acc[p.method] || 0) + p.amount
         return acc
       },
@@ -997,7 +1001,7 @@ export class FinancialReportsService {
    * Calculate total from payments
    */
   calculateTotalPayments(payments: { amount: number }[]): number {
-    return payments.reduce((sum, p) => sum + p.amount, 0)
+    return payments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
   }
 }
 

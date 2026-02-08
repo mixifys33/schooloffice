@@ -2074,8 +2074,8 @@ export async function searchGuardians(options: GuardianSearchOptions): Promise<G
     whereClause.OR = [
       { firstName: { contains: searchTerm, mode: 'insensitive' } },
       { lastName: { contains: searchTerm, mode: 'insensitive' } },
-      { phone: { contains: searchTerm, mode: 'insensitive' } },
-      { secondaryPhone: { contains: searchTerm, mode: 'insensitive' } },
+      { phone: { contains: searchTerm } }, // Phone search without case-insensitive mode
+      { secondaryPhone: { contains: searchTerm } }, // Phone search without case-insensitive mode
       { email: { contains: searchTerm, mode: 'insensitive' } },
     ]
   }

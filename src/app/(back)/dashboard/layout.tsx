@@ -1,13 +1,13 @@
 'use client'
 
-import { ReactNode, useCallback, useMemo } from 'react'
+import * as React from 'react'
+import { ReactNode, useMemo, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import {
   Home,
   Users,
   GraduationCap,
-  Calendar,
   ClipboardList,
   DollarSign,
   MessageSquare,
@@ -19,16 +19,16 @@ import {
   BookOpen,
   Building2,
   UserCog,
+  AlertTriangle,
+  FolderOpen,
 } from 'lucide-react'
 import {
   DashboardLayout,
   type NavItem,
 } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { InlineContextDisplay } from '@/components/ui/context-header'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { DashboardRoleSwitcher, getDashboardPathForRole } from '@/components/dashboard'
-import { PermissionGuard } from '@/components/auth/permission-guard'
+import { PasswordResetGuard } from '@/components/auth/password-reset-guard'
 import { Role, StaffRole } from '@/types/enums'
 
 /**
@@ -60,10 +60,10 @@ interface PermissionNavItem extends NavItem {
 }
 
 /**
- * Navigation items with permission requirements
+ * Admin navigation items with permission requirements
  * Requirements: 12.3, 12.4 - Wrap menu items with PermissionGuard
  */
-const navItems: PermissionNavItem[] = [
+const adminNavItems: PermissionNavItem[] = [
   { 
     href: '/dashboard', 
     label: 'Dashboard', 
@@ -89,6 +89,12 @@ const navItems: PermissionNavItem[] = [
       { href: '/dashboard/staff', label: 'All Staff' },
       { href: '/dashboard/staff/assignments', label: 'Assignments' },
     ],
+  },
+  {
+    href: '/dashboard/assignments',
+    label: 'Assignments',
+    icon: <ClipboardList className="h-5 w-5" />,
+    permission: 'view_students',
   },
   {
     href: '/dashboard/classes',
@@ -137,7 +143,12 @@ const navItems: PermissionNavItem[] = [
   { 
     href: '/dashboard/communications', 
     label: 'Communications', 
-    icon: <MessageSquare className="h-5 w-5" /> 
+    icon: <MessageSquare className="h-5 w-5" />,
+    children: [
+      { href: '/dashboard/communications', label: 'Message Center' },
+      { href: '/dashboard/sms/templates', label: 'SMS Templates' },
+      { href: '/dashboard/sms/templates/manage', label: 'Manage Templates' },
+    ],
   },
   { 
     href: '/dashboard/school-admin', 
@@ -151,6 +162,178 @@ const navItems: PermissionNavItem[] = [
     icon: <Settings className="h-5 w-5" /> 
   },
 ]
+
+/**
+ * Class Teacher navigation items
+ * Focused on class management and teaching activities
+ * Comprehensive features for new curriculum compliance
+ * Communications removed for cost control and abuse prevention
+ */
+const classTeacherNavItems: PermissionNavItem[] = [
+  {
+    href: '/dashboard/class-teacher',
+    label: 'Dashboard',
+    icon: <Home className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/my-class',
+    label: 'My Class',
+    icon: <GraduationCap className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/students',
+    label: 'Students',
+    icon: <GraduationCap className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/timetable',
+    label: 'Timetable',
+    icon: <ClipboardList className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/assessments',
+    label: 'Assessments / Results',
+    icon: <BookOpen className="h-5 w-5" />,
+    children: [
+      { href: '/dashboard/class-teacher/assessments/ca', label: 'Continuous Assessment' },
+      { href: '/dashboard/class-teacher/assessments/exam', label: 'Exam Management' },
+      { href: '/dashboard/class-teacher/assessments/report', label: 'Assessment Reports' },
+    ],
+  },
+  {
+    href: '/dashboard/class-teacher/performance',
+    label: 'Performance',
+    icon: <BarChart3 className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/evidence',
+    label: 'Learning Evidence',
+    icon: <FolderOpen className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/class-teacher/reports',
+    label: 'Reports',
+    icon: <BarChart3 className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/attendance',
+    label: 'Attendance',
+    icon: <ClipboardList className="h-5 w-5" />,
+    children: [
+      { href: '/dashboard/attendance/mark', label: 'Mark Attendance' },
+      { href: '/dashboard/attendance/view', label: 'View Records' },
+    ],
+  },
+  {
+    href: '/dashboard/discipline',
+    label: 'Discipline',
+    icon: <AlertTriangle className="h-5 w-5" />,
+    children: [
+      { href: '/dashboard/discipline', label: 'View Records' },
+      { href: '/dashboard/discipline/report', label: 'Report Incident' },
+    ],
+  },
+  {
+    href: '/dashboard/class-teacher/profile',
+    label: 'Profile & Workload',
+    icon: <User className="h-5 w-5" />
+  },
+  {
+    href: '/dashboard/settings',
+    label: 'Settings',
+    icon: <Settings className="h-5 w-5" />
+  },
+]
+
+/**
+ * Regular Teacher navigation items
+ * Focused on subject teaching and student management
+ * Communications removed for cost control and abuse prevention
+ */
+const teacherNavItems: PermissionNavItem[] = [
+  {
+    href: '/teacher',
+    label: 'Dashboard',
+    icon: <Home className="h-5 w-5" />
+  },
+  {
+    href: '/teacher/classes',
+    label: 'My Classes',
+    icon: <Building2 className="h-5 w-5" />,
+    children: [
+      { href: '/teacher/classes', label: 'All Classes' },
+      { href: '/teacher/timetable', label: 'Timetable' },
+    ],
+  },
+  {
+    href: '/teacher/attendance',
+    label: 'Attendance',
+    icon: <ClipboardList className="h-5 w-5" />,
+    children: [
+      { href: '/teacher/attendance', label: 'Mark Attendance' },
+      { href: '/teacher/attendance/history', label: 'View Records' },
+    ],
+  },
+  {
+    href: '/teacher/assessments',
+    label: 'Assessments / Results',
+    icon: <BookOpen className="h-5 w-5" />,
+    children: [
+      { href: '/teacher/assessments', label: 'Assessments Overview' },
+      { href: '/teacher/assessments/ca', label: 'Continuous Assessment' },
+      { href: '/teacher/assessments/exam', label: 'Exam Management' },
+      { href: '/teacher/marks', label: 'Enter Marks' },
+      { href: '/teacher/reports', label: 'Generate Reports' },
+    ],
+  },
+  {
+    href: '/teacher/evidence',
+    label: 'Learning Evidence',
+    icon: <FolderOpen className="h-5 w-5" />
+  },
+  {
+    href: '/teacher/students',
+    label: 'Students',
+    icon: <GraduationCap className="h-5 w-5" />,
+    children: [
+      { href: '/teacher/students', label: 'My Students' },
+      { href: '/teacher/students/performance', label: 'Performance' },
+    ],
+  },
+  {
+    href: '/teacher/messages',
+    label: 'Messages',
+    icon: <MessageSquare className="h-5 w-5" />
+  },
+  {
+    href: '/teacher/profile',
+    label: 'Profile & Workload',
+    icon: <User className="h-5 w-5" />
+  },
+  {
+    href: '/teacher/settings',
+    label: 'Settings',
+    icon: <Settings className="h-5 w-5" />
+  },
+]
+
+/**
+ * Get navigation items based on user role
+ */
+function getNavItemsForRole(role: Role | StaffRole | undefined): PermissionNavItem[] {
+  switch (role) {
+    case StaffRole.CLASS_TEACHER:
+      return classTeacherNavItems
+    case Role.TEACHER:
+      return teacherNavItems
+    case Role.SCHOOL_ADMIN:
+    case Role.DEPUTY:
+    case StaffRole.DOS:
+    case StaffRole.BURSAR:
+    default:
+      return adminNavItems
+  }
+}
 
 /**
  * Filter navigation items based on user permissions
@@ -173,6 +356,13 @@ function filterNavItemsByPermission(
     })
     .map(item => ({
       ...item,
+      // Ensure all properties are properly typed and not objects
+      href: String(item.href || ''),
+      label: typeof item.label === 'object' && item.label !== null
+        ? (((item.label as Record<string, unknown>).name as string) || 
+           ((item.label as Record<string, unknown>).text as string) || 
+           String(item.label))
+        : String(item.label || ''),
       children: item.children 
         ? filterNavItemsByPermission(item.children, userRole)
         : undefined,
@@ -180,127 +370,263 @@ function filterNavItemsByPermission(
 }
 
 // Format role for display (e.g., SCHOOL_ADMIN -> School Admin)
-function formatRole(role: string): string {
-  return role
+function formatRole(role: string | Role | StaffRole | unknown): string {
+  // Handle null, undefined, or object cases
+  if (!role) return 'User'
+  
+  // If it's an object, try to extract a meaningful string
+  if (typeof role === 'object' && role !== null) {
+    const roleObj = role as Record<string, unknown>
+    if (typeof roleObj.name === 'string') return formatRole(roleObj.name)
+    if (typeof roleObj.role === 'string') return formatRole(roleObj.role)
+    if (typeof roleObj.type === 'string') return formatRole(roleObj.type)
+    return 'User'
+  }
+  
+  // Ensure we have a string to work with
+  const roleString = String(role)
+  
+  return roleString
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
 }
 
-/**
- * Get all available roles for a user
- * Combines session roles with any additional staff roles
- */
-function getAvailableRoles(session: any): (Role | StaffRole)[] {
-  if (!session?.user) return []
-  
-  const roles = new Set<Role | StaffRole>()
-  
-  // Add primary role
-  if (session.user.role) {
-    roles.add(session.user.role as Role)
-  }
-  
-  // Add active role
-  if (session.user.activeRole) {
-    roles.add(session.user.activeRole as Role)
-  }
-  
-  // Add all roles from the roles array
-  if (session.user.roles && Array.isArray(session.user.roles)) {
-    session.user.roles.forEach((role: Role) => roles.add(role))
-  }
-  
-  return Array.from(roles)
-}
-
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
+  const [notificationCount, setNotificationCount] = useState(0)
 
-  const userRole = session?.user?.role || 'User'
-  const userEmail = session?.user?.email || ''
-  
-  // Get current active role (from session or stored preference)
+  // Get current active role (from session or stored preference) - moved before early returns
   const currentRole = useMemo(() => {
     return (session?.user?.activeRole || session?.user?.role) as Role | StaffRole
   }, [session])
   
-  // Get all available roles for the user
-  const availableRoles = useMemo(() => {
-    return getAvailableRoles(session)
-  }, [session])
-  
-  // Filter navigation items based on permissions
+  // Get navigation items based on user role - moved before early returns
   // Requirements: 12.3, 12.4 - Only show accessible menu items
   const filteredNavItems = useMemo(() => {
-    return filterNavItemsByPermission(navItems, currentRole)
+    const roleNavItems = getNavItemsForRole(currentRole)
+    return filterNavItemsByPermission(roleNavItems, currentRole)
   }, [currentRole])
+
+  // Handle authentication
+  React.useEffect(() => {
+    if (status === 'loading') return // Still loading
+    
+    if (!session?.user) {
+      // No session, redirect to login
+      console.log('No session found, redirecting to login')
+      router.push('/login')
+      return
+    }
+    
+    // Check if user has required data
+    if (!session.user.schoolId) {
+      console.warn('User has no schoolId, this may cause API issues')
+    }
+  }, [session, status, router])
+
+  // Debug: Log session data to identify potential object issues
+  React.useEffect(() => {
+    if (session?.user) {
+      console.log('Session user data:', {
+        role: session.user.role,
+        roleType: typeof session.user.role,
+        email: session.user.email,
+        emailType: typeof session.user.email,
+        roles: session.user.roles,
+        rolesType: typeof session.user.roles,
+        schoolId: session.user.schoolId,
+      })
+      
+      // Check if role or email are objects
+      if (typeof session.user.role === 'object') {
+        console.warn('User role is an object:', session.user.role)
+      }
+      if (typeof session.user.email === 'object') {
+        console.warn('User email is an object:', session.user.email)
+      }
+    }
+  }, [session])
+
+  // Fetch notification count - moved before early returns
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/notifications/unread-count')
+        
+        // Check if response is actually JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn('API returned non-JSON response, likely an error page')
+          setNotificationCount(0)
+          return
+        }
+        
+        if (response.ok) {
+          const data = await response.json()
+          setNotificationCount(data.count || 0)
+        } else {
+          console.warn('Failed to fetch notification count:', response.status, response.statusText)
+          setNotificationCount(0)
+        }
+      } catch (error) {
+        console.warn('Error fetching notification count:', error)
+        setNotificationCount(0)
+      }
+    }
+
+    if (session?.user) {
+      fetchNotificationCount()
+      // Poll every 30 seconds for updates
+      const interval = setInterval(fetchNotificationCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [session])
+
+  // Show loading while checking authentication
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render anything if no session (will redirect)
+  if (!session?.user) {
+    return null
+  }
+
+  const userRole = session?.user?.role || 'User'
+  const userEmail = session?.user?.email || ''
   
-  // Handle role change from RoleSwitcher
-  // Requirements: 1.4, 1.5 - Navigate on role change and persist selection
-  const handleRoleChange = useCallback((newRole: Role | StaffRole) => {
-    // The RoleSwitcher component handles sessionStorage persistence
-    // and navigation internally, but we can add additional logic here if needed
-    const dashboardPath = getDashboardPathForRole(newRole)
-    router.push(dashboardPath)
-  }, [router])
+  // Debug: Ensure we're working with strings, not objects
+  const safeUserRole = typeof userRole === 'object' && userRole !== null 
+    ? (((userRole as Record<string, unknown>).name as string) || 
+       ((userRole as Record<string, unknown>).role as string) || 
+       ((userRole as Record<string, unknown>).type as string) || 
+       JSON.stringify(userRole))
+    : typeof userRole === 'string' 
+      ? userRole 
+      : String(userRole || 'User')
   
-  // Check if user has multiple roles (for showing RoleSwitcher)
-  // Requirements: 1.3 - Only show RoleSwitcher if user has multiple roles
-  const hasMultipleRoles = availableRoles.length > 1
+  const safeUserEmail = typeof userEmail === 'object' && userEmail !== null
+    ? (((userEmail as Record<string, unknown>).email as string) || 
+       ((userEmail as Record<string, unknown>).name as string) || 
+       JSON.stringify(userEmail))
+    : typeof userEmail === 'string' 
+      ? userEmail 
+      : String(userEmail || '')
+  
+  // Get role-specific subtitle
+  const getSubtitleForRole = (role: Role | StaffRole | undefined): string => {
+    switch (role) {
+      case StaffRole.CLASS_TEACHER:
+        return 'Class Teacher'
+      case Role.TEACHER:
+        return 'Teacher'
+      case StaffRole.DOS:
+        return 'DOS'
+      case StaffRole.BURSAR:
+        return 'Bursar'
+      case Role.SCHOOL_ADMIN:
+      case Role.DEPUTY:
+      default:
+        return 'Admin'
+    }
+  }
+
+  // Check if we're in routes that have their own standalone layouts
+  const isDosRoute = pathname.startsWith('/dashboard/dos')
+  const isBursarRoute = pathname.startsWith('/dashboard/bursar')
+  
+  // If this is a route with its own layout, render children without the admin dashboard layout
+  // BUT we must do this AFTER all hooks have been called
+  if (isDosRoute || isBursarRoute) {
+    return (
+      <>
+        {children}
+      </>
+    )
+  }
 
   return (
-    <DashboardLayout
-      navItems={filteredNavItems}
-      brandLogo="/images/schooloffice.png"
-      brandText="SchoolOffice"
-      subtitle="Admin"
-      headerContent={
-        <div className="flex items-center gap-4">
-          {/* Context Display - Requirements: 9.4, 18.5 */}
-          <InlineContextDisplay className="hidden md:flex" />
-          
-          {/* Role Switcher - Requirements: 1.3, 1.4, 1.5 */}
-          {hasMultipleRoles && currentRole && (
-            <DashboardRoleSwitcher
-              currentRole={currentRole}
-              availableRoles={availableRoles}
-              onRoleChange={handleRoleChange}
-              className="hidden sm:block"
-            />
-          )}
-          
-          <ThemeToggle />
-          <Button variant="ghost" size="touch-icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-              3
-            </span>
-          </Button>
-          <Button variant="ghost" size="touch-icon">
-            <User className="h-5 w-5" />
-          </Button>
-        </div>
-      }
-      sidebarFooter={
-        <div className="text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">{formatRole(userRole)}</p>
-          <p className="truncate">{userEmail}</p>
-          {/* Mobile Role Switcher - shown in sidebar footer on small screens */}
-          {hasMultipleRoles && currentRole && (
-            <div className="mt-3 sm:hidden">
-              <DashboardRoleSwitcher
-                currentRole={currentRole}
-                availableRoles={availableRoles}
-                onRoleChange={handleRoleChange}
-              />
-            </div>
-          )}
-        </div>
-      }
-    >
-      {children}
-    </DashboardLayout>
+    <PasswordResetGuard>
+      <DashboardLayout
+        navItems={filteredNavItems}
+        brandLogo="/images/schooloffice.png"
+        brandText="SchoolOffice"
+        subtitle={getSubtitleForRole(currentRole)}
+        headerContent={
+          <div className="flex items-center gap-4">
+            {/* Context Display - Requirements: 9.4, 18.5 */}
+            {/* Temporarily disabled to debug React error */}
+            {/* <InlineContextDisplay className="hidden md:flex" /> */}
+            
+            {/* Role Switcher - Requirements: 1.3, 1.4, 1.5 */}
+            {/* Temporarily disabled to debug React error */}
+            {/* {hasMultipleRoles && currentRole && (
+              <div className="hidden sm:block">
+                <DashboardRoleSwitcher
+                  currentRole={currentRole}
+                  availableRoles={availableRoles}
+                  onRoleChange={handleRoleChange}
+                />
+              </div>
+            )} */}
+            
+            {/* Staff Onboarding Button - Only for School Admins */}
+            {/* Temporarily disabled to debug React error */}
+            {/* <StaffOnboardingButton /> */}
+            
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="touch-icon" 
+              className="relative"
+              onClick={() => router.push('/dashboard/notifications')}
+            >
+              <Bell className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] text-[var(--white-pure)]">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              )}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="touch-icon"
+              onClick={() => router.push('/dashboard/profile')}
+            >
+              <User className="h-5 w-5" />
+            </Button>
+          </div>
+        }
+        sidebarFooter={
+          <div className="text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">{formatRole(safeUserRole)}</p>
+            <p className="truncate">{safeUserEmail}</p>
+            {/* Mobile Role Switcher - shown in sidebar footer on small screens */}
+            {/* Temporarily disabled to debug React error */}
+            {/* {hasMultipleRoles && currentRole && (
+              <div className="mt-3 sm:hidden">
+                <DashboardRoleSwitcher
+                  currentRole={currentRole}
+                  availableRoles={availableRoles}
+                  onRoleChange={handleRoleChange}
+                />
+              </div>
+            )} */}
+          </div>
+        }
+      >
+        {children}
+      </DashboardLayout>
+    </PasswordResetGuard>
   )
 }

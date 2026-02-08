@@ -335,13 +335,13 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
             <div
               className={cn(
                 'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-                'hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950'
+                'hover:border-[var(--info)] hover:bg-[var(--info-light)] dark:hover:bg-[var(--info-dark)]'
               )}
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <Upload className="h-12 w-12 mx-auto mb-4 text-[var(--text-muted)]" />
               <p className="text-lg font-medium mb-2">Drop your CSV file here</p>
               <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
               <p className="text-xs text-muted-foreground">Supports CSV files</p>
@@ -383,7 +383,7 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
             </div>
 
             {showMappingHelp && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg text-sm">
+              <div className="p-4 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg text-sm">
                 <p className="font-medium mb-2">Field Mapping Tips:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>Required fields are marked with *</li>
@@ -397,7 +397,7 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
 
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
                   <tr>
                     <th className="px-4 py-2 text-left">CSV Column</th>
                     <th className="px-4 py-2 text-left">Maps To</th>
@@ -461,7 +461,7 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
 
             <div className="border rounded-lg max-h-[400px] overflow-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left w-12">Row</th>
                     <th className="px-3 py-2 text-left w-12">Status</th>
@@ -473,19 +473,19 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
                 </thead>
                 <tbody>
                   {parsedRows.map((row) => (
-                    <tr key={row.rowNumber} className={cn('border-t', !row.isValid && 'bg-red-50 dark:bg-red-950')}>
+                    <tr key={row.rowNumber} className={cn('border-t', !row.isValid && 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]')}>
                       <td className="px-3 py-2">{row.rowNumber}</td>
                       <td className="px-3 py-2">
                         {row.isValid ? (
-                          <Check className="h-4 w-4 text-green-600" />
+                          <Check className="h-4 w-4 text-[var(--chart-green)]" />
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertCircle className="h-4 w-4 text-[var(--chart-red)]" />
                         )}
                       </td>
                       <td className="px-3 py-2">{row.data.firstName} {row.data.lastName}</td>
                       <td className="px-3 py-2">{row.data.email}</td>
                       <td className="px-3 py-2">{row.data.department}</td>
-                      <td className="px-3 py-2 text-red-600 text-xs">
+                      <td className="px-3 py-2 text-[var(--chart-red)] text-xs">
                         {row.errors.join(', ')}
                       </td>
                     </tr>
@@ -511,7 +511,7 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
         {/* Step: Uploading */}
         {step === 'uploading' && (
           <div className="py-12 text-center">
-            <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-blue-600" />
+            <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-[var(--chart-blue)]" />
             <p className="text-lg font-medium">Uploading teachers...</p>
             <p className="text-sm text-muted-foreground">Please wait while we process your data</p>
           </div>
@@ -522,9 +522,9 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
           <div className="space-y-4">
             <div className="py-8 text-center">
               {uploadResult.success > 0 ? (
-                <Check className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                <Check className="h-12 w-12 mx-auto mb-4 text-[var(--chart-green)]" />
               ) : (
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-600" />
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-[var(--chart-red)]" />
               )}
               <p className="text-lg font-medium">Upload Complete</p>
               <p className="text-sm text-muted-foreground">
@@ -534,8 +534,8 @@ export function TeacherBulkUpload({ onUploadComplete, onCancel }: TeacherBulkUpl
             </div>
 
             {uploadResult.errors.length > 0 && (
-              <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-950">
-                <p className="font-medium text-red-600 mb-2">Errors:</p>
+              <div className="border rounded-lg p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]">
+                <p className="font-medium text-[var(--chart-red)] mb-2">Errors:</p>
                 <ul className="text-sm space-y-1">
                   {uploadResult.errors.map((err, i) => (
                     <li key={i}>Row {err.row}: {err.error}</li>

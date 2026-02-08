@@ -105,7 +105,7 @@ export function generateBrandedEmailTemplate(
     .email-container {
       max-width: 600px;
       margin: 0 auto;
-      background-color: #ffffff;
+      background-color: var(--white-pure);
     }
     .email-header {
       background-color: ${primaryColor};
@@ -117,7 +117,7 @@ export function generateBrandedEmailTemplate(
       margin-bottom: 10px;
     }
     .email-header h1 {
-      color: #ffffff;
+      color: var(--white-pure);
       margin: 0;
       font-size: 24px;
       font-weight: 600;
@@ -143,7 +143,7 @@ export function generateBrandedEmailTemplate(
       display: inline-block;
       padding: 12px 24px;
       background-color: ${primaryColor};
-      color: #ffffff;
+      color: var(--white-pure);
       text-decoration: none;
       border-radius: 6px;
       font-weight: 500;
@@ -547,14 +547,12 @@ export class EmailGatewayService {
  * Create Email Gateway service from environment variables
  */
 export function createEmailGateway(): EmailGatewayService {
-  const provider = (process.env.EMAIL_PROVIDER as 'sendgrid' | 'mailgun') || 'sendgrid'
-  
+  // Use SendGrid as the provider based on your .env configuration
   const config: EmailConfig = {
-    apiKey: process.env.EMAIL_API_KEY || '',
-    fromEmail: process.env.EMAIL_FROM_ADDRESS || 'noreply@schooloffice.com',
+    apiKey: process.env.SENDGRID_API_KEY || '',
+    fromEmail: process.env.EMAIL_FROM || 'noreply@schooloffice.com',
     fromName: process.env.EMAIL_FROM_NAME || 'SchoolOffice',
-    provider,
-    domain: process.env.MAILGUN_DOMAIN,
+    provider: 'sendgrid',
   }
 
   return new EmailGatewayService(config)

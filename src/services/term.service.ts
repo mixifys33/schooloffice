@@ -1,9 +1,10 @@
 /**
- * Term Service
- * Handles term management operations with date validation
+ * Enhanced Term Service
+ * Handles term management operations with date validation, calendar integration, and holiday management
  * Requirements: 2.2
  */
 import { prisma } from '@/lib/db'
+import { calculateWeekCount as calcWeekCount, getHolidayPeriod, validateTermWithinYear, dateRangesOverlap } from '@/lib/academic-calendar-utils'
 import {
   Term,
   CreateTermInput,
@@ -38,22 +39,7 @@ function mapPrismaTermToDomain(prismaTerm: {
  * Calculate the number of weeks between two dates
  */
 export function calculateWeekCount(startDate: Date, endDate: Date): number {
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const diffMs = endDate.getTime() - startDate.getTime()
-  return Math.ceil(diffMs / msPerWeek)
-}
-
-/**
- * Check if two date ranges overlap
- * Two ranges [a1, a2] and [b1, b2] overlap if a1 < b2 AND b1 < a2
- */
-export function dateRangesOverlap(
-  start1: Date,
-  end1: Date,
-  start2: Date,
-  end2: Date
-): boolean {
-  return start1 < end2 && start2 < end1
+  return calcWeekCount(startDate, endDate);
 }
 
 /**
@@ -151,7 +137,7 @@ export class TermService {
       },
     })
 
-    return existingTerms.some(term =>
+    return existingTerms.some((term: any) =>
       dateRangesOverlap(startDate, endDate, term.startDate, term.endDate)
     )
   }
@@ -166,6 +152,48 @@ export class TermService {
 
     if (!term) return null
     return mapPrismaTermToDomain(term)
+  }
+
+  /**
+   * Get all terms for an academic year with holiday information
+   */
+  async getTermsByAcademicYearWithHolidays(academicYearId: string): Promise<(Term & { 
+    holidayInfo?: { 
+      startDate: Date; 
+      endDate: Date; 
+      weekCount: number;
+      dayCount: number;
+    } 
+  })[]> {
+    const terms = await prisma.term.findMany({
+      where: { academicYearId },
+      orderBy: { startDate: 'asc' },
+    })
+
+    // Map terms and calculate holiday periods between them
+    const termsWithHolidays = terms.map((term, index) => {
+      const termWithDomain = mapPrismaTermToDomain(term);
+      
+      // Calculate holiday period if there's a next term
+      if (index < terms.length - 1) {
+        const nextTerm = terms[index + 1];
+        const holidayInfo = getHolidayPeriod(term.endDate, nextTerm.startDate);
+        
+        return {
+          ...termWithDomain,
+          holidayInfo: holidayInfo ? {
+            startDate: holidayInfo.startDate,
+            endDate: holidayInfo.endDate,
+            weekCount: holidayInfo.weekCount,
+            dayCount: holidayInfo.dayCount
+          } : undefined
+        };
+      }
+      
+      return termWithDomain;
+    });
+
+    return termsWithHolidays;
   }
 
   /**

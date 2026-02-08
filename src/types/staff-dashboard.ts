@@ -527,6 +527,11 @@ export interface ClassSnapshot {
   };
   feeDefaultersCount: number;
   disciplineAlertsCount: number;
+  streams?: {
+    id: string;
+    name: string;
+    studentCount: number;
+  }[];
 }
 
 export interface StudentAlert {

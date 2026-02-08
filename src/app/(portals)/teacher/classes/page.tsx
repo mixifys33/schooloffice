@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BookOpen, Users, ChevronRight, Star } from 'lucide-react'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessagePanel } from '@/components/teacher'
+import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { 
   cardStyles, 
@@ -41,19 +42,41 @@ export default function MyClassesPage() {
   const [classes, setClasses] = useState<AssignedClass[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function fetchClasses() {
       try {
         const response = await fetch('/api/teacher/classes')
         if (!response.ok) {
-          throw new Error('Failed to fetch classes')
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage = errorData.details || errorData.error || 'Failed to fetch classes'
+          
+          // Show user-friendly toast notification instead of throwing error
+          toast({
+            title: "Unable to Load Classes",
+            description: errorMessage,
+            variant: "destructive",
+          })
+          
+          setError(errorMessage)
+          return
         }
         const data = await response.json()
         setClasses(data.classes || [])
+        setError(null) // Clear any previous errors
       } catch (err) {
-        setError('Unable to load your classes')
+        const errorMessage = 'Unable to load your classes. Please check your connection and try again.'
         console.error('Error fetching teacher classes:', err)
+        
+        // Show user-friendly toast notification
+        toast({
+          title: "Connection Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+        
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -61,6 +84,56 @@ export default function MyClassesPage() {
 
     fetchClasses()
   }, [])
+
+  // Add retry functionality
+  const handleRetry = () => {
+    setLoading(true)
+    setError(null)
+    
+    async function retryFetchClasses() {
+      try {
+        const response = await fetch('/api/teacher/classes')
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage = errorData.details || errorData.error || 'Failed to fetch classes'
+          
+          toast({
+            title: "Still Unable to Load Classes",
+            description: errorMessage,
+            variant: "destructive",
+          })
+          
+          setError(errorMessage)
+          return
+        }
+        const data = await response.json()
+        setClasses(data.classes || [])
+        setError(null)
+        
+        // Show success message on retry
+        toast({
+          title: "Classes Loaded Successfully",
+          description: "Your classes have been loaded.",
+          variant: "default",
+        })
+      } catch (err) {
+        const errorMessage = 'Unable to load your classes. Please check your connection and try again.'
+        console.error('Error retrying teacher classes:', err)
+        
+        toast({
+          title: "Connection Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+        
+        setError(errorMessage)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    retryFetchClasses()
+  }
 
   if (loading) {
     return (
@@ -86,7 +159,7 @@ export default function MyClassesPage() {
               'Contact support if the problem persists',
             ],
           }}
-          onRetry={() => window.location.reload()}
+          onRetry={handleRetry}
         />
       </div>
     )
@@ -127,7 +200,7 @@ export default function MyClassesPage() {
                   <div>
                     <h3 className={cn(
                       typography.sectionTitle,
-                      'group-hover:text-slate-900 dark:group-hover:text-white transition-colors'
+                      'group-hover:text-[var(--text-primary)] dark:group-hover:text-[var(--white-pure)] transition-colors'
                     )}>
                       {cls.className}
                       {cls.streamName && (
@@ -143,7 +216,7 @@ export default function MyClassesPage() {
                   </div>
                 </div>
                 <ChevronRight className={cn(
-                  'h-5 w-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors'
+                  'h-5 w-5 text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] dark:group-hover:text-[var(--text-muted)] transition-colors'
                 )} />
               </div>
 
@@ -157,7 +230,7 @@ export default function MyClassesPage() {
                 
                 {/* Class Teacher Badge */}
                 {cls.isClassTeacher && (
-                  <div className="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
+                  <div className="flex items-center gap-1 text-sm text-[var(--chart-yellow)] dark:text-[var(--warning)]">
                     <Star className="h-4 w-4 fill-current" />
                     <span>Class Teacher</span>
                   </div>
@@ -169,7 +242,7 @@ export default function MyClassesPage() {
       ) : (
         <div className={cn(cardStyles.base, cardStyles.normal, 'text-center')}>
           <div className={cn('mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4', teacherColors.secondary.bg)}>
-            <BookOpen className="h-6 w-6 text-slate-400" />
+            <BookOpen className="h-6 w-6 text-[var(--text-muted)]" />
           </div>
           <h3 className={cn(typography.sectionTitle, 'mb-2')}>
             No Classes Assigned

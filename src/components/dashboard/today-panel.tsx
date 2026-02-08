@@ -80,7 +80,7 @@ export function TodayPanel({
     return (
       <div className={cn(cardStyles.base, cardStyles.normal, className)}>
         <div className="flex items-center gap-2 mb-3">
-          <Clock className="h-5 w-5 text-slate-400" />
+          <Clock className="h-5 w-5 text-[var(--text-muted)]" />
           <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
         </div>
         <div className={spacing.card}>
@@ -97,12 +97,12 @@ export function TodayPanel({
       {/* Header - Requirement 12.1: Dense layout */}
       <div className="flex items-center justify-between mb-3">
         <h2 className={cn(typography.sectionTitle, 'flex items-center gap-2')}>
-          <Clock className="h-5 w-5 text-slate-400" />
+          <Clock className="h-5 w-5 text-[var(--text-muted)]" />
           Today
         </h2>
         <Link 
-          href="/teacher/timetable" 
-          className={cn(typography.caption, 'hover:text-slate-900 dark:hover:text-white', transitions.color)}
+          href="/portals/teacher/timetable" 
+          className={cn(typography.caption, 'hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]', transitions.color)}
         >
           Full timetable →
         </Link>
@@ -111,7 +111,7 @@ export function TodayPanel({
       {/* Requirements: 2.7 - Show "No classes scheduled for today" when empty */}
       {scheduledClasses.length === 0 ? (
         <div className="text-center py-6">
-          <Clock className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+          <Clock className="h-10 w-10 text-[var(--text-muted)] dark:text-[var(--text-secondary)] mx-auto mb-2" />
           <p className={typography.body}>
             No classes scheduled for today
           </p>
@@ -149,7 +149,7 @@ function ScheduledClassCard({ entry, hasContextError }: ScheduledClassCardProps)
     )}>
       {/* Period indicator and time - Requirement 12.1: Dense layout */}
       <div className="flex items-center gap-3 sm:w-28 flex-shrink-0">
-        <div className="w-9 h-9 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-300 font-medium text-xs">
+        <div className="w-9 h-9 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-[var(--text-primary)] dark:text-[var(--text-muted)] font-medium text-xs">
           P{entry.period}
         </div>
         <div className={cn(typography.caption, 'sm:hidden')}>
@@ -228,8 +228,8 @@ function AttendanceStatusButton({ status, classId, disabled }: AttendanceStatusB
     'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border',
     transitions.color,
     isDisabled 
-      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
-      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+      ? 'bg-slate-100 dark:bg-slate-800 text-[var(--text-muted)] dark:text-[var(--text-muted)] border-slate-200 dark:border-slate-700 cursor-not-allowed'
+      : 'bg-[var(--bg-main)] dark:bg-slate-800 text-[var(--text-primary)] dark:text-[var(--text-muted)] border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
   )
 
   if (isDisabled) {
@@ -242,7 +242,7 @@ function AttendanceStatusButton({ status, classId, disabled }: AttendanceStatusB
   }
 
   return (
-    <Link href={`/teacher/attendance?classId=${classId}`} className={buttonClasses}>
+    <Link href={`/portals/teacher/attendance?classId=${classId}`} className={buttonClasses}>
       <ClipboardList className="h-3.5 w-3.5" />
       Take Attendance
     </Link>
@@ -285,8 +285,8 @@ function MarksStatusButton({ status, classId, subjectId, disabled }: MarksStatus
     'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border',
     transitions.color,
     isDisabled 
-      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
-      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+      ? 'bg-slate-100 dark:bg-slate-800 text-[var(--text-muted)] dark:text-[var(--text-muted)] border-slate-200 dark:border-slate-700 cursor-not-allowed'
+      : 'bg-[var(--bg-main)] dark:bg-slate-800 text-[var(--text-primary)] dark:text-[var(--text-muted)] border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
   )
 
   if (isDisabled) {
@@ -299,7 +299,7 @@ function MarksStatusButton({ status, classId, subjectId, disabled }: MarksStatus
   }
 
   return (
-    <Link href={`/teacher/marks?classId=${classId}&subjectId=${subjectId}`} className={buttonClasses}>
+    <Link href={`/portals/teacher/marks?classId=${classId}&subjectId=${subjectId}`} className={buttonClasses}>
       <BookOpen className="h-3.5 w-3.5" />
       Enter Marks
     </Link>

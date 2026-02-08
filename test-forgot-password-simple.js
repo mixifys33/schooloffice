@@ -1,56 +1,82 @@
 /**
- * Simple test for forgot password that works even with database issues
- * This will help us see if the email sending is working
+ * Simple test for forgot password functionality
  */
 require('dotenv').config();
 
-const BASE_URL = 'http://localhost:3000';
-
-async function testForgotPasswordSimple() {
-  console.log('🧪 Testing forgot password with enhanced logging...\n');
-
+async function testForgotPassword() {
+  console.log('🔍 Testing Forgot Password Flow\n');
+  
+  const baseUrl = 'http://localhost:3000';
+  
+  // Test data
+  const testData = {
+    schoolCode: 'VALLEY',
+    identifier: 'admin@valley.com', // Change this to a real email in your database
+    method: 'email'
+  };
+  
+  console.log('📋 Test data:', testData);
+  console.log('');
+  
   try {
-    // Test the send-code endpoint directly
-    console.log('📧 Testing send-code endpoint...');
-    const response = await fetch(`${BASE_URL}/api/auth/forgot-password/send-code`, {
+    // Step 1: Initiate forgot password
+    console.log('1️⃣ Initiating forgot password...');
+    const initiateResponse = await fetch(`${baseUrl}/api/auth/forgot-password/initiate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        schoolCode: 'TESTSCHOOL',
-        identifier: 'p4147176@gmail.com', // Your actual email
-        method: 'email'
+        schoolCode: testData.schoolCode,
+        identifier: testData.identifier
       })
     });
-
-    console.log('Response status:', response.status);
-    const data = await response.json();
-    console.log('Response data:', JSON.stringify(data, null, 2));
-
-    if (response.ok) {
-      console.log('\n✅ API call successful!');
-      console.log('📋 What to check now:');
-      console.log('1. Look at the server console logs above for:');
-      console.log('   - 🔧 [FORGOT PASSWORD DEBUG] Code for p4147176@gmail.com');
-      console.log('   - ✅ [Password Reset] Email sent successfully');
-      console.log('   - Any error messages');
-      console.log('2. Check your email inbox (p4147176@gmail.com)');
-      console.log('3. If you see the debug code in logs, the system is working');
-      console.log('4. If email fails, the code will still be logged for testing');
-    } else {
-      console.log('\n❌ API call failed');
+    
+    const initiateResult = await initiateResponse.json();
+    console.log('   Status:', initiateResponse.status);
+    console.log('   Response:', initiateResult);
+    console.log('');
+    
+    if (!initiateResponse.ok) {
+      console.error('❌ Initiate failed');
+      return;
     }
-
+    
+    // Step 2: Send verification code
+    console.log('2️⃣ Sending verification code...');
+    const sendCodeResponse = await fetch(`${baseUrl}/api/auth/forgot-password/send-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testData)
+    });
+    
+    const sendCodeResult = await sendCodeResponse.json();
+    console.log('   Status:', sendCodeResponse.status);
+    console.log('   Response:', sendCodeResult);
+    console.log('');
+    
+    if (sendCodeResult.success) {
+      console.log('✅ API returned success');
+      if (sendCodeResult.sent) {
+        console.log('✅ Email was reportedly sent');
+        console.log('📧 Check your email inbox and spam folder');
+        console.log('🔍 Also check the server console logs for the verification code');
+      } else {
+        console.log('⚠️ API succeeded but email was not sent');
+        if (sendCodeResult.error) {
+          console.log('❌ Error:', sendCodeResult.error);
+        }
+      }
+    } else {
+      console.log('❌ API returned failure');
+    }
+    
   } catch (error) {
     console.error('❌ Test failed:', error.message);
+    console.log('');
+    console.log('💡 Make sure:');
+    console.log('   - Next.js server is running (npm run dev)');
+    console.log('   - Database is connected');
+    console.log('   - Test user exists in database');
   }
-
-  console.log('\n🔍 Next steps:');
-  console.log('1. Check the server terminal for detailed logs');
-  console.log('2. Look for the verification code in the logs');
-  console.log('3. Use that code to test the verify endpoint');
-  console.log('4. If emails are not being sent, check Gmail App Password');
 }
 
-testForgotPasswordSimple();
+testForgotPassword().catch(console.error);

@@ -10,7 +10,6 @@
 
 export enum MessageChannel {
   SMS = 'SMS',
-  WHATSAPP = 'WHATSAPP',
   EMAIL = 'EMAIL',
 }
 

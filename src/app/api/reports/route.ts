@@ -34,133 +34,130 @@ export async function GET(request: NextRequest) {
     const classId = searchParams.get('classId') || ''
     const termId = searchParams.get('termId') || ''
 
-    // Build where clause
-    const whereClause: Record<string, unknown> = {
-      student: {
-        schoolId,
-        status: 'ACTIVE',
-      },
+    // If no termId provided, get the most recent term
+    let currentTermId = termId
+    if (!currentTermId) {
+      const recentTerm = await prisma.term.findFirst({
+        where: { 
+          academicYear: {
+            schoolId: schoolId
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true }
+      })
+      currentTermId = recentTerm?.id || ''
     }
 
-    if (termId) {
-      whereClause.termId = termId
+    if (!currentTermId) {
+      return NextResponse.json({
+        results: [],
+        pagination: { page: 1, pageSize, total: 0, totalPages: 0 },
+        summary: {
+          totalStudents: 0,
+          publishedReports: 0,
+          unpublishedReports: 0,
+          paidStudents: 0,
+          unpaidStudents: 0,
+        },
+      })
+    }
+
+    // Build where clause for students
+    const studentWhere: Record<string, unknown> = {
+      schoolId,
+      status: 'ACTIVE',
     }
 
     if (classId) {
-      whereClause.student = {
-        ...(whereClause.student as object),
-        classId,
-      }
+      studentWhere.classId = classId
     }
 
     if (search) {
-      whereClause.student = {
-        ...(whereClause.student as object),
-        OR: [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { admissionNumber: { contains: search, mode: 'insensitive' } },
-        ],
-      }
+      studentWhere.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { admissionNumber: { contains: search, mode: 'insensitive' } },
+      ]
     }
 
-    // Get total count
-    const total = await prisma.result.count({ where: whereClause })
-
-    // Get results with student info
-    const results = await prisma.result.findMany({
-      where: whereClause,
+    // Get students first, then their results
+    const students = await prisma.student.findMany({
+      where: studentWhere,
       include: {
-        student: {
+        class: { select: { id: true, name: true } },
+        stream: { select: { id: true, name: true } },
+        results: {
+          where: { termId: currentTermId },
           include: {
-            class: true,
-            stream: true,
-          },
-        },
-        term: {
-          include: {
-            academicYear: true,
-          },
-        },
+            term: { select: { id: true, name: true } },
+            publishedReportCard: { select: { isAccessible: true } }
+          }
+        }
       },
-      orderBy: [
-        { student: { class: { name: 'asc' } } },
-        { position: 'asc' },
-      ],
       skip: (page - 1) * pageSize,
       take: pageSize,
+      orderBy: [
+        { class: { name: 'asc' } },
+        { firstName: 'asc' }
+      ]
     })
 
-    // Get published report cards for these results
-    const resultIds = results.map(r => r.id)
-    const publishedReports = await prisma.publishedReportCard.findMany({
-      where: {
-        resultId: { in: resultIds },
-      },
-      select: {
-        resultId: true,
-        isAccessible: true,
-      },
-    })
+    // Get total count of students (not results)
+    const total = await prisma.student.count({ where: studentWhere })
 
-    const publishedMap = new Map(publishedReports.map(p => [p.resultId, p]))
-
-    // Get payment status for students
-    const studentIds = results.map(r => r.studentId)
-    const currentTermId = termId || results[0]?.termId
-
-    // Get fee structures and payments to determine payment status
-    const payments = currentTermId ? await prisma.payment.groupBy({
-      by: ['studentId'],
-      where: {
-        studentId: { in: studentIds },
-        termId: currentTermId,
-      },
-      _sum: {
-        amount: true,
-      },
-    }) : []
+    // Get payment information for these students
+    const studentIds = students.map(s => s.id)
+    const [payments, feeStructures] = await Promise.all([
+      prisma.payment.groupBy({
+        by: ['studentId'],
+        where: {
+          studentId: { in: studentIds },
+          termId: currentTermId,
+        },
+        _sum: { amount: true },
+      }),
+      prisma.feeStructure.findMany({
+        where: {
+          classId: { in: students.map(s => s.classId) },
+          termId: currentTermId,
+        },
+        select: { classId: true, totalAmount: true }
+      })
+    ])
 
     const paymentMap = new Map(payments.map(p => [p.studentId, p._sum.amount || 0]))
-
-    // Get fee structures for students' classes
-    const classIds = [...new Set(results.map(r => r.student.classId))]
-    const feeStructures = currentTermId ? await prisma.feeStructure.findMany({
-      where: {
-        classId: { in: classIds },
-        termId: currentTermId,
-      },
-    }) : []
-
     const feeMap = new Map(feeStructures.map(f => [f.classId, f.totalAmount]))
 
-    // Map results to response format
-    const mappedResults = results.map(result => {
-      const published = publishedMap.get(result.id)
-      const totalFees = feeMap.get(result.student.classId) || 0
-      const totalPaid = paymentMap.get(result.studentId) || 0
-      const paymentStatus = totalPaid >= totalFees ? 'PAID' : 'NOT_PAID'
+    // Map students to results format
+    const mappedResults = students
+      .filter(student => student.results.length > 0)
+      .map(student => {
+        const result = student.results[0] // Should only be one result per term
+        const totalFees = feeMap.get(student.classId) || 0
+        const totalPaid = paymentMap.get(student.id) || 0
+        const paymentStatus = totalPaid >= totalFees ? 'PAID' : 'NOT_PAID'
 
-      return {
-        id: result.id,
-        studentId: result.studentId,
-        studentName: `${result.student.firstName} ${result.student.lastName}`,
-        admissionNumber: result.student.admissionNumber,
-        classId: result.student.classId,
-        className: result.student.class.name,
-        streamName: result.student.stream?.name || null,
-        termId: result.termId,
-        termName: result.term.name,
-        totalMarks: result.totalMarks,
-        average: result.average,
-        position: result.position,
-        totalStudents: result.totalStudents || 0,
-        grade: result.grade,
-        paymentStatus,
-        isPublished: !!published,
-        canSendReport: paymentStatus === 'PAID',
-      }
-    })
+        return {
+          id: result.id,
+          studentId: student.id,
+          studentName: `${student.firstName} ${student.lastName}`,
+          admissionNumber: student.admissionNumber,
+          classId: student.classId,
+          className: student.class.name,
+          streamName: student.stream?.name || null,
+          termId: result.termId,
+          termName: result.term.name,
+          totalMarks: result.totalMarks,
+          average: result.average,
+          position: result.position,
+          totalStudents: result.totalStudents || 0,
+          grade: result.grade,
+          paymentStatus,
+          isPublished: !!result.publishedReportCard,
+          canSendReport: paymentStatus === 'PAID',
+        }
+      })
 
     // Calculate summary
     const paidCount = mappedResults.filter(r => r.paymentStatus === 'PAID').length
@@ -172,13 +169,13 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         pageSize,
-        total,
-        totalPages: Math.ceil(total / pageSize),
+        total: mappedResults.length, // Use actual results count
+        totalPages: Math.ceil(mappedResults.length / pageSize),
       },
       summary: {
-        totalStudents: total,
+        totalStudents: mappedResults.length,
         publishedReports: publishedCount,
-        unpublishedReports: total - publishedCount,
+        unpublishedReports: mappedResults.length - publishedCount,
         paidStudents: paidCount,
         unpaidStudents: unpaidCount,
       },
@@ -186,7 +183,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching reports:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch reports' },
+      { error: 'Failed to fetch reports', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

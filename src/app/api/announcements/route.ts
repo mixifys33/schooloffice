@@ -49,10 +49,9 @@ export async function GET(request: NextRequest) {
     const isPinned = searchParams.get('isPinned')
     const scheduled = searchParams.get('scheduled')
 
-    const announcements = await enhancedAnnouncementService.getAnnouncements(schoolId, {
+    const announcements = await enhancedAnnouncementService.getAnnouncementsBySchool(schoolId, {
       isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
       isPinned: isPinned === 'true' ? true : undefined,
-      scheduled: scheduled === 'true' ? true : undefined,
     })
 
     return NextResponse.json({

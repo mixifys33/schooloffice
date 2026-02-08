@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { Save, MessageSquare, Mail, Clock } from 'lucide-react'
+import Link from 'next/link'
+import { Save, MessageSquare, Mail, Clock, FileText, Settings } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
@@ -10,23 +11,17 @@ import { AlertBanner } from '@/components/ui/alert-banner'
 import { Toast, useLocalToast } from '@/components/ui/toast'
 
 /**
- * Communication Settings Component
+ * Communication Settings Component - SMS Only
  * Requirements: 13.1, 13.2, 13.3, 13.5
- * - SMS provider config, WhatsApp settings, email SMTP
+ * - SMS provider config only
  * - Quiet hours configuration
+ * - Simplified for Uganda market (SMS-only communication)
  */
 
 interface CommunicationSettingsData {
   smsProvider?: string
   smsApiKey?: string
   smsSenderId?: string
-  whatsappEnabled: boolean
-  whatsappApiKey?: string
-  emailSmtpHost?: string
-  emailSmtpPort?: number
-  emailSmtpUser?: string
-  emailSmtpPassword?: string
-  emailFromAddress?: string
   quietHoursStart?: string
   quietHoursEnd?: string
   emergencyOverrideEnabled: boolean
@@ -48,13 +43,6 @@ export function CommunicationSettings() {
     smsProvider: '',
     smsApiKey: '',
     smsSenderId: '',
-    whatsappEnabled: false,
-    whatsappApiKey: '',
-    emailSmtpHost: '',
-    emailSmtpPort: 587,
-    emailSmtpUser: '',
-    emailSmtpPassword: '',
-    emailFromAddress: '',
     quietHoursStart: '21:00',
     quietHoursEnd: '07:00',
     emergencyOverrideEnabled: true,
@@ -70,13 +58,6 @@ export function CommunicationSettings() {
         smsProvider: data.smsProvider || '',
         smsApiKey: data.smsApiKey || '',
         smsSenderId: data.smsSenderId || '',
-        whatsappEnabled: data.whatsappEnabled || false,
-        whatsappApiKey: data.whatsappApiKey || '',
-        emailSmtpHost: data.emailSmtpHost || '',
-        emailSmtpPort: data.emailSmtpPort || 587,
-        emailSmtpUser: data.emailSmtpUser || '',
-        emailSmtpPassword: data.emailSmtpPassword || '',
-        emailFromAddress: data.emailFromAddress || '',
         quietHoursStart: data.quietHoursStart || '21:00',
         quietHoursEnd: data.quietHoursEnd || '07:00',
         emergencyOverrideEnabled: data.emergencyOverrideEnabled ?? true,
@@ -147,14 +128,17 @@ export function CommunicationSettings() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
               SMS Configuration
             </CardTitle>
-            <CardDescription>Configure SMS provider and sender settings</CardDescription>
+            <CardDescription>
+              Configure SMS provider settings for Uganda market. 
+              Cost: UGX 45 per SMS. WhatsApp and Email removed for cost efficiency.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -168,42 +152,16 @@ export function CommunicationSettings() {
             </div>
             <FormField label="API Key" name="smsApiKey" type="password" value={formData.smsApiKey || ''} onChange={handleInputChange} helpText="Your SMS provider API key" />
             <FormField label="Sender ID" name="smsSenderId" value={formData.smsSenderId || ''} onChange={handleInputChange} helpText="Max 11 characters" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              WhatsApp Configuration
-            </CardTitle>
-            <CardDescription>Configure WhatsApp Business API</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="whatsappEnabled" name="whatsappEnabled" checked={formData.whatsappEnabled} onChange={handleInputChange} className="rounded border-input" />
-              <label htmlFor="whatsappEnabled" className="text-sm font-medium">Enable WhatsApp</label>
+            
+            <div className="mt-4 p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)]/20 rounded-md">
+              <h4 className="text-sm font-medium text-[var(--info-dark)] dark:text-[var(--info-light)] mb-1">Uganda Market Optimization</h4>
+              <ul className="text-xs text-[var(--info-dark)] dark:text-[var(--info)] space-y-1">
+                <li>• SMS only - UGX 45 per message</li>
+                <li>• 160 character limit per message</li>
+                <li>• Annual pricing: UGX 5,000 per student</li>
+                <li>• Email reserved for system functions only</li>
+              </ul>
             </div>
-            {formData.whatsappEnabled && (
-              <FormField label="WhatsApp API Key" name="whatsappApiKey" type="password" value={formData.whatsappApiKey || ''} onChange={handleInputChange} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Email SMTP Configuration
-            </CardTitle>
-            <CardDescription>Configure email server settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField label="SMTP Host" name="emailSmtpHost" value={formData.emailSmtpHost || ''} onChange={handleInputChange} />
-            <FormField label="SMTP Port" name="emailSmtpPort" type="number" value={formData.emailSmtpPort?.toString() || '587'} onChange={handleInputChange} />
-            <FormField label="SMTP Username" name="emailSmtpUser" value={formData.emailSmtpUser || ''} onChange={handleInputChange} />
-            <FormField label="SMTP Password" name="emailSmtpPassword" type="password" value={formData.emailSmtpPassword || ''} onChange={handleInputChange} />
-            <FormField label="From Address" name="emailFromAddress" type="email" value={formData.emailFromAddress || ''} onChange={handleInputChange} />
           </CardContent>
         </Card>
 
@@ -221,6 +179,37 @@ export function CommunicationSettings() {
             <div className="flex items-center gap-2">
               <input type="checkbox" id="emergencyOverrideEnabled" name="emergencyOverrideEnabled" checked={formData.emergencyOverrideEnabled} onChange={handleInputChange} className="rounded border-input" />
               <label htmlFor="emergencyOverrideEnabled" className="text-sm font-medium">Allow emergency messages during quiet hours</label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              SMS Templates
+            </CardTitle>
+            <CardDescription>Manage your SMS message templates with 160-character limits</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link href="/dashboard/sms/templates">
+                <Button variant="outline" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Templates
+                </Button>
+              </Link>
+              <Link href="/dashboard/sms/templates/manage">
+                <Button variant="outline" className="w-full justify-start">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage Templates
+                </Button>
+              </Link>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>• Create and edit SMS templates for fees, attendance, and announcements</p>
+              <p>• All templates are limited to 160 characters (UGX 45 per SMS)</p>
+              <p>• Templates include placeholders for student names, balances, and dates</p>
             </div>
           </CardContent>
         </Card>

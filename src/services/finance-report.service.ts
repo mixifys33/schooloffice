@@ -24,7 +24,7 @@ import type {
   PenaltySummary,
   PaymentMethod,
 } from '@/types/finance'
-import { determinePaymentStatus } from './student-account.service'
+import { categorizePaymentStatus } from './finance.service'
 
 // Error codes for report operations
 export const REPORT_ERRORS = {

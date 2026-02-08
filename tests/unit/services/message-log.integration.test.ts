@@ -114,7 +114,6 @@ describe('MessageLogService Integration', () => {
     it('should support all message channels', () => {
       const allChannels = [
         MessageChannel.SMS,
-        MessageChannel.WHATSAPP,
         MessageChannel.EMAIL,
       ]
 

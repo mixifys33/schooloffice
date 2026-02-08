@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search } }, // Phone search without case-insensitive mode
         { email: { contains: search, mode: 'insensitive' } },
       ]
     }

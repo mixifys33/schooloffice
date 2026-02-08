@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '@/lib/db'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/enums'
 
 /**
  * Context for tenant-scoped operations

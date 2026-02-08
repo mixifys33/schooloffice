@@ -123,14 +123,14 @@ export default function ClassDetailPage() {
     return (
       <div className="p-4 sm:p-6">
         <Link
-          href="/teacher/classes"
-          className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
+          href="/portals/teacher/classes"
+          className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to My Classes
         </Link>
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
             <AlertCircle className="h-5 w-5" />
             <span>{error || 'Unable to load class details'}</span>
           </div>
@@ -149,39 +149,39 @@ export default function ClassDetailPage() {
     <div className="space-y-6 p-4 sm:p-6">
       {/* Back Navigation */}
       <Link
-        href="/teacher/classes"
-        className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+        href="/portals/teacher/classes"
+        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to My Classes
       </Link>
 
       {/* Class Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-              <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div className="p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg">
+              <BookOpen className="h-6 w-6 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                   {data.className}
                   {data.streamName && (
-                    <span className="text-gray-500 dark:text-gray-400 font-normal">
+                    <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)] font-normal">
                       {' '}({data.streamName})
                     </span>
                   )}
                 </h1>
                 {data.isClassTeacher && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] text-[var(--warning-dark)] dark:text-[var(--warning)] text-xs font-medium rounded-full">
                     <Star className="h-3 w-3 fill-current" />
                     Class Teacher
                   </span>
                 )}
               </div>
               {data.subject && (
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                   {data.subject.name}
                 </p>
               )}
@@ -191,14 +191,14 @@ export default function ClassDetailPage() {
           {/* Quick Actions */}
           <div className="flex gap-2">
             <Button asChild size="sm" className="gap-2">
-              <Link href={`/teacher/attendance?classId=${classId}`}>
+              <Link href={`/portals/teacher/attendance?classId=${classId}`}>
                 <ClipboardList className="h-4 w-4" />
                 Take Attendance
               </Link>
             </Button>
             {data.subject && (
               <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link href={`/teacher/marks?classId=${classId}&subjectId=${data.subject.id}`}>
+                <Link href={`/portals/teacher/marks?classId=${classId}&subjectId=${data.subject.id}`}>
                   <BookOpen className="h-4 w-4" />
                   Enter Marks
                 </Link>
@@ -208,26 +208,26 @@ export default function ClassDetailPage() {
         </div>
 
         {/* Stats Row */}
-        <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium text-gray-900 dark:text-white">{data.studentCount}</span> students
+            <Users className="h-4 w-4 text-[var(--text-muted)]" />
+            <span className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+              <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{data.studentCount}</span> students
             </span>
           </div>
           {data.performanceSummary.attendanceRate !== null && (
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-white">{data.performanceSummary.attendanceRate}%</span> attendance
+              <Calendar className="h-4 w-4 text-[var(--text-muted)]" />
+              <span className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{data.performanceSummary.attendanceRate}%</span> attendance
               </span>
             </div>
           )}
           {data.performanceSummary.averageScore !== null && (
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-white">{data.performanceSummary.averageScore}%</span> avg score
+              <TrendingUp className="h-4 w-4 text-[var(--text-muted)]" />
+              <span className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{data.performanceSummary.averageScore}%</span> avg score
               </span>
             </div>
           )}
@@ -235,7 +235,7 @@ export default function ClassDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
         <nav className="flex gap-4 -mb-px">
           {tabs.map((tab) => (
             <button
@@ -243,8 +243,8 @@ export default function ClassDetailPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-[var(--chart-blue)] text-[var(--chart-blue)] dark:border-[var(--info)] dark:text-[var(--chart-blue)]'
+                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-muted)]'
               }`}
             >
               {tab.icon}
@@ -255,7 +255,7 @@ export default function ClassDetailPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
         {activeTab === 'students' && (
           <StudentListTab students={data.students} />
         )}
@@ -278,8 +278,8 @@ function StudentListTab({ students }: { students: StudentListItem[] }) {
   if (students.length === 0) {
     return (
       <div className="p-8 text-center">
-        <Users className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">No students in this class</p>
+        <Users className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+        <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No students in this class</p>
       </div>
     )
   }
@@ -287,36 +287,36 @@ function StudentListTab({ students }: { students: StudentListItem[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+        <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Student
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Admission No.
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Gender
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {students.map((student) => (
-            <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <tr key={student.id} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <div className="h-8 w-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center text-sm font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                     {student.firstName[0]}{student.lastName[0]}
                   </div>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                     {student.firstName} {student.lastName}
                   </span>
                 </div>
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+              <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                 {student.admissionNumber}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+              <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                 {student.gender || '-'}
               </td>
             </tr>
@@ -335,8 +335,8 @@ function AttendanceHistoryTab({ records }: { records: AttendanceRecord[] }) {
   if (records.length === 0) {
     return (
       <div className="p-8 text-center">
-        <ClipboardList className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">No attendance records found</p>
+        <ClipboardList className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+        <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No attendance records found</p>
       </div>
     )
   }
@@ -344,11 +344,11 @@ function AttendanceHistoryTab({ records }: { records: AttendanceRecord[] }) {
   const getStatusIcon = (status: AttendanceStatus) => {
     switch (status) {
       case AttendanceStatus.PRESENT:
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-[var(--success)]" />
       case AttendanceStatus.ABSENT:
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className="h-4 w-4 text-[var(--danger)]" />
       case AttendanceStatus.LATE:
-        return <Clock className="h-4 w-4 text-amber-500" />
+        return <Clock className="h-4 w-4 text-[var(--warning)]" />
       default:
         return null
     }
@@ -370,26 +370,26 @@ function AttendanceHistoryTab({ records }: { records: AttendanceRecord[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+        <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Date
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Status
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Recorded By
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
               Time
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {records.map((record) => (
-            <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+            <tr key={record.id} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
+              <td className="px-4 py-3 text-sm text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                 {new Date(record.date).toLocaleDateString('en-UG', {
                   weekday: 'short',
                   year: 'numeric',
@@ -400,15 +400,15 @@ function AttendanceHistoryTab({ records }: { records: AttendanceRecord[] }) {
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(record.status)}
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                     {getStatusLabel(record.status)}
                   </span>
                 </div>
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+              <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                 {record.recordedBy}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
+              <td className="px-4 py-3 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                 {new Date(record.recordedAt).toLocaleTimeString('en-UG', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -432,9 +432,9 @@ function PerformanceTab({ summary }: { summary: PerformanceSummary }) {
   if (!hasData) {
     return (
       <div className="p-8 text-center">
-        <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">No performance data available yet</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+        <TrendingUp className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+        <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No performance data available yet</p>
+        <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
           Performance metrics will appear once marks are entered
         </p>
       </div>
@@ -445,34 +445,34 @@ function PerformanceTab({ summary }: { summary: PerformanceSummary }) {
     <div className="p-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Average Score */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Average Score</div>
-          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg p-4">
+          <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Average Score</div>
+          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {summary.averageScore !== null ? `${summary.averageScore}%` : '-'}
           </div>
         </div>
 
         {/* Pass Rate */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pass Rate</div>
-          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg p-4">
+          <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Pass Rate</div>
+          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {summary.passRate !== null ? `${summary.passRate}%` : '-'}
           </div>
         </div>
 
         {/* Top Performers */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Top Performers</div>
-          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg p-4">
+          <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Top Performers</div>
+          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {summary.topPerformers}
           </div>
-          <div className="text-xs text-gray-400 dark:text-gray-500">scoring 80%+</div>
+          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">scoring 80%+</div>
         </div>
 
         {/* Attendance Rate */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Attendance Rate</div>
-          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg p-4">
+          <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Attendance Rate</div>
+          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {summary.attendanceRate !== null ? `${summary.attendanceRate}%` : '-'}
           </div>
         </div>

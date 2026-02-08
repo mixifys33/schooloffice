@@ -406,8 +406,8 @@ export default function GuardianDetailPage() {
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className={`h-full ${
-                          guardian.dataQualityScore >= 75 ? 'bg-green-500' :
-                          guardian.dataQualityScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                          guardian.dataQualityScore >= 75 ? 'bg-[var(--success)]' :
+                          guardian.dataQualityScore >= 50 ? 'bg-[var(--warning)]' : 'bg-[var(--danger)]'
                         }`}
                         style={{ width: `${guardian.dataQualityScore}%` }}
                       />
@@ -420,7 +420,7 @@ export default function GuardianDetailPage() {
                     <ul className="space-y-1">
                       {guardian.dataQualityIssues.map((issue, idx) => (
                         <li key={idx} className="text-sm flex items-center gap-2">
-                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                          <AlertTriangle className="h-3 w-3 text-[var(--warning)]" />
                           {issue}
                         </li>
                       ))}
@@ -496,7 +496,7 @@ export default function GuardianDetailPage() {
                 <div className="space-y-6">
                   <div className="text-center p-6 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Total Balance</p>
-                    <p className={`text-3xl font-bold ${financial.totalBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <p className={`text-3xl font-bold ${financial.totalBalance > 0 ? 'text-[var(--chart-red)]' : 'text-[var(--chart-green)]'}`}>
                       {formatCurrency(financial.totalBalance)}
                     </p>
                   </div>
@@ -511,7 +511,7 @@ export default function GuardianDetailPage() {
                               Last payment: {formatDate(student.lastPaymentDate)}
                             </p>
                           </div>
-                          <p className={`font-medium ${student.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          <p className={`font-medium ${student.balance > 0 ? 'text-[var(--chart-red)]' : 'text-[var(--chart-green)]'}`}>
                             {formatCurrency(student.balance)}
                           </p>
                         </div>

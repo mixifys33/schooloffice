@@ -19,7 +19,7 @@ import type {
   TransactionEntry,
   PaymentStatusCategory,
 } from '@/types/finance'
-import { StudentAccountService } from './student-account.service'
+import { updateBalanceAfterPayment } from './student-account.service'
 
 // Error codes for statement operations
 export const STATEMENT_ERRORS = {
@@ -509,10 +509,10 @@ export function generateStudentStatementHTML(
           <td style="padding: 8px; border-bottom: 1px solid #eee;">${new Date(txn.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee;">${txn.description}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee;">${txn.reference || '-'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${txn.type === 'DEBIT' ? '#ef4444' : '#10b981'};">
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${txn.type === 'DEBIT' ? 'var(--chart-red)' : 'var(--chart-green)'};">
             ${txn.type === 'DEBIT' ? '' : '-'}UGX ${txn.amount.toLocaleString()}
           </td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: ${txn.runningBalance > 0 ? '#ef4444' : '#10b981'};">
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: ${txn.runningBalance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'};">
             UGX ${txn.runningBalance.toLocaleString()}
           </td>
         </tr>
@@ -548,7 +548,7 @@ export function generateStudentStatementHTML(
     .summary-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 20px; }
     .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
     .summary-row.total { font-size: 18px; font-weight: bold; border-top: 2px solid #333; margin-top: 10px; padding-top: 15px; }
-    .summary-row.balance { font-size: 20px; font-weight: bold; color: ${statement.closingBalance > 0 ? '#ef4444' : '#10b981'}; }
+    .summary-row.balance { font-size: 20px; font-weight: bold; color: ${statement.closingBalance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'}; }
     .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #666; }
     @media print {
       body { padding: 0; }
@@ -610,11 +610,11 @@ export function generateStudentStatementHTML(
       </div>
       <div class="summary-row">
         <span>Total Charges (Debits)</span>
-        <span style="color: #ef4444;">+ UGX ${statement.totalDebits.toLocaleString()}</span>
+        <span style="color: var(--chart-red);">+ UGX ${statement.totalDebits.toLocaleString()}</span>
       </div>
       <div class="summary-row">
         <span>Total Payments (Credits)</span>
-        <span style="color: #10b981;">- UGX ${statement.totalCredits.toLocaleString()}</span>
+        <span style="color: var(--chart-green);">- UGX ${statement.totalCredits.toLocaleString()}</span>
       </div>
       <div class="summary-row balance">
         <span>Closing Balance</span>
@@ -679,11 +679,11 @@ export function generateGuardianStatementHTML(
           </div>
           <div class="summary-item">
             <span class="label">Total Paid:</span>
-            <span class="value" style="color: #10b981;">UGX ${student.totalPaid.toLocaleString()}</span>
+            <span class="value" style="color: var(--chart-green);">UGX ${student.totalPaid.toLocaleString()}</span>
           </div>
           <div class="summary-item">
             <span class="label">Balance:</span>
-            <span class="value" style="color: ${student.balance > 0 ? '#ef4444' : '#10b981'}; font-weight: bold;">
+            <span class="value" style="color: ${student.balance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'}; font-weight: bold;">
               UGX ${student.balance.toLocaleString()}
             </span>
           </div>
@@ -709,10 +709,10 @@ export function generateGuardianStatementHTML(
                 <td>${new Date(txn.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                 <td>${txn.description}</td>
                 <td>${txn.reference || '-'}</td>
-                <td style="text-align: right; color: ${txn.type === 'DEBIT' ? '#ef4444' : '#10b981'};">
+                <td style="text-align: right; color: ${txn.type === 'DEBIT' ? 'var(--chart-red)' : 'var(--chart-green)'};">
                   ${txn.type === 'DEBIT' ? '' : '-'}UGX ${txn.amount.toLocaleString()}
                 </td>
-                <td style="text-align: right; font-weight: bold; color: ${txn.runningBalance > 0 ? '#ef4444' : '#10b981'};">
+                <td style="text-align: right; font-weight: bold; color: ${txn.runningBalance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'};">
                   UGX ${txn.runningBalance.toLocaleString()}
                 </td>
               </tr>
@@ -764,7 +764,7 @@ export function generateGuardianStatementHTML(
     .no-transactions { color: #666; font-style: italic; text-align: center; padding: 20px; }
     .total-section { margin-top: 30px; border-top: 2px solid #333; padding-top: 20px; }
     .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; }
-    .total-row.grand-total { font-size: 20px; font-weight: bold; color: ${statement.totalBalance > 0 ? '#ef4444' : '#10b981'}; }
+    .total-row.grand-total { font-size: 20px; font-weight: bold; color: ${statement.totalBalance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'}; }
     .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #666; }
     @media print {
       body { padding: 0; }
@@ -803,11 +803,11 @@ export function generateGuardianStatementHTML(
     <div class="total-section">
       <div class="total-row">
         <span>Total Charges (All Students)</span>
-        <span style="color: #ef4444;">UGX ${statement.totalDebits.toLocaleString()}</span>
+        <span style="color: var(--chart-red);">UGX ${statement.totalDebits.toLocaleString()}</span>
       </div>
       <div class="total-row">
         <span>Total Payments (All Students)</span>
-        <span style="color: #10b981;">UGX ${statement.totalCredits.toLocaleString()}</span>
+        <span style="color: var(--chart-green);">UGX ${statement.totalCredits.toLocaleString()}</span>
       </div>
       <div class="total-row grand-total">
         <span>Total Balance Due</span>

@@ -4,13 +4,19 @@ import { cn } from "@/lib/utils"
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "rounded-lg border shadow-sm",
       className
     )}
+    style={{
+      backgroundColor: 'var(--bg-elevated)',
+      borderColor: 'var(--border-default)',
+      color: 'var(--text-primary)',
+      ...style,
+    }}
     {...props}
   />
 ))
@@ -46,10 +52,14 @@ CardTitle.displayName = "CardTitle"
 const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm", className)}
+    style={{
+      color: 'var(--text-secondary)',
+      ...style,
+    }}
     {...props}
   />
 ))

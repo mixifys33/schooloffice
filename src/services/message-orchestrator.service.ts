@@ -16,11 +16,11 @@ import type { IMessageOrchestratorService } from '../types/services'
 import { targetingService } from './targeting.service'
 import { communicationPermissionService } from './communication-permission.service'
 import { messageTemplateService } from './message-template.service'
+import { templateRendererService } from './template-renderer.service'
 import { MessageLogService } from './message-log.service'
 import { contactManagementService } from './contact-management.service'
 import { fallbackService } from './fallback.service'
 import { smsGateway } from './sms-gateway.service'
-import { whatsappGateway } from './whatsapp-gateway.service'
 import { emailGateway } from './email-gateway.service'
 
 const messageLogService = new MessageLogService()
@@ -70,35 +70,123 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
 
 
   async sendBulkMessage(params: BulkMessageRequest): Promise<BulkMessageResult> {
+    console.log(`[BULK DEBUG] Starting sendBulkMessage with params:`, {
+      schoolId: params.schoolId,
+      targetType: params.targetType,
+      channel: params.channel || 'SMS',
+      templateId: params.templateId,
+      customContent: !!params.customContent,
+      totalRecipients: params.targetCriteria
+    })
+    
     const jobId = uuidv4()
     const errors: string[] = []
     let queued = 0
     try {
+      console.log(`[BULK DEBUG] Checking permissions for job ${jobId}`)
       const permissionResult = await this.checkPermissions(params)
-      if (!permissionResult.allowed) return { jobId, totalRecipients: 0, queued: 0, errors: [permissionResult.reason || 'Permission denied'] }
+      if (!permissionResult.allowed) {
+        console.log(`[BULK DEBUG] Permissions denied: ${permissionResult.reason}`)
+        return { jobId, totalRecipients: 0, queued: 0, errors: [permissionResult.reason || 'Permission denied'] }
+      }
+      
+      console.log(`[BULK DEBUG] Resolving recipients for school ${params.schoolId}`)
       const recipients = await targetingService.resolveRecipients({ schoolId: params.schoolId, targetType: params.targetType, criteria: params.targetCriteria })
-      if (recipients.length === 0) return { jobId, totalRecipients: 0, queued: 0, errors: ['No recipients found'] }
-      const content = await this.renderContent(params)
-      if (!content.success) return { jobId, totalRecipients: recipients.length, queued: 0, errors: [content.error || 'Failed to render content'] }
+      console.log(`[BULK DEBUG] Found ${recipients.length} recipients`)
+      
+      if (recipients.length === 0) {
+        console.log(`[BULK DEBUG] No recipients found`)
+        return { jobId, totalRecipients: 0, queued: 0, errors: ['No recipients found'] }
+      }
+      
+      // Get template content if using template
+      let templateContent: string | undefined
+      let templateType: any
+      if (params.templateId) {
+        console.log(`[BULK DEBUG] Getting template with ID: ${params.templateId}`)
+        const template = await messageTemplateService.getTemplateById(params.templateId)
+        if (!template) {
+          console.log(`[BULK DEBUG] Template not found: ${params.templateId}`)
+          return { jobId, totalRecipients: recipients.length, queued: 0, errors: ['Template not found'] }
+        }
+        templateContent = template.content
+        templateType = template.type
+        console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
+      }
+      
       const channel = params.channel || MessageChannel.SMS
       const batchSize = params.batchSize || 100
       const contactable = recipients.filter(r => r.type === RecipientType.GUARDIAN || r.type === RecipientType.STAFF)
       const unique = this.deduplicateRecipients(contactable)
+      
+      console.log(`[BULK DEBUG] Processing ${unique.length} unique recipients in batches of ${batchSize}`)
+      
       for (let i = 0; i < unique.length; i += batchSize) {
         const batch = unique.slice(i, i + batchSize)
+        console.log(`[BULK DEBUG] Processing batch ${Math.floor(i/batchSize) + 1}, size: ${batch.length}`)
+        
         for (const recipient of batch) {
           const messageId = uuidv4()
+          console.log(`[BULK DEBUG] Processing recipient: ${recipient.name}, ID: ${recipient.id}`)
+          
           try {
-            await this.logMessage(messageId, params.schoolId, params.senderId, recipient, content.content!, channel, DeliveryStatus.QUEUED)
-            const result = await this.sendToRecipient(messageId, params.schoolId, params.senderId, recipient, content.content!, channel, params.priority)
-            if (result.status !== DeliveryStatus.FAILED) queued++
-            else errors.push(`Failed: ${recipient.name}: ${result.error}`)
-          } catch (e) { errors.push(`Error: ${recipient.name}: ${e instanceof Error ? e.message : 'Unknown'}`) }
+            // Render content for this specific recipient
+            let finalContent: string
+            if (params.customContent) {
+              console.log(`[BULK DEBUG] Using custom content`)
+              finalContent = params.customContent
+            } else if (templateContent && templateType) {
+              console.log(`[BULK DEBUG] Rendering template for recipient`)
+              const renderResult = await templateRendererService.renderTemplateForRecipient(
+                templateContent,
+                templateType,
+                recipient,
+                params.schoolId
+              )
+              if (!renderResult.success) {
+                console.log(`[BULK DEBUG] Template render failed for ${recipient.name}: ${renderResult.error}`)
+                errors.push(`Template render failed for ${recipient.name}: ${renderResult.error}`)
+                continue
+              }
+              finalContent = renderResult.content!
+              console.log(`[BULK DEBUG] Template rendered successfully`)
+            } else {
+              console.log(`[BULK DEBUG] No content available for ${recipient.name}`)
+              errors.push(`No content available for ${recipient.name}`)
+              continue
+            }
+            
+            console.log(`[BULK DEBUG] Logging message to queue: ${messageId}`)
+            await this.logMessage(messageId, params.schoolId, params.senderId, recipient, finalContent, channel, DeliveryStatus.QUEUED)
+            
+            console.log(`[BULK DEBUG] Sending message via sendToRecipient: ${messageId}`)
+            const result = await this.sendToRecipient(messageId, params.schoolId, params.senderId, recipient, finalContent, channel, params.priority)
+            console.log(`[BULK DEBUG] Send result:`, result)
+            
+            if (result.status !== DeliveryStatus.FAILED) {
+              console.log(`[BULK DEBUG] Message queued successfully`)
+              queued++
+            } else {
+              console.log(`[BULK DEBUG] Message failed: ${result.error}`)
+              errors.push(`Failed: ${recipient.name}: ${result.error}`)
+            }
+          } catch (e) { 
+            console.error(`[BULK DEBUG] Error processing recipient ${recipient.name}:`, e)
+            errors.push(`Error: ${recipient.name}: ${e instanceof Error ? e.message : 'Unknown'}`) 
+          }
         }
-        if (params.rateLimit && i + batchSize < unique.length) await this.delay(1000 / params.rateLimit)
+        if (params.rateLimit && i + batchSize < unique.length) {
+          console.log(`[BULK DEBUG] Applying rate limit delay`)
+          await this.delay(1000 / params.rateLimit)
+        }
       }
+      
+      console.log(`[BULK DEBUG] Bulk message job completed. Total: ${unique.length}, Queued: ${queued}, Errors: ${errors.length}`)
       return { jobId, totalRecipients: unique.length, queued, errors }
-    } catch (error) { return { jobId, totalRecipients: 0, queued, errors: [error instanceof Error ? error.message : 'Unknown error'] } }
+    } catch (error) { 
+      console.error(`[BULK DEBUG] Error in sendBulkMessage:`, error)
+      return { jobId, totalRecipients: 0, queued, errors: [error instanceof Error ? error.message : 'Unknown error'] } 
+    }
   }
 
 
@@ -179,6 +267,9 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
       if (params.templateId) {
         const template = await messageTemplateService.getTemplateById(params.templateId)
         if (!template) return { success: false, error: 'Template not found' }
+        
+        // For now, return the template content as-is since we don't have recipient data here
+        // The actual variable replacement should happen per-recipient in bulk messaging
         return { success: true, content: template.content }
       }
       return { success: false, error: 'No content or template provided' }
@@ -186,15 +277,22 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
   }
 
   private async sendToRecipient(messageId: string, schoolId: string, senderId: string, recipient: Recipient, content: string, channel: MessageChannel, priority: 'normal' | 'high' | 'critical'): Promise<MessageOrchestratorResult> {
+    console.log(`[SEND DEBUG] Starting sendToRecipient for messageId: ${messageId}`)
+    console.log(`[SEND DEBUG] Recipient: ${recipient.name} (${recipient.id}), Channel: ${channel}, Priority: ${priority}`)
+    console.log(`[SEND DEBUG] Content preview: ${content.substring(0, 100)}...`)
+    
     try {
       // Check if school messaging is paused (Requirements 2.7, 2.8)
       const messagingConfig = await prisma.schoolMessagingConfig.findUnique({
         where: { schoolId },
       })
 
+      console.log(`[SEND DEBUG] Messaging config for school ${schoolId}:`, messagingConfig)
       if (messagingConfig?.isPaused) {
         // Allow critical messages to bypass pause if emergency override is enabled
+        console.log(`[SEND DEBUG] School messaging is paused: ${messagingConfig.pauseReason}`)
         if (priority !== 'critical' || !messagingConfig.emergencyOverride) {
+          console.log(`[SEND DEBUG] Message is not critical or emergency override not enabled, returning FAILED`)
           await this.updateMessageStatus(messageId, DeliveryStatus.FAILED, `School messaging is paused: ${messagingConfig.pauseReason || 'No reason provided'}`)
           return {
             messageId,
@@ -205,27 +303,54 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
         }
       }
 
+      console.log(`[SEND DEBUG] Resolving contact for recipient ${recipient.id} and channel ${channel}`)
       const contact = await contactManagementService.resolveContactForChannel(recipient.id, channel)
+      console.log(`[SEND DEBUG] Resolved contact:`, contact)
+      
       if (!contact) {
+        console.log(`[SEND DEBUG] No contact available, attempting fallback`)
         const fallbackResult = await this.tryFallback(messageId, schoolId, senderId, recipient, content, channel)
-        if (fallbackResult) return fallbackResult
+        if (fallbackResult) {
+          console.log(`[SEND DEBUG] Fallback succeeded:`, fallbackResult)
+          return fallbackResult
+        }
+        console.log(`[SEND DEBUG] No contact available and fallback failed`)
         await this.updateMessageStatus(messageId, DeliveryStatus.FAILED, 'No contact available')
         return { messageId, status: DeliveryStatus.FAILED, channel, error: 'No contact available' }
       }
+      
+      console.log(`[SEND DEBUG] Validating contact: ${contact}`)
       const validation = await contactManagementService.validateContact(contact, channel === MessageChannel.EMAIL ? 'email' : 'phone')
+      console.log(`[SEND DEBUG] Contact validation result:`, validation)
+      
       if (!validation.valid) {
+        console.log(`[SEND DEBUG] Contact validation failed: ${validation.error}`)
         await this.updateMessageStatus(messageId, DeliveryStatus.FAILED, validation.error || 'Invalid contact')
         return { messageId, status: DeliveryStatus.FAILED, channel, error: validation.error || 'Invalid contact' }
       }
+      
+      console.log(`[SEND DEBUG] Sending via gateway with contact: ${validation.formatted || contact}`)
       const result = await this.sendViaGateway(channel, validation.formatted || contact, content, recipient)
+      console.log(`[SEND DEBUG] Gateway result:`, result)
+      
       const status = result.success ? DeliveryStatus.SENT : DeliveryStatus.FAILED
+      console.log(`[SEND DEBUG] Determined status: ${status}`)
+      
       await this.updateMessageStatus(messageId, status, result.error)
+      
       if (!result.success && priority !== 'critical') {
+        console.log(`[SEND DEBUG] Gateway failed, attempting fallback`)
         const fallbackResult = await this.tryFallback(messageId, schoolId, senderId, recipient, content, channel)
-        if (fallbackResult && fallbackResult.status !== DeliveryStatus.FAILED) return fallbackResult
+        if (fallbackResult && fallbackResult.status !== DeliveryStatus.FAILED) {
+          console.log(`[SEND DEBUG] Fallback succeeded after gateway failure:`, fallbackResult)
+          return fallbackResult
+        }
       }
+      
+      console.log(`[SEND DEBUG] Returning result: { messageId: ${messageId}, status: ${status}, channel: ${channel} }`)
       return { messageId, status, channel, error: result.error }
     } catch (error) {
+      console.error(`[SEND DEBUG] Error in sendToRecipient:`, error)
       await this.updateMessageStatus(messageId, DeliveryStatus.FAILED, error instanceof Error ? error.message : 'Send failed')
       return { messageId, status: DeliveryStatus.FAILED, channel, error: error instanceof Error ? error.message : 'Send failed' }
     }
@@ -233,21 +358,34 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
 
 
   private async sendViaGateway(channel: MessageChannel, contact: string, content: string, recipient: Recipient): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    console.log(`[SMS DEBUG] Attempting to send message via channel: ${channel}`)
+    console.log(`[SMS DEBUG] Contact: ${contact}`)
+    console.log(`[SMS DEBUG] Content length: ${content.length}`)
+    console.log(`[SMS DEBUG] Recipient ID: ${recipient.id}, Name: ${recipient.name}`)
+    
     try {
       switch (channel) {
         case MessageChannel.SMS:
+          console.log(`[SMS DEBUG] Calling smsGateway.sendSMS with contact: ${contact}`)
           const smsResult = await smsGateway.sendSMS({ to: contact, message: content })
+          console.log(`[SMS DEBUG] SMS Gateway result:`, smsResult)
           return { success: smsResult.success, messageId: smsResult.messageId, error: smsResult.error }
-        case MessageChannel.WHATSAPP:
-          const waResult = await whatsappGateway.sendWhatsApp({ to: contact, message: content })
-          return { success: waResult.success, messageId: waResult.messageId, error: waResult.error }
         case MessageChannel.EMAIL:
+          console.log(`[EMAIL DEBUG] Calling emailGateway.sendEmail with contact: ${contact}`)
           const emailResult = await emailGateway.sendEmail({ to: contact, subject: 'School Notification', html: content })
+          console.log(`[EMAIL DEBUG] Email Gateway result:`, emailResult)
           return { success: emailResult.success, messageId: emailResult.messageId, error: emailResult.error }
+        case MessageChannel.WHATSAPP:
+          console.log(`[WHATSAPP DEBUG] WhatsApp is not supported`)
+          return { success: false, error: 'WhatsApp is not supported' }
         default:
+          console.log(`[CHANNEL DEBUG] Unsupported channel: ${channel}`)
           return { success: false, error: `Unsupported channel: ${channel}` }
       }
-    } catch (error) { return { success: false, error: error instanceof Error ? error.message : 'Gateway error' } }
+    } catch (error) { 
+      console.error(`[ERROR DEBUG] Gateway error for channel ${channel}:`, error)
+      return { success: false, error: error instanceof Error ? error.message : 'Gateway error' } 
+    }
   }
 
   private async tryFallback(messageId: string, schoolId: string, senderId: string, recipient: Recipient, content: string, failedChannel: MessageChannel): Promise<MessageOrchestratorResult | null> {
@@ -290,8 +428,14 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
   }
 
   private async updateMessageStatus(messageId: string, status: DeliveryStatus, reason?: string): Promise<void> {
-    try { await messageLogService.updateMessageStatus(messageId, status, reason) }
-    catch (error) { console.error('Failed to update message status:', error) }
+    console.log(`[STATUS DEBUG] Updating message status for ${messageId}: ${status} - Reason: ${reason || 'none'}`)
+    try { 
+      await messageLogService.updateMessageStatus(messageId, status, reason) 
+      console.log(`[STATUS DEBUG] Successfully updated message status for ${messageId}`)
+    }
+    catch (error) { 
+      console.error('Failed to update message status:', error) 
+    }
   }
 
   private async logEmergencyAlertSummary(alertId: string, params: EmergencyAlertRequest, results: EmergencyAlertResult['channelResults']): Promise<void> {

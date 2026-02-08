@@ -22,6 +22,7 @@ interface SendSMSRequest {
   classIds?: string[]
   studentIds?: string[]
   excludeUnpaid?: boolean
+  permissionCode?: string // Required permission code for teachers
 }
 
 /**
@@ -41,11 +42,44 @@ export async function POST(request: NextRequest) {
     }
 
     const schoolId = (session.user as { schoolId?: string }).schoolId
-    if (!schoolId) {
+    const userId = (session.user as { id?: string }).id
+    if (!schoolId || !userId) {
       return NextResponse.json(
-        { error: 'School ID not found in session' },
+        { error: 'School ID or User ID not found in session' },
         { status: 400 }
       )
+    }
+
+    // Check if user is teacher and requires permission code
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    })
+
+    if (user?.role === 'TEACHER') {
+      // Teachers must provide permission code
+      if (!permissionCode) {
+        return NextResponse.json(
+          { error: 'Permission code required for teachers to send SMS' },
+          { status: 403 }
+        )
+      }
+
+      // Validate the permission code
+      const { teacherSMSPermissionService } = await import('@/services/teacher-sms-permission.service')
+      const validation = await teacherSMSPermissionService.validateCode(permissionCode, schoolId, userId)
+      
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: validation.error || 'Invalid permission code' },
+          { status: 403 }
+        )
+      }
+
+      // Mark code as used
+      if (validation.code) {
+        await teacherSMSPermissionService.useCode(validation.code.id, userId)
+      }
     }
 
     // Check if school is active (Requirement 8.4)
@@ -89,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: SendSMSRequest = await request.json()
-    const { message, templateType, recipientType, classIds, studentIds, excludeUnpaid = true } = body
+    const { message, templateType, recipientType, classIds, studentIds, excludeUnpaid = true, permissionCode } = body
 
     if (!message || message.trim().length === 0) {
       return NextResponse.json(

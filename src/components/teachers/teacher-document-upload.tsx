@@ -185,7 +185,7 @@ export function TeacherDocumentUpload({
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="flex items-center gap-2 p-3 bg-[var(--danger-light)] text-[var(--chart-red)] rounded-lg text-sm">
             <AlertCircle className="h-4 w-4" />
             {error}
           </div>
@@ -193,7 +193,7 @@ export function TeacherDocumentUpload({
 
         {/* Upload Form */}
         {showUploadForm && !readOnly && (
-          <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 space-y-4">
+          <div className="p-4 border rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--text-primary)] space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Upload New Document</h4>
               <Button
@@ -238,7 +238,7 @@ export function TeacherDocumentUpload({
             </div>
 
             {isUploading && (
-              <div className="flex items-center gap-2 text-sm text-blue-600">
+              <div className="flex items-center gap-2 text-sm text-[var(--chart-blue)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Saving document...
               </div>
@@ -248,7 +248,7 @@ export function TeacherDocumentUpload({
 
         {/* Document List */}
         {documents.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">
+          <p className="text-sm text-[var(--text-muted)] text-center py-4">
             No documents uploaded yet
           </p>
         ) : (
@@ -256,13 +256,13 @@ export function TeacherDocumentUpload({
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900"
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--text-primary)]"
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-blue-600" />
+                  <FileText className="h-8 w-8 text-[var(--chart-blue)]" />
                   <div>
                     <p className="font-medium text-sm">{doc.fileName}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-[var(--text-muted)]">
                       {DOCUMENT_TYPE_LABELS[doc.documentType]} • {formatFileSize(doc.fileSize)} • {formatDate(doc.uploadedAt)}
                     </p>
                   </div>
@@ -296,7 +296,7 @@ export function TeacherDocumentUpload({
                       onClick={() => handleDelete(doc.id)}
                       disabled={deletingId === doc.id}
                       title="Delete"
-                      className="text-red-500 hover:text-red-700"
+                      className="text-[var(--danger)] hover:text-[var(--chart-red)]"
                     >
                       {deletingId === doc.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

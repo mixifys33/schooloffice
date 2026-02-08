@@ -1,9 +1,9 @@
 /**
  * Discount Service
- * Manages discount rules and student-specific discounts
- * Requirements: 3.1, 3.2, 3.3, 3.8, 3.9
- *
- * Property 10: Discount Approval Workflow
+ * Manages discount rules and application to students
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+ * 
+ * Property 10: Discount Application Validat
  * For any discount that requires approval (based on school settings),
  * the discount SHALL NOT affect the student balance until status is APPROVED.
  *
@@ -24,7 +24,7 @@ import type {
   DiscountRule,
 } from '@/types/finance'
 import { FinanceAuditService } from './finance-audit.service'
-import { updateBalance } from './student-account.service'
+import { updateBalanceAfterDiscount } from './student-account.service'
 
 // Error codes for discount operations
 export const DISCOUNT_ERRORS = {

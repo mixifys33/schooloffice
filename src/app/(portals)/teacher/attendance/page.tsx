@@ -158,7 +158,7 @@ export default function TeacherAttendancePage() {
       ) : (
         <div className={cn(cardStyles.base, 'p-8 text-center')}>
           <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-            <ClipboardList className="h-6 w-6 text-slate-400" />
+            <ClipboardList className="h-6 w-6 text-[var(--text-muted)]" />
           </div>
           <h3 className={cn(typography.sectionTitle, 'mb-2')}>
             No Classes Assigned
@@ -172,11 +172,11 @@ export default function TeacherAttendancePage() {
       {/* Link to History */}
       <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
         <Link 
-          href="/teacher/attendance/history"
+          href="/portals/teacher/attendance/history"
           className={cn(
             'flex items-center gap-1',
             typography.caption,
-            'hover:text-slate-900 dark:hover:text-white',
+            'hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]',
             transitions.color
           )}
         >
@@ -251,7 +251,7 @@ function AttendanceClassCard({ classData, isGloballyLocked }: AttendanceClassCar
       <ActionButton
         label={isDone ? 'View Attendance' : isLocked ? 'Locked - Admin Approval Required' : 'Take Attendance'}
         icon={isLocked && !isDone ? <Lock className="h-4 w-4" /> : undefined}
-        href={`/teacher/attendance/${classData.classId}`}
+        href={`/portals/teacher/attendance/${classData.classId}`}
         isPermitted={!isLocked || isDone}
         hideWhenNotPermitted={false}
         variant={isDone ? 'secondary' : 'primary'}

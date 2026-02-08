@@ -608,7 +608,7 @@ export class HubAlertService implements IHubAlertService {
       const { emailService } = await import('./email.service')
       
       const severityEmoji = alert.severity === HubAlertSeverity.CRITICAL ? '🚨' : '⚠️'
-      const severityColor = alert.severity === HubAlertSeverity.CRITICAL ? '#dc2626' : '#f59e0b'
+      const severityColor = alert.severity === HubAlertSeverity.CRITICAL ? 'var(--chart-red)' : 'var(--chart-yellow)'
       
       const subject = `${severityEmoji} [SchoolOffice Alert] ${alert.title}`
       
@@ -649,7 +649,7 @@ export class HubAlertService implements IHubAlertService {
               </tr>
             </table>
             
-            <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px;">
+            <div style="margin-top: 20px; padding: 15px; background-color: var(--warning-light); border-radius: 8px;">
               <p style="margin: 0; color: #92400e; font-size: 14px;">
                 <strong>Action Required:</strong> Please review this alert in the SchoolOffice Communication Hub dashboard.
               </p>

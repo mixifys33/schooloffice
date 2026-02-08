@@ -1,168 +1,354 @@
 /**
  * Finance Audit Service
- * Creates and queries immutable audit logs for all finance operations
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.7
+ * Provides immutable audit logging for all finance operations
+ * Requirements: 7.1, 7.2, 7.3, 7.4
  * 
- * Property 19: Finance Audit Log Immutability
- * For any finance audit log entry, modification or deletion attempts SHALL be rejected.
+ * Property 7: Reversal Audit Trail
+ * For any payment reversal, the system SHALL create an audit entry containing the original
+ * payment details, reversal reason, and user who performed the reversal.
  */
 import { prisma } from '@/lib/db'
-import type {
-  FinanceAuditEntry,
-  AuditLogInput,
-  AuditLogFilters,
-  FinanceAuditAction,
-  PaginatedAuditLogs,
-} from '@/types/finance'
+import type { FinanceAuditAction, FinanceAuditEntry } from '@/types/finance'
 
+// Error codes for audit operations
 export const AUDIT_ERRORS = {
-  AUDIT_LOG_IMMUTABLE: 'AUDIT_LOG_IMMUTABLE',
-  AUDIT_LOG_NOT_FOUND: 'AUDIT_LOG_NOT_FOUND',
   INVALID_ACTION: 'INVALID_ACTION',
-  MISSING_REQUIRED_FIELDS: 'MISSING_REQUIRED_FIELDS',
+  MISSING_DETAILS: 'MISSING_DETAILS',
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
 } as const
 
-export class FinanceAuditError extends Error {
-  constructor(public code: string, message: string, public details?: Record<string, unknown>) {
+export class AuditError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public details?: Record<string, unknown>
+  ) {
     super(message)
-    this.name = 'FinanceAuditError'
+    this.name = 'AuditError'
   }
 }
 
-const VALID_ACTIONS: FinanceAuditAction[] = [
-  'PAYMENT_RECORDED', 'PAYMENT_REVERSED', 'DISCOUNT_APPLIED', 'DISCOUNT_APPROVED',
-  'DISCOUNT_REJECTED', 'DISCOUNT_REMOVED', 'PENALTY_APPLIED', 'PENALTY_WAIVED',
-  'FEE_STRUCTURE_CREATED', 'FEE_STRUCTURE_UPDATED', 'RECEIPT_CANCELLED',
-  'SETTINGS_UPDATED', 'INVOICE_GENERATED', 'INVOICE_CANCELLED',
-]
-
-const VALID_RESOURCE_TYPES = ['Payment', 'Invoice', 'Receipt', 'Discount', 'Penalty', 'FeeStructure', 'Settings'] as const
-type ResourceType = typeof VALID_RESOURCE_TYPES[number]
-
-function isValidAction(action: string): action is FinanceAuditAction {
-  return VALID_ACTIONS.includes(action as FinanceAuditAction)
+interface LogActionInput {
+  action: FinanceAuditAction
+  entityType: string
+  entityId: string
+  details: Record<string, unknown>
+  userId: string
+  schoolId?: string
+  ipAddress?: string
+  userAgent?: string
 }
 
-function isValidResourceType(type: string): type is ResourceType {
-  return VALID_RESOURCE_TYPES.includes(type as ResourceType)
-}
+/**
+ * Log a finance audit action
+ * Creates an immutable audit trail entry
+ */
+export async function logAction(input: LogActionInput): Promise<FinanceAuditEntry> {
+  // Validate required fields
+  if (!input.action || !input.entityType || !input.entityId || !input.userId) {
+    throw new AuditError(
+      AUDIT_ERRORS.MISSING_DETAILS,
+      'Action, entityType, entityId, and userId are required'
+    )
+  }
 
-interface AuditLogRecord {
-  id: string; schoolId: string; userId: string; action: string; resourceType: string
-  resourceId: string; previousValue: unknown; newValue: unknown
-  reason: string | null; ipAddress: string | null; timestamp: Date
-}
+  // Get user information for audit context
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    include: {
+      staff: true,
+    },
+  })
 
-function mapToAuditEntry(record: AuditLogRecord): FinanceAuditEntry {
+  if (!user) {
+    throw new AuditError(
+      AUDIT_ERRORS.USER_NOT_FOUND,
+      'User not found'
+    )
+  }
+
+  // Determine school ID if not provided
+  const schoolId = input.schoolId || user.schoolId
+
+  // Create audit entry
+  const auditEntry = await prisma.financeAuditLog.create({
+    data: {
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      details: input.details,
+      userId: input.userId,
+      userName: user.staff ? `${user.staff.firstName} ${user.staff.lastName}` : user.email,
+      userRole: user.role,
+      schoolId,
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+      timestamp: new Date(),
+    },
+  })
+
   return {
-    id: record.id, schoolId: record.schoolId, userId: record.userId,
-    action: record.action as FinanceAuditAction,
-    resourceType: record.resourceType as FinanceAuditEntry['resourceType'],
-    resourceId: record.resourceId,
-    previousValue: record.previousValue as Record<string, unknown> | undefined,
-    newValue: record.newValue as Record<string, unknown> | undefined,
-    reason: record.reason ?? undefined, ipAddress: record.ipAddress ?? undefined,
-    timestamp: record.timestamp.toISOString(),
+    id: auditEntry.id,
+    action: auditEntry.action as FinanceAuditAction,
+    entityType: auditEntry.entityType,
+    entityId: auditEntry.entityId,
+    details: auditEntry.details as Record<string, unknown>,
+    userId: auditEntry.userId,
+    userName: auditEntry.userName,
+    userRole: auditEntry.userRole,
+    schoolId: auditEntry.schoolId,
+    ipAddress: auditEntry.ipAddress,
+    userAgent: auditEntry.userAgent,
+    timestamp: auditEntry.timestamp.toISOString(),
   }
 }
 
-export const FinanceAuditService = {
-  async logAction(data: AuditLogInput): Promise<FinanceAuditEntry> {
-    if (!data.schoolId || !data.userId || !data.action || !data.resourceType || !data.resourceId) {
-      throw new FinanceAuditError(AUDIT_ERRORS.MISSING_REQUIRED_FIELDS,
-        'Missing required fields: schoolId, userId, action, resourceType, and resourceId are required',
-        { provided: Object.keys(data) })
+/**
+ * Get audit trail for a specific entity
+ */
+export async function getEntityAuditTrail(
+  entityType: string,
+  entityId: string,
+  limit: number = 50
+): Promise<FinanceAuditEntry[]> {
+  const entries = await prisma.financeAuditLog.findMany({
+    where: {
+      entityType,
+      entityId,
+    },
+    orderBy: { timestamp: 'desc' },
+    take: limit,
+  })
+
+  return entries.map(entry => ({
+    id: entry.id,
+    action: entry.action as FinanceAuditAction,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    details: entry.details as Record<string, unknown>,
+    userId: entry.userId,
+    userName: entry.userName,
+    userRole: entry.userRole,
+    schoolId: entry.schoolId,
+    ipAddress: entry.ipAddress,
+    userAgent: entry.userAgent,
+    timestamp: entry.timestamp.toISOString(),
+  }))
+}
+
+/**
+ * Get audit trail for a user's actions
+ */
+export async function getUserAuditTrail(
+  userId: string,
+  schoolId?: string,
+  limit: number = 100
+): Promise<FinanceAuditEntry[]> {
+  const where: any = { userId }
+  
+  if (schoolId) {
+    where.schoolId = schoolId
+  }
+
+  const entries = await prisma.financeAuditLog.findMany({
+    where,
+    orderBy: { timestamp: 'desc' },
+    take: limit,
+  })
+
+  return entries.map(entry => ({
+    id: entry.id,
+    action: entry.action as FinanceAuditAction,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    details: entry.details as Record<string, unknown>,
+    userId: entry.userId,
+    userName: entry.userName,
+    userRole: entry.userRole,
+    schoolId: entry.schoolId,
+    ipAddress: entry.ipAddress,
+    userAgent: entry.userAgent,
+    timestamp: entry.timestamp.toISOString(),
+  }))
+}
+
+/**
+ * Search audit trail with filters
+ */
+export async function searchAuditTrail(
+  schoolId: string,
+  filters: {
+    actions?: FinanceAuditAction[]
+    entityTypes?: string[]
+    userIds?: string[]
+    startDate?: Date
+    endDate?: Date
+    searchTerm?: string
+  } = {},
+  page: number = 1,
+  limit: number = 50
+): Promise<{
+  entries: FinanceAuditEntry[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}> {
+  const offset = (page - 1) * limit
+
+  // Build where clause
+  const where: any = { schoolId }
+
+  if (filters.actions && filters.actions.length > 0) {
+    where.action = { in: filters.actions }
+  }
+
+  if (filters.entityTypes && filters.entityTypes.length > 0) {
+    where.entityType = { in: filters.entityTypes }
+  }
+
+  if (filters.userIds && filters.userIds.length > 0) {
+    where.userId = { in: filters.userIds }
+  }
+
+  if (filters.startDate || filters.endDate) {
+    where.timestamp = {}
+    if (filters.startDate) {
+      where.timestamp.gte = filters.startDate
     }
-    if (!isValidAction(data.action)) {
-      throw new FinanceAuditError(AUDIT_ERRORS.INVALID_ACTION,
-        `Invalid action: ${data.action}. Must be one of: ${VALID_ACTIONS.join(', ')}`,
-        { action: data.action, validActions: VALID_ACTIONS })
+    if (filters.endDate) {
+      where.timestamp.lte = filters.endDate
     }
-    if (!isValidResourceType(data.resourceType)) {
-      throw new FinanceAuditError(AUDIT_ERRORS.INVALID_ACTION,
-        `Invalid resource type: ${data.resourceType}. Must be one of: ${VALID_RESOURCE_TYPES.join(', ')}`,
-        { resourceType: data.resourceType, validTypes: VALID_RESOURCE_TYPES })
+  }
+
+  if (filters.searchTerm) {
+    where.OR = [
+      { userName: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { entityType: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { entityId: { contains: filters.searchTerm, mode: 'insensitive' } },
+    ]
+  }
+
+  // Get total count
+  const total = await prisma.financeAuditLog.count({ where })
+
+  // Get entries
+  const entries = await prisma.financeAuditLog.findMany({
+    where,
+    orderBy: { timestamp: 'desc' },
+    skip: offset,
+    take: limit,
+  })
+
+  return {
+    entries: entries.map(entry => ({
+      id: entry.id,
+      action: entry.action as FinanceAuditAction,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      details: entry.details as Record<string, unknown>,
+      userId: entry.userId,
+      userName: entry.userName,
+      userRole: entry.userRole,
+      schoolId: entry.schoolId,
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent,
+      timestamp: entry.timestamp.toISOString(),
+    })),
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  }
+}
+
+/**
+ * Get audit statistics for a school
+ */
+export async function getAuditStatistics(
+  schoolId: string,
+  startDate?: Date,
+  endDate?: Date
+): Promise<{
+  totalActions: number
+  actionBreakdown: Array<{ action: string; count: number }>
+  userBreakdown: Array<{ userId: string; userName: string; count: number }>
+  dailyActivity: Array<{ date: string; count: number }>
+}> {
+  const where: any = { schoolId }
+
+  if (startDate || endDate) {
+    where.timestamp = {}
+    if (startDate) {
+      where.timestamp.gte = startDate
     }
-    const auditLog = await prisma.financeAuditLog.create({
-      data: {
-        schoolId: data.schoolId, userId: data.userId, action: data.action,
-        resourceType: data.resourceType, resourceId: data.resourceId,
-        previousValue: data.previousValue ?? undefined, newValue: data.newValue ?? undefined,
-        reason: data.reason ?? undefined, ipAddress: data.ipAddress ?? undefined,
-        timestamp: new Date(),
-      },
-    })
-    return mapToAuditEntry(auditLog)
-  },
-
-  async queryLogs(schoolId: string, filters: AuditLogFilters = {}, page = 1, pageSize = 50): Promise<PaginatedAuditLogs> {
-    const validPage = Math.max(1, page)
-    const validPageSize = Math.min(100, Math.max(1, pageSize))
-    const skip = (validPage - 1) * validPageSize
-    const where: Record<string, unknown> = { schoolId }
-    if (filters.userId) where.userId = filters.userId
-    if (filters.action) where.action = filters.action
-    if (filters.resourceType) where.resourceType = filters.resourceType
-    if (filters.resourceId) where.resourceId = filters.resourceId
-    if (filters.dateFrom || filters.dateTo) {
-      where.timestamp = {}
-      if (filters.dateFrom) (where.timestamp as Record<string, Date>).gte = filters.dateFrom
-      if (filters.dateTo) (where.timestamp as Record<string, Date>).lte = filters.dateTo
+    if (endDate) {
+      where.timestamp.lte = endDate
     }
-    const [logs, total] = await Promise.all([
-      prisma.financeAuditLog.findMany({ where, orderBy: { timestamp: 'desc' }, skip, take: validPageSize }),
-      prisma.financeAuditLog.count({ where }),
-    ])
-    return {
-      data: logs.map(mapToAuditEntry),
-      pagination: { page: validPage, pageSize: validPageSize, total, totalPages: Math.ceil(total / validPageSize) },
-    }
-  },
+  }
 
-  async getResourceAuditTrail(resourceType: string, resourceId: string): Promise<FinanceAuditEntry[]> {
-    const logs = await prisma.financeAuditLog.findMany({
-      where: { resourceType, resourceId }, orderBy: { timestamp: 'desc' },
-    })
-    return logs.map(mapToAuditEntry)
-  },
+  // Get total actions
+  const totalActions = await prisma.financeAuditLog.count({ where })
 
-  async updateLog(): Promise<never> {
-    throw new FinanceAuditError(AUDIT_ERRORS.AUDIT_LOG_IMMUTABLE, 'Finance audit logs are immutable and cannot be updated')
-  },
+  // Get action breakdown
+  const actionBreakdown = await prisma.financeAuditLog.groupBy({
+    by: ['action'],
+    where,
+    _count: { action: true },
+    orderBy: { _count: { action: 'desc' } },
+  })
 
-  async deleteLog(): Promise<never> {
-    throw new FinanceAuditError(AUDIT_ERRORS.AUDIT_LOG_IMMUTABLE, 'Finance audit logs are immutable and cannot be deleted')
-  },
+  // Get user breakdown
+  const userBreakdown = await prisma.financeAuditLog.groupBy({
+    by: ['userId', 'userName'],
+    where,
+    _count: { userId: true },
+    orderBy: { _count: { userId: 'desc' } },
+    take: 10,
+  })
 
-  async getLogById(id: string): Promise<FinanceAuditEntry | null> {
-    const log = await prisma.financeAuditLog.findUnique({ where: { id } })
-    return log ? mapToAuditEntry(log) : null
-  },
+  // Get daily activity (last 30 days)
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  async getUserAuditTrail(schoolId: string, userId: string, limit = 100): Promise<FinanceAuditEntry[]> {
-    const logs = await prisma.financeAuditLog.findMany({
-      where: { schoolId, userId }, orderBy: { timestamp: 'desc' }, take: Math.min(limit, 1000),
-    })
-    return logs.map(mapToAuditEntry)
-  },
+  const dailyActivity = await prisma.$queryRaw<Array<{ date: string; count: bigint }>>`
+    SELECT 
+      DATE(timestamp) as date,
+      COUNT(*) as count
+    FROM FinanceAuditLog
+    WHERE schoolId = ${schoolId}
+      AND timestamp >= ${thirtyDaysAgo}
+    GROUP BY DATE(timestamp)
+    ORDER BY date DESC
+  `
 
-  async getRecentLogs(schoolId: string, limit = 20): Promise<FinanceAuditEntry[]> {
-    const logs = await prisma.financeAuditLog.findMany({
-      where: { schoolId }, orderBy: { timestamp: 'desc' }, take: Math.min(limit, 100),
-    })
-    return logs.map(mapToAuditEntry)
-  },
+  return {
+    totalActions,
+    actionBreakdown: actionBreakdown.map(item => ({
+      action: item.action,
+      count: item._count.action,
+    })),
+    userBreakdown: userBreakdown.map(item => ({
+      userId: item.userId,
+      userName: item.userName,
+      count: item._count.userId,
+    })),
+    dailyActivity: dailyActivity.map(item => ({
+      date: item.date,
+      count: Number(item.count),
+    })),
+  }
+}
 
-  async countLogs(schoolId: string, filters: AuditLogFilters = {}): Promise<number> {
-    const where: Record<string, unknown> = { schoolId }
-    if (filters.userId) where.userId = filters.userId
-    if (filters.action) where.action = filters.action
-    if (filters.resourceType) where.resourceType = filters.resourceType
-    if (filters.dateFrom || filters.dateTo) {
-      where.timestamp = {}
-      if (filters.dateFrom) (where.timestamp as Record<string, Date>).gte = filters.dateFrom
-      if (filters.dateTo) (where.timestamp as Record<string, Date>).lte = filters.dateTo
-    }
-    return prisma.financeAuditLog.count({ where })
-  },
+// Export the service as a class for consistency
+export class FinanceAuditService {
+  static logAction = logAction
+  static getEntityAuditTrail = getEntityAuditTrail
+  static getUserAuditTrail = getUserAuditTrail
+  static searchAuditTrail = searchAuditTrail
+  static getAuditStatistics = getAuditStatistics
 }

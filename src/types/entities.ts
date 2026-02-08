@@ -23,18 +23,27 @@ import {
   OTPVerificationStatus,
   GuardianStatus,
   GuardianFlag,
+  GuardianDocumentType,
+  RecipientType,
+  DeliveryStatus,
+  TargetType,
+  TriggerType,
+  ExecutionStatus,
+  NotificationType,
+  NotificationPriority,
+  MessageType,
 } from './enums'
 
 // ============================================
-// FEATURE FLAGS
+// FEATURE FLAGS - SIMPLIFIED (Binary: School has feature or doesn't use system)
 // ============================================
 
 export interface FeatureFlags {
   smsEnabled: boolean
-  whatsappEnabled: boolean
+  emailEnabled: boolean
   paymentIntegration: boolean
-  advancedReporting: boolean
-  bulkMessaging: boolean
+  // No per-class, per-role, or experimental toggles
+  // Either school has it or they don't use the system
 }
 
 // ============================================
@@ -283,7 +292,6 @@ export interface Guardian {
   phoneVerified: boolean
   email?: string
   emailVerified: boolean
-  whatsappNumber?: string
   nationalId?: string
   address?: string
   relationship: RelationshipType
@@ -305,7 +313,6 @@ export interface CreateGuardianInput {
   phone: string
   secondaryPhone?: string
   email?: string
-  whatsappNumber?: string
   nationalId?: string
   address?: string
   relationship?: RelationshipType
@@ -322,7 +329,6 @@ export interface UpdateGuardianInput {
   phone?: string
   secondaryPhone?: string
   email?: string
-  whatsappNumber?: string
   nationalId?: string
   address?: string
   relationship?: RelationshipType
@@ -1443,17 +1449,6 @@ export interface SystemRules {
 // Requirements: 4.1, 5.1-5.8, 6.1, 11.4, 12.1, 14.1-14.6, 16.1-16.6, 17.1-17.5
 // ============================================
 
-import {
-  NotificationType,
-  NotificationPriority,
-  TriggerType,
-  ExecutionStatus,
-  RecipientType,
-  DeliveryStatus,
-  TargetType,
-  MessageType,
-} from './enums'
-
 // ============================================
 // IN-APP NOTIFICATIONS - Requirements 4.1-4.5
 // ============================================
@@ -1528,7 +1523,6 @@ export interface Recipient {
   name: string
   phone?: string
   email?: string
-  whatsappNumber?: string
   preferredChannel: MessageChannel
 }
 
@@ -1830,7 +1824,6 @@ export interface GuardianContact {
   phoneVerified: boolean
   email?: string
   emailVerified: boolean
-  whatsappNumber?: string
   preferredChannel: MessageChannel
   isPrimary: boolean
 }

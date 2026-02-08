@@ -5,7 +5,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { StudentStatus, AttendanceStatus, PilotType } from '@/types/enums'
 
 export interface DashboardOverviewData {
   students: {
@@ -47,45 +46,90 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.log('Dashboard API: No session found')
+      return NextResponse.json({ error: 'Unauthorized', details: 'No valid session found' }, { status: 401 })
     }
 
     const schoolId = session.user.schoolId
+    if (!schoolId) {
+      console.log('Dashboard API: No schoolId found for user:', session.user.email)
+      return NextResponse.json({ 
+        error: 'School ID not found', 
+        details: 'User account is not associated with a school' 
+      }, { status: 400 })
+    }
+
+    console.log(`Dashboard API: Fetching data for school ${schoolId}, user ${session.user.email}`)
 
     // Get today's date normalized to start of day
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Fetch all data in parallel
+    // Fetch all data in parallel with error handling
     const [
       totalStudents,
       paidStudents,
       school,
       currentTerm,
       todayAttendance,
-    ] = await Promise.all([
+    ] = await Promise.allSettled([
       // Total students
       prisma.student.count({
-        where: { schoolId, status: StudentStatus.ACTIVE },
+        where: { schoolId, status: 'ACTIVE' },
       }),
       // Paid students (PAID pilot type)
       prisma.student.count({
-        where: { schoolId, status: StudentStatus.ACTIVE, pilotType: PilotType.PAID },
+        where: { schoolId, status: 'ACTIVE', pilotType: 'PAID' },
       }),
       // School details for SMS budget
       prisma.school.findUnique({
         where: { id: schoolId },
-        select: { smsBudgetPerTerm: true, isActive: true },
+        select: { smsBudgetPerTerm: true, isActive: true, name: true },
       }),
-      // Current term
-      prisma.term.findFirst({
-        where: {
-          academicYear: { schoolId, isActive: true },
-          startDate: { lte: today },
-          endDate: { gte: today },
-        },
-        select: { id: true, startDate: true, endDate: true },
-      }),
+      // Current term - First get the active academic year for the school, then find the term
+      (async () => {
+        console.log(`🔍 [Dashboard Overview] Looking for active academic year for school: ${schoolId}`);
+        const activeAcademicYear = await prisma.academicYear.findFirst({
+          where: {
+            schoolId,
+            isActive: true,
+          },
+          select: { id: true, name: true },
+        });
+        
+        if (!activeAcademicYear) {
+          console.log(`⚠️ [Dashboard Overview] No active academic year found for school: ${schoolId}`);
+          return null;
+        }
+        
+        console.log(`✅ [Dashboard Overview] Found active academic year: ${activeAcademicYear.name} (${activeAcademicYear.id})`);
+        console.log(`🔍 [Dashboard Overview] Looking for terms in academic year: ${activeAcademicYear.id}`);
+        
+        const termResult = await prisma.term.findFirst({
+          where: {
+            academicYearId: activeAcademicYear.id,
+          },
+          select: { 
+            id: true, 
+            name: true, 
+            startDate: true, 
+            endDate: true,
+            academicYear: {
+              select: {
+                name: true
+              }
+            }
+          },
+        });
+        
+        if (termResult) {
+          console.log(`✅ [Dashboard Overview] Found current term: ${termResult.name} (${termResult.id})`);
+        } else {
+          console.log(`⚠️ [Dashboard Overview] No terms found in academic year: ${activeAcademicYear.id}`);
+        }
+        
+        return termResult;
+      })(),
       // Today's attendance
       prisma.attendance.findMany({
         where: {
@@ -97,29 +141,43 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    // SMS sent this term (needs currentTerm to be resolved first)
-    const smsSentThisTerm = await prisma.message.count({
-      where: {
-        schoolId,
-        createdAt: currentTerm ? { gte: currentTerm.startDate } : undefined,
-      },
-    }).catch(() => 0)
+    // Extract values with fallbacks
+    const totalStudentsCount = totalStudents.status === 'fulfilled' ? totalStudents.value : 0
+    const paidStudentsCount = paidStudents.status === 'fulfilled' ? paidStudents.value : 0
+    const schoolData = school.status === 'fulfilled' ? school.value : null
+    const termData = currentTerm.status === 'fulfilled' ? currentTerm.value : null
+    const attendanceData = todayAttendance.status === 'fulfilled' ? todayAttendance.value : []
+
+    // SMS sent this term (with error handling)
+    let smsSentThisTerm = 0
+    try {
+      if (termData?.startDate) {
+        smsSentThisTerm = await prisma.message.count({
+          where: {
+            schoolId,
+            createdAt: { gte: termData.startDate },
+          },
+        })
+      }
+    } catch (error) {
+      console.warn('Could not fetch SMS count:', error)
+    }
 
     // Calculate unpaid students
-    const unpaidStudents = totalStudents - paidStudents
+    const unpaidStudents = totalStudentsCount - paidStudentsCount
 
     // Calculate SMS balance
-    const smsBudget = school?.smsBudgetPerTerm || 0
-    const smsBalance = Math.max(0, smsBudget - (smsSentThisTerm || 0))
+    const smsBudget = schoolData?.smsBudgetPerTerm || 0
+    const smsBalance = Math.max(0, smsBudget - smsSentThisTerm)
 
     // Calculate attendance percentages
-    const presentCount = todayAttendance.filter(
-      (a) => a.status === AttendanceStatus.PRESENT || a.status === AttendanceStatus.LATE
+    const presentCount = attendanceData.filter(
+      (a) => a.status === 'PRESENT' || a.status === 'LATE'
     ).length
-    const absentCount = todayAttendance.filter(
-      (a) => a.status === AttendanceStatus.ABSENT
+    const absentCount = attendanceData.filter(
+      (a) => a.status === 'ABSENT'
     ).length
-    const totalAttendanceRecords = todayAttendance.length
+    const totalAttendanceRecords = attendanceData.length
 
     const presentPercentage = totalAttendanceRecords > 0
       ? Math.round((presentCount / totalAttendanceRecords) * 100)
@@ -129,7 +187,7 @@ export async function GET(request: NextRequest) {
       : 0
 
     // Calculate alerts
-    const paymentOverdue = !school?.isActive
+    const paymentOverdue = !schoolData?.isActive
     const smsBalanceLow = smsBalance < 50
     
     // Term ending soon (within 14 days)
@@ -137,24 +195,28 @@ export async function GET(request: NextRequest) {
     let daysUntilTermEnd: number | undefined
     let termEndDate: string | undefined
     
-    if (currentTerm?.endDate) {
-      const termEnd = new Date(currentTerm.endDate)
+    if (termData?.endDate) {
+      const termEnd = new Date(termData.endDate)
       const diffTime = termEnd.getTime() - today.getTime()
       daysUntilTermEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       termEndingSoon = daysUntilTermEnd <= 14 && daysUntilTermEnd > 0
-      termEndDate = currentTerm.endDate.toISOString()
+      termEndDate = termData.endDate.toISOString()
     }
 
     // Get school features for subscription status
-    // Requirement 14.3: Check if features are restricted for unpaid schools
-    const schoolFeatures = await prisma.school.findUnique({
-      where: { id: schoolId },
-      select: { 
-        isActive: true, 
-        features: true,
-        licenseType: true 
-      }
-    })
+    let schoolFeatures = null
+    try {
+      schoolFeatures = await prisma.school.findUnique({
+        where: { id: schoolId },
+        select: { 
+          isActive: true, 
+          features: true,
+          licenseType: true 
+        }
+      })
+    } catch (error) {
+      console.warn('Could not fetch school features:', error)
+    }
 
     const features = schoolFeatures?.features as { 
       smsEnabled?: boolean
@@ -175,12 +237,12 @@ export async function GET(request: NextRequest) {
 
     const data: DashboardOverviewData = {
       students: {
-        total: totalStudents,
-        paid: paidStudents,
+        total: totalStudentsCount,
+        paid: paidStudentsCount,
         unpaid: unpaidStudents,
       },
       sms: {
-        sentThisTerm: smsSentThisTerm || 0,
+        sentThisTerm: smsSentThisTerm,
         balance: smsBalance,
       },
       attendance: {
@@ -205,12 +267,35 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    return NextResponse.json(data)
+    // Add context data
+    const responseData = {
+      ...data,
+      context: {
+        schoolName: schoolData?.name || 'School Dashboard',
+        currentTerm: termData?.name || 'Current Term',
+        academicYear: termData?.academicYear?.name || new Date().getFullYear().toString(),
+      }
+    }
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Error fetching dashboard overview:', error)
+    
+    // Return a more detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard overview data' },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch dashboard overview data',
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     )
   }
 }

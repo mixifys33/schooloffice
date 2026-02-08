@@ -76,6 +76,9 @@ export function OnboardingProvider({
   React.useEffect(() => {
     const loadState = () => {
       try {
+        // Ensure we're on the client side
+        if (typeof window === 'undefined') return
+        
         const stored = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
         if (stored) {
           const parsed = JSON.parse(stored)
@@ -114,7 +117,9 @@ export function OnboardingProvider({
 
   const saveState = (newState: OnboardingState) => {
     try {
-      localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(newState))
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(newState))
+      }
     } catch (error) {
       console.error('Failed to save onboarding state:', error)
     }

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Onboarding Button Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button-demo {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .normal-state {
+            background-color: transparent;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        .normal-state:hover {
+            background-color: #f3f4f6;
+        }
+        .incomplete-state {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+            position: relative;
+        }
+        .incomplete-state:hover {
+            background-color: #fde68a;
+        }
+        .loading-state {
+            background-color: #e5e7eb;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        .notification-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .code-block {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .highlight {
+            background-color: #fbbf24;
+            color: #000;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .instructions {
+            background-color: #dbeafe;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            color: #1e40af;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Staff Onboarding Button Test Guide</h1>
+    
+    <div class="instructions">
+        <h3>📍 Where to Find the Button</h3>
+        <p>The staff onboarding button is located in the <strong>top header/navigation bar</strong> of your dashboard, next to the theme toggle and notifications. Look for:</p>
+        <ul>
+            <li>A <strong>UserCog icon</strong> (⚙️👤)</li>
+            <li>It appears <strong>only for School Admin users</strong></li>
+            <li>It may have different visual states based on your setup status</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Button Visual States</h2>
+        <p>The onboarding button will appear in different states depending on your school's setup:</p>
+        
+        <h3>1. Normal State (Setup Complete)</h3>
+        <button class="button-demo normal-state">
+            <span>⚙️👤</span>
+        </button>
+        <p><em>Gray/neutral appearance when all required staff are registered</em></p>
+
+        <h3>2. Attention State (Setup Incomplete)</h3>
+        <button class="button-demo incomplete-state">
+            <span>⚙️👤</span>
+            <div class="notification-dot"></div>
+        </button>
+        <p><em>Amber/yellow background with red notification dot when staff setup is needed</em></p>
+
+        <h3>3. Loading State</h3>
+        <button class="button-demo loading-state">
+            <div class="spinner"></div>
+        </button>
+        <p><em>Shows spinner when clicked and loading</em></p>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 How to Test</h2>
+        <ol>
+            <li><strong>Login as School Admin</strong> - The button only appears for this role</li>
+            <li><strong>Look in the header</strong> - Top right area, near theme toggle</li>
+            <li><strong>Check for visual indicators</strong>:
+                <ul>
+                    <li>Red dot = Setup incomplete</li>
+                    <li>Amber background = Action needed</li>
+                    <li>Spinner = Loading after click</li>
+                </ul>
+            </li>
+            <li><strong>Click the button</strong> - Should show loading animation then open modal</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Debugging Steps</h2>
+        <p>If you can't see the button, run this in your browser console:</p>
+        
+        <div class="code-block">
+// Check if you're logged in as School Admin
+fetch('/api/auth/session')
+  .then(r => r.json())
+  .then(session => {
+    console.log('User role:', session?.user?.role);
+    console.log('Should see button:', session?.user?.role === 'SCHOOL_ADMIN');
+  });
+
+// Look for the button in DOM
+const button = document.querySelector('button[title*="Staff Onboarding"]');
+console.log('Button found:', !!button);
+if (button) {
+  console.log('Button element:', button);
+  button.style.border = '3px solid red'; // Highlight it
+}
+
+// Check onboarding status
+fetch('/api/staff/onboarding/status')
+  .then(r => r.json())
+  .then(data => {
+    console.log('Onboarding status:', data);
+    console.log('Setup complete:', data.isComplete);
+    console.log('Missing roles:', data.missingRoles);
+  });
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Expected Behavior</h2>
+        <ul>
+            <li><strong>Button visible</strong> - Only for School Admin users</li>
+            <li><strong>Visual feedback</strong> - Different states based on setup status</li>
+            <li><strong>Loading animation</strong> - Spinner appears when clicked</li>
+            <li><strong>Modal opens</strong> - Staff onboarding dialog appears</li>
+            <li><strong>Dashboard banner</strong> - Prominent banner on dashboard if setup incomplete</li>
+        </ul>
+    </div>
+
+    <div class="instructions">
+        <h3>🚨 Still Not Working?</h3>
+        <p>If the button still doesn't appear or work:</p>
+        <ol>
+            <li>Refresh the page completely</li>
+            <li>Check browser console for errors</li>
+            <li>Verify you're logged in as SCHOOL_ADMIN</li>
+            <li>Run the debugging script above</li>
+            <li>Look for the prominent banner on the dashboard page</li>
+        </ol>
+    </div>
+</body>
+</html>

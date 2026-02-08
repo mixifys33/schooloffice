@@ -66,11 +66,11 @@ export function FormField({
         className={cn(
           'block',
           touchFriendly && 'text-base', // Larger text for touch
-          error && 'text-red-600 dark:text-red-400'
+          error && 'text-[var(--chart-red)] dark:text-[var(--danger)]'
         )}
       >
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-[var(--danger)]">*</span>}
       </Label>
       
       <Input
@@ -86,18 +86,18 @@ export function FormField({
         aria-describedby={error ? errorId : helpText ? helpId : undefined}
         aria-invalid={error ? 'true' : undefined}
         className={cn(
-          error && 'border-red-500 focus-visible:ring-red-500'
+          error && 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
         )}
       />
       
       {helpText && !error && (
-        <p id={helpId} className="text-sm text-gray-500 dark:text-gray-400">
+        <p id={helpId} className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           {helpText}
         </p>
       )}
       
       {error && (
-        <p id={errorId} className="text-sm text-red-600 dark:text-red-400">
+        <p id={errorId} className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">
           {error}
         </p>
       )}
@@ -149,11 +149,11 @@ export function SelectField({
         className={cn(
           'block',
           touchFriendly && 'text-base',
-          error && 'text-red-600 dark:text-red-400'
+          error && 'text-[var(--chart-red)] dark:text-[var(--danger)]'
         )}
       >
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-[var(--danger)]">*</span>}
       </Label>
       
       <select
@@ -170,7 +170,7 @@ export function SelectField({
           'disabled:cursor-not-allowed disabled:opacity-50',
           touchFriendly && 'h-12 text-base px-4',
           !touchFriendly && 'h-10',
-          error && 'border-red-500 focus-visible:ring-red-500'
+          error && 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
         )}
       >
         {placeholder && (
@@ -186,13 +186,13 @@ export function SelectField({
       </select>
       
       {helpText && !error && (
-        <p id={helpId} className="text-sm text-gray-500 dark:text-gray-400">
+        <p id={helpId} className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           {helpText}
         </p>
       )}
       
       {error && (
-        <p id={errorId} className="text-sm text-red-600 dark:text-red-400">
+        <p id={errorId} className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">
           {error}
         </p>
       )}
@@ -245,11 +245,11 @@ export function PasswordField({
         className={cn(
           'block',
           touchFriendly && 'text-base',
-          error && 'text-red-600 dark:text-red-400'
+          error && 'text-[var(--chart-red)] dark:text-[var(--danger)]'
         )}
       >
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-[var(--danger)]">*</span>}
       </Label>
       
       <div className="relative">
@@ -267,14 +267,14 @@ export function PasswordField({
           aria-invalid={error ? 'true' : undefined}
           className={cn(
             'pr-12',
-            error && 'border-red-500 focus-visible:ring-red-500'
+            error && 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
           )}
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className={cn(
-            'absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none',
+            'absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-secondary)] focus:outline-none',
             touchFriendly && 'p-1'
           )}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -293,13 +293,13 @@ export function PasswordField({
       </div>
       
       {helpText && !error && (
-        <p id={helpId} className="text-sm text-gray-500 dark:text-gray-400">
+        <p id={helpId} className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           {helpText}
         </p>
       )}
       
       {error && (
-        <p id={errorId} className="text-sm text-red-600 dark:text-red-400">
+        <p id={errorId} className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">
           {error}
         </p>
       )}
@@ -354,7 +354,7 @@ export function CheckboxField({
           onChange={onChange}
           disabled={disabled}
           className={cn(
-            'rounded border-gray-300 text-blue-600 focus:ring-blue-500',
+            'rounded border-[var(--border-default)] text-[var(--chart-blue)] focus:ring-[var(--accent-primary)]',
             touchFriendly && 'h-5 w-5', // Larger checkbox for touch
             !touchFriendly && 'h-4 w-4'
           )}
@@ -365,13 +365,13 @@ export function CheckboxField({
       </label>
       
       {helpText && !error && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 ml-8">
+        <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] ml-8">
           {helpText}
         </p>
       )}
       
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 ml-8">
+        <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] ml-8">
           {error}
         </p>
       )}
@@ -425,11 +425,11 @@ export function TextareaField({
         className={cn(
           'block',
           touchFriendly && 'text-base',
-          error && 'text-red-600 dark:text-red-400'
+          error && 'text-[var(--chart-red)] dark:text-[var(--danger)]'
         )}
       >
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && <span className="ml-1 text-[var(--danger)]">*</span>}
       </Label>
       
       <textarea
@@ -449,18 +449,18 @@ export function TextareaField({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-50',
           touchFriendly && 'text-base px-4 py-3',
-          error && 'border-red-500 focus-visible:ring-red-500'
+          error && 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
         )}
       />
       
       {helpText && !error && (
-        <p id={helpId} className="text-sm text-gray-500 dark:text-gray-400">
+        <p id={helpId} className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           {helpText}
         </p>
       )}
       
       {error && (
-        <p id={errorId} className="text-sm text-red-600 dark:text-red-400">
+        <p id={errorId} className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">
           {error}
         </p>
       )}

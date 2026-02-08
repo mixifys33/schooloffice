@@ -68,9 +68,12 @@ const TARGET_TYPE_OPTIONS = [
 
 const CHANNEL_OPTIONS = [
   { value: MessageChannel.SMS, label: 'SMS', icon: Smartphone },
-  { value: MessageChannel.WHATSAPP, label: 'WhatsApp', icon: MessageSquare },
-  { value: MessageChannel.EMAIL, label: 'Email', icon: Mail },
 ]
+
+// SMS constraints for Uganda market
+const SMS_MAX_CHARACTERS = 160
+const SMS_WARNING_THRESHOLD = 140
+const SMS_COST_UGX = 45
 
 export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerProps) {
   const [targetType, setTargetType] = useState<TargetType>(TargetType.ENTIRE_SCHOOL)
@@ -188,6 +191,10 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
       setError('Please enter a message')
       return
     }
+    if (useCustomContent && customContent.length > SMS_MAX_CHARACTERS) {
+      setError(`Message exceeds ${SMS_MAX_CHARACTERS} character limit`)
+      return
+    }
     if (targetType === TargetType.CLASS && selectedClasses.length === 0) {
       setError('Please select at least one class')
       return
@@ -251,7 +258,10 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
   }
 
   const characterCount = customContent.length
-  const smsSegments = Math.ceil(characterCount / 160) || 1
+  const isOverLimit = characterCount > SMS_MAX_CHARACTERS
+  const isNearLimit = characterCount > SMS_WARNING_THRESHOLD
+  const remainingChars = SMS_MAX_CHARACTERS - characterCount
+  const estimatedCost = SMS_COST_UGX // Single segment only
 
   return (
     <Card>
@@ -263,7 +273,7 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto"><X className="h-4 w-4" /></button>
@@ -271,7 +281,7 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
         )}
 
         {success && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/20 dark:text-[var(--success)]">
             <CheckCircle className="h-4 w-4" />
             <span className="text-sm">{success}</span>
             <button onClick={() => setSuccess(null)} className="ml-auto"><X className="h-4 w-4" /></button>
@@ -396,24 +406,15 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
 
         <div className="space-y-2">
           <label className="block text-sm font-medium">Channel</label>
-          <div className="flex gap-2">
-            {CHANNEL_OPTIONS.map((option) => {
-              const Icon = option.icon
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedChannel(option.value)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md border text-sm ${
-                    selectedChannel === option.value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background border-input hover:bg-accent'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {option.label}
-                </button>
-              )
-            })}
+          <div className="p-3 rounded-md bg-muted/50 border">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4" />
+              <span className="text-sm font-medium">SMS Only</span>
+              <span className="text-xs text-muted-foreground">UGX {SMS_COST_UGX} per message</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              WhatsApp and Email have been removed to keep costs low and ensure universal accessibility.
+            </p>
           </div>
         </div>
 
@@ -451,16 +452,60 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
           <label className="block text-sm font-medium">{useCustomContent ? 'Message' : 'Preview'}</label>
           <textarea
             value={customContent}
-            onChange={(e) => setCustomContent(e.target.value)}
-            placeholder={useCustomContent ? 'Type your message...' : 'Select a template'}
+            onChange={(e) => {
+              const newValue = e.target.value
+              // Strictly enforce 160 character limit - prevent typing beyond it
+              if (newValue.length <= SMS_MAX_CHARACTERS) {
+                setCustomContent(newValue)
+              }
+            }}
+            onPaste={(e) => {
+              // Handle paste events to enforce character limit
+              e.preventDefault()
+              const pastedText = e.clipboardData.getData('text')
+              const currentText = customContent
+              const availableSpace = SMS_MAX_CHARACTERS - currentText.length
+              const textToAdd = pastedText.slice(0, availableSpace)
+              setCustomContent(currentText + textToAdd)
+            }}
+            placeholder={useCustomContent ? 'Type your message... (160 characters max)' : 'Select a template'}
             rows={4}
             readOnly={!useCustomContent}
-            className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none ${!useCustomContent ? 'bg-muted/50' : ''}`}
+            maxLength={SMS_MAX_CHARACTERS}
+            className={`w-full rounded-md border px-3 py-2 text-sm resize-none ${
+              !useCustomContent ? 'bg-muted/50 border-input' : 
+              isOverLimit ? 'border-[var(--danger)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20' :
+              isNearLimit ? 'border-[var(--warning)] bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/20' :
+              'border-input bg-background'
+            }`}
           />
-          {selectedChannel === MessageChannel.SMS && (
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{characterCount} chars</span>
-              <span>{smsSegments} segment{smsSegments > 1 ? 's' : ''}</span>
+          <div className="flex justify-between items-center text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`${
+                isOverLimit ? 'text-[var(--chart-red)]' : 
+                isNearLimit ? 'text-[var(--chart-yellow)]' : 
+                'text-muted-foreground'
+              }`}>
+                {characterCount}/{SMS_MAX_CHARACTERS} characters
+              </span>
+              {isOverLimit && (
+                <span className="text-[var(--chart-red)] font-medium">
+                  ({Math.abs(remainingChars)} over limit)
+                </span>
+              )}
+              {isNearLimit && !isOverLimit && (
+                <span className="text-[var(--chart-yellow)]">
+                  ({remainingChars} remaining)
+                </span>
+              )}
+            </div>
+            <div className="text-muted-foreground">
+              Cost: UGX {estimatedCost}
+            </div>
+          </div>
+          {isOverLimit && (
+            <div className="text-xs text-[var(--chart-red)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20 p-2 rounded">
+              Message exceeds 160 character limit. Please shorten your message to avoid additional charges.
             </div>
           )}
         </div>
@@ -474,8 +519,8 @@ export function MessageComposer({ onSendSuccess, onSendError }: MessageComposerP
                 onClick={() => setPriority(p)}
                 className={`px-4 py-2 rounded-md border text-sm capitalize ${
                   priority === p
-                    ? p === 'critical' ? 'bg-red-500 text-white'
-                      : p === 'high' ? 'bg-yellow-500 text-white'
+                    ? p === 'critical' ? 'bg-[var(--danger)] text-[var(--white-pure)]'
+                      : p === 'high' ? 'bg-[var(--warning)] text-[var(--white-pure)]'
                       : 'bg-primary text-primary-foreground'
                     : 'bg-background border-input hover:bg-accent'
                 }`}

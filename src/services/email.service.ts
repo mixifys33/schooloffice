@@ -108,7 +108,7 @@ export function generateBrandedEmailTemplate(
     .email-container {
       max-width: 600px;
       margin: 0 auto;
-      background-color: #ffffff;
+      background-color: var(--white-pure);
     }
     .email-header {
       background-color: ${primaryColor};
@@ -120,7 +120,7 @@ export function generateBrandedEmailTemplate(
       margin-bottom: 10px;
     }
     .email-header h1 {
-      color: #ffffff;
+      color: var(--white-pure);
       margin: 0;
       font-size: 24px;
       font-weight: 600;
@@ -146,7 +146,7 @@ export function generateBrandedEmailTemplate(
       display: inline-block;
       padding: 12px 24px;
       background-color: ${primaryColor};
-      color: #ffffff;
+      color: var(--white-pure);
       text-decoration: none;
       border-radius: 6px;
       font-weight: 500;
@@ -254,7 +254,7 @@ export function generateTeacherInvitationEmail(
       <a href="${loginUrl}" class="button">Login to Your Account</a>
     </p>
     
-    <p style="color: #ef4444; margin-top: 20px;">
+    <p style="color: var(--chart-red); margin-top: 20px;">
       <strong>Important:</strong> You will be required to change your password on first login.
     </p>
     
@@ -326,45 +326,114 @@ export function generatePasswordResetEmail(
   recipientName: string,
   resetCode: string,
   resetUrl: string,
-  expiryMinutes: number = 30
+  expiryMinutes: number = 15
 ): { subject: string; html: string; text: string } {
-  const subject = 'Password Reset Request'
+  const subject = 'SchoolOffice Password Reset Code'
   
   const html = `
-    <h2>Password Reset Request</h2>
-    <p>Hello${recipientName ? `, ${recipientName}` : ''},</p>
-    <p>We received a request to reset your password. Use the code below or click the button to reset your password:</p>
-    
-    <div style="text-align: center;">
-      <span class="verification-code">${resetCode}</span>
+    <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #1a56db 0%, #3b82f6 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <div style="background: rgba(255,255,255,0.1); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+          <div style="color: white; font-size: 32px;">🔐</div>
+        </div>
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">SchoolOffice</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px;">Secure • Reliable • Built for Schools</p>
+      </div>
+      
+      <!-- Main Content -->
+      <div style="background: white; padding: 40px 30px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+        <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 24px; font-weight: 600;">Password Reset Code</h2>
+        
+        <p style="color: #374151; font-size: 16px; margin: 0 0 20px;">Hello,</p>
+        
+        <p style="color: #374151; font-size: 16px; margin: 0 0 25px;">
+          We received a request to reset the password for your SchoolOffice account.
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; margin: 0 0 25px;">
+          To continue, enter the verification code below in the password reset screen:
+        </p>
+        
+        <!-- Verification Code Box -->
+        <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+          <p style="color: #64748b; font-size: 14px; margin: 0 0 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Verification Code</p>
+          <div style="font-size: 36px; font-weight: bold; color: #1a56db; letter-spacing: 8px; font-family: 'Courier New', monospace; margin: 10px 0;">${resetCode}</div>
+        </div>
+        
+        <!-- Expiry Warning -->
+        <div style="background: #fef3cd; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 25px 0;">
+          <p style="color: #92400e; font-size: 14px; margin: 0; display: flex; align-items: center;">
+            <span style="margin-right: 8px;">⏱️</span>
+            <strong>This code will expire in ${expiryMinutes} minutes for security reasons.</strong>
+          </p>
+        </div>
+        
+        <!-- Security Notice -->
+        <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 30px 0;">
+          <h3 style="color: #0c4a6e; margin: 0 0 10px; font-size: 16px; font-weight: 600;">Didn't request this?</h3>
+          <p style="color: #0c4a6e; font-size: 14px; margin: 0;">
+            If you did not request a password reset, ignore this email. Your account is safe and no changes will be made.
+          </p>
+        </div>
+        
+        <!-- Help Section -->
+        <div style="background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; padding: 20px; margin: 30px 0;">
+          <h3 style="color: #374151; margin: 0 0 10px; font-size: 16px; font-weight: 600;">Need help?</h3>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            If you are unable to reset your password or believe this email was sent in error, contact your school administrator or the SchoolOffice support team.
+          </p>
+        </div>
+        
+        <p style="color: #374151; font-size: 16px; margin: 30px 0 0;">
+          Thank you for using SchoolOffice.
+        </p>
+      </div>
+      
+      <!-- Footer -->
+      <div style="background: #f9fafb; padding: 30px; text-align: center; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1a56db; margin: 0 0 5px; font-size: 20px; font-weight: 600;">SchoolOffice System</h3>
+          <p style="color: #6b7280; margin: 0; font-size: 14px;">Secure • Reliable • Built for Schools</p>
+        </div>
+        
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0; line-height: 1.5;">
+            This email was sent by SchoolOffice for account security purposes.<br>
+            If you believe you received this email in error, please contact your school administrator.
+          </p>
+        </div>
+      </div>
     </div>
-    
-    <p style="text-align: center; margin-top: 20px;">
-      <a href="${resetUrl}" class="button">Reset Password</a>
-    </p>
-    
-    <p>This code will expire in <strong>${expiryMinutes} minutes</strong>.</p>
-    
-    <p style="color: #ef4444; margin-top: 20px;">
-      <strong>Security Notice:</strong> If you didn't request this password reset, please ignore this email. 
-      Your password will remain unchanged.
-    </p>
   `
   
   const text = `
-Password Reset Request
+SchoolOffice Password Reset Code
 
-Hello${recipientName ? `, ${recipientName}` : ''},
+Hello,
 
-We received a request to reset your password.
+We received a request to reset the password for your SchoolOffice account.
 
-Your reset code is: ${resetCode}
+To continue, enter the verification code below in the password reset screen:
 
-Or use this link: ${resetUrl}
+Verification Code: ${resetCode}
 
-This code will expire in ${expiryMinutes} minutes.
+⏱️ This code will expire in ${expiryMinutes} minutes for security reasons.
 
-SECURITY NOTICE: If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
+Didn't request this?
+If you did not request a password reset, ignore this email. Your account is safe and no changes will be made.
+
+Need help?
+If you are unable to reset your password or believe this email was sent in error, contact your school administrator or the SchoolOffice support team.
+
+Thank you for using SchoolOffice.
+
+---
+SchoolOffice System
+Secure • Reliable • Built for Schools
+
+This email was sent by SchoolOffice for account security purposes.
+If you believe you received this email in error, please contact your school administrator.
   `.trim()
   
   return { subject, html, text }
@@ -771,8 +840,14 @@ export class EmailService {
     recipientName: string,
     resetCode: string,
     branding?: SchoolBranding,
-    expiryMinutes: number = 30
+    expiryMinutes: number = 15
   ): Promise<EmailResult> {
+    console.log('🔧 [Email Service] sendPasswordReset called with:', {
+      email,
+      resetCode,
+      recipientName,
+      expiryMinutes
+    })
     const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?code=${resetCode}`
     const { subject, html, text } = generatePasswordResetEmail(
       recipientName,

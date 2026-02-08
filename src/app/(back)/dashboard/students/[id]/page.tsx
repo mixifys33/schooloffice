@@ -137,7 +137,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
         const classesData = classesRes.ok ? await classesRes.json() : []
 
         setStudent(studentData)
-        setClasses(classesData)
+        // Ensure classes is always an array
+        setClasses(Array.isArray(classesData) ? classesData : [])
         setFormData({
           firstName: studentData.firstName,
           lastName: studentData.lastName,
@@ -158,7 +159,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     fetchData()
   }, [id])
 
-  const selectedClass = classes.find((c) => c.id === formData.classId)
+  const selectedClass = Array.isArray(classes) ? classes.find((c) => c.id === formData.classId) : null
   const streams = selectedClass?.streams || []
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -366,7 +367,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                   value={formData.classId}
                   onChange={handleChange}
                   required
-                  options={classes.map((c) => ({ value: c.id, label: c.name }))}
+                  options={Array.isArray(classes) ? classes.map((c) => ({ value: c.id, label: c.name })) : []}
                 />
                 <SelectField
                   label="Stream"
@@ -424,7 +425,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
               {student.guardians.map((guardian) => (
                 <div 
                   key={guardian.id} 
-                  className={`p-3 rounded-lg ${guardian.isPrimary ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800' : 'bg-muted'}`}
+                  className={`p-3 rounded-lg ${guardian.isPrimary ? 'bg-[var(--info-light)] dark:bg-[var(--info-dark)] border border-[var(--info-light)] dark:border-[var(--info-dark)]' : 'bg-muted'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">{guardian.name}</span>
@@ -466,7 +467,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
             <InfoRow 
               label="Balance" 
               value={`UGX ${student.balance.toLocaleString()}`}
-              valueClass={student.balance > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}
+              valueClass={student.balance > 0 ? 'text-[var(--chart-red)] font-semibold' : 'text-[var(--chart-green)] font-semibold'}
             />
             <div className="pt-2">
               <PaymentStatusBadge status={student.paymentStatus} />
@@ -487,7 +488,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
             <InfoRow 
               label="Remaining" 
               value={(student.smsLimitPerTerm - student.smsSentCount).toString()}
-              valueClass={student.smsSentCount >= student.smsLimitPerTerm ? 'text-red-600' : ''}
+              valueClass={student.smsSentCount >= student.smsLimitPerTerm ? 'text-[var(--chart-red)]' : ''}
             />
             <InfoRow label="Pilot Type" value={student.pilotType} />
           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { 
   ClipboardList, 
@@ -108,10 +109,30 @@ function TeacherDashboardSkeleton() {
 }
 
 export default function TeacherDashboardPage() {
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [data, setData] = useState<TeacherDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Authentication check
+  useEffect(() => {
+    if (status === 'loading') return // Still loading
+    
+    if (!session?.user) {
+      console.log('No session found, redirecting to login')
+      router.push('/login')
+      return
+    }
+    
+    // Check if user has required data
+    if (!session.user.schoolId) {
+      console.warn('User has no schoolId, this may cause API issues')
+      setError('Session error: No school ID found. Please log out and log in again.')
+      setLoading(false)
+      return
+    }
+  }, [session, status, router])
 
   const fetchDashboardData = async () => {
     try {
@@ -128,11 +149,68 @@ export default function TeacherDashboardPage() {
           router.push('/dashboard/access-denied')
           return
         }
-        throw new Error('Failed to fetch dashboard data')
+        
+        // Get more detailed error information
+        let errorMessage = 'Failed to fetch dashboard data'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch (e) {
+          // If we can't parse the error response, use the default message
+        }
+        
+        console.error(`Dashboard API error: ${response.status} - ${errorMessage}`)
+        throw new Error(errorMessage)
       }
       
-      const dashboardData = await response.json()
-      setData(dashboardData)
+      const responseData = await response.json()
+      
+      // Handle the API response structure with context and dashboard
+      if (responseData.context?.contextError) {
+        setError(responseData.context.contextError)
+        return
+      }
+      
+      // Set the dashboard data from the response with additional safety checks
+      const dashboardData = responseData.dashboard
+      if (dashboardData) {
+        // Ensure all nested objects are properly handled
+        const safeDashboardData = {
+          ...dashboardData,
+          alerts: {
+            pendingAttendance: (dashboardData.alerts?.pendingAttendance || []).map(alert => ({
+              ...alert,
+              message: String(alert.message || 'Alert'),
+              className: String(alert.className || 'Class')
+            })),
+            marksDeadlines: (dashboardData.alerts?.marksDeadlines || []).map(alert => ({
+              ...alert,
+              message: String(alert.message || 'Alert'),
+              examName: String(alert.examName || 'Exam'),
+              subjectName: String(alert.subjectName || 'Subject')
+            })),
+            unsubmittedReports: (dashboardData.alerts?.unsubmittedReports || []).map(alert => ({
+              ...alert,
+              message: String(alert.message || 'Alert'),
+              className: String(alert.className || 'Class')
+            }))
+          },
+          classes: (dashboardData.classes || []).map(cls => ({
+            ...cls,
+            className: String(cls.className || 'Class'),
+            subject: String(cls.subject || 'Subject'),
+            term: String(cls.term || 'Term')
+          })),
+          tasks: (dashboardData.tasks || []).map(task => ({
+            ...task,
+            title: String(task.title || 'Task'),
+            description: task.description ? String(task.description) : undefined
+          }))
+        }
+        setData(safeDashboardData)
+      } else {
+        setData(null)
+      }
     } catch (err) {
       console.error('Error fetching teacher dashboard:', err)
       setError('Unable to load dashboard data. Please try again.')
@@ -142,8 +220,28 @@ export default function TeacherDashboardPage() {
   }
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    // Only fetch data after authentication is confirmed
+    if (status === 'authenticated' && session?.user?.schoolId) {
+      fetchDashboardData()
+    }
+  }, [status, session?.user?.schoolId])
+
+  // Show loading while checking authentication
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render anything if no session (will redirect)
+  if (!session?.user) {
+    return null
+  }
 
   if (loading) {
     return <TeacherDashboardSkeleton />
@@ -153,7 +251,7 @@ export default function TeacherDashboardPage() {
     return (
       <div className="space-y-6 p-4 sm:p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Teacher Dashboard
           </h1>
         </div>
@@ -174,38 +272,38 @@ export default function TeacherDashboardPage() {
 
   // Combine all alerts into a single array for display - Requirements: 2.2
   const allAlerts = [
-    ...data.alerts.pendingAttendance.map((alert) => ({
+    ...(data?.alerts?.pendingAttendance || []).map((alert) => ({
       id: alert.id,
       type: AlertType.PENDING_ATTENDANCE,
       severity: AlertSeverity.WARNING,
-      message: alert.message,
+      message: String(alert.message || 'Pending attendance'),
       actionUrl: `/dashboard/attendance/mark?classId=${alert.classId}`,
       actionLabel: 'Take Attendance',
     })),
-    ...data.alerts.marksDeadlines.map((alert) => ({
+    ...(data?.alerts?.marksDeadlines || []).map((alert) => ({
       id: alert.id,
       type: AlertType.MARKS_DEADLINE,
       severity: new Date(alert.deadline) < new Date() 
         ? AlertSeverity.CRITICAL 
         : AlertSeverity.WARNING,
-      message: alert.message,
+      message: String(alert.message || 'Marks deadline'),
       actionUrl: `/dashboard/examinations/marks?examId=${alert.examId}&subjectId=${alert.subjectId}`,
       actionLabel: 'Enter Marks',
     })),
-    ...data.alerts.unsubmittedReports.map((alert) => ({
+    ...(data?.alerts?.unsubmittedReports || []).map((alert) => ({
       id: alert.id,
       type: AlertType.UNSUBMITTED_REPORT,
       severity: new Date(alert.deadline) < new Date() 
         ? AlertSeverity.CRITICAL 
         : AlertSeverity.INFO,
-      message: alert.message,
+      message: String(alert.message || 'Unsubmitted report'),
       actionUrl: `/dashboard/reports?classId=${alert.classId}`,
       actionLabel: 'Submit Report',
     })),
   ]
 
   // Filter tasks to show only pending and overdue - Requirements: 2.5
-  const pendingTasks = data.tasks.filter(
+  const pendingTasks = (data?.tasks || []).filter(
     (task) => task.status === TaskStatus.PENDING || task.status === TaskStatus.OVERDUE
   )
 
@@ -214,16 +312,16 @@ export default function TeacherDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Teacher Dashboard
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
             Manage your classes, attendance, and marks
           </p>
         </div>
         <button
           onClick={fetchDashboardData}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           aria-label="Refresh dashboard"
         >
           <RefreshCw className="h-5 w-5" />
@@ -251,7 +349,7 @@ export default function TeacherDashboardPage() {
 
       {/* Quick Actions Row - Requirements: 2.3 */}
       <section aria-label="Quick Actions">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h2 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -269,28 +367,28 @@ export default function TeacherDashboardPage() {
 
       {/* My Classes Grid - Requirements: 2.4 */}
       <section aria-label="My Classes">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+        <h2 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">
           My Classes
         </h2>
         {data.classes.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
-            <Users className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-8 text-center">
+            <Users className="h-12 w-12 mx-auto text-[var(--text-muted)] dark:text-[var(--text-secondary)] mb-3" />
+            <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">
               No classes assigned yet
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
               Contact your administrator to get class assignments
             </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.classes.map((classData: TeacherClassCardData) => (
+            {(data?.classes || []).map((classData: TeacherClassCardData) => (
               <ClassCard
                 key={classData.classId}
                 classId={classData.classId}
-                className={classData.className}
-                subject={classData.subject}
-                term={classData.term}
+                className={String(classData.className || 'Class')}
+                subject={String(classData.subject || 'Subject')}
+                term={String(classData.term || 'Term')}
                 studentCount={classData.studentCount}
                 attendanceDone={classData.attendanceDone}
                 marksDone={classData.marksDone}
@@ -304,7 +402,15 @@ export default function TeacherDashboardPage() {
       {/* Pending Tasks - Requirements: 2.5 */}
       <section aria-label="Pending Tasks">
         <TaskList
-          tasks={pendingTasks}
+          tasks={pendingTasks.map(task => ({
+            ...task,
+            title: typeof task.title === 'object' && task.title !== null
+              ? (task.title.name || task.title.text || String(task.title))
+              : String(task.title || 'Task'),
+            description: task.description && typeof task.description === 'object' && task.description !== null
+              ? (task.description.text || task.description.name || String(task.description))
+              : task.description ? String(task.description) : undefined
+          }))}
           title="Pending Tasks"
           showStatus={true}
           maxItems={5}

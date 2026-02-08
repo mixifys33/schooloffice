@@ -85,14 +85,14 @@ export default function ParentDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
           <SkeletonLoader variant="text" count={2} />
         </div>
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
             <SkeletonLoader variant="card" count={1} />
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
             <SkeletonLoader variant="card" count={1} />
           </div>
         </div>
@@ -102,12 +102,12 @@ export default function ParentDashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-800">Error Loading Dashboard</h2>
-        <p className="text-red-600 mt-1">{error}</p>
+      <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-[var(--danger-dark)]">Error Loading Dashboard</h2>
+        <p className="text-[var(--chart-red)] mt-1">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="mt-4 px-4 py-2 bg-[var(--chart-red)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--chart-red)]"
         >
           Retry
         </button>
@@ -117,8 +117,8 @@ export default function ParentDashboard() {
 
   if (!data) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">Unable to load dashboard data.</p>
+      <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg p-8 text-center">
+        <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">Unable to load dashboard data.</p>
       </div>
     )
   }
@@ -129,17 +129,17 @@ export default function ParentDashboard() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Welcome Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Welcome, {parentName}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
+        <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Welcome, {parentName}</h1>
+        <p className="text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1 text-sm">
           You have {children.length} {children.length === 1 ? 'child' : 'children'} linked to your account.
         </p>
       </div>
 
       {children.length === 0 ? (
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">No children linked to your account yet.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+        <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg p-8 text-center">
+          <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No children linked to your account yet.</p>
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-2">
             Please contact the school administration to link your children.
           </p>
         </div>
@@ -147,8 +147,8 @@ export default function ParentDashboard() {
         <>
           {/* Child Selector - Requirements: 15.1 - Child selector at top for multi-child parents */}
           {children.length > 1 && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
+              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
                 Select Child
               </label>
               <div className="flex flex-wrap gap-2">
@@ -158,8 +158,8 @@ export default function ParentDashboard() {
                     onClick={() => setSelectedChildId(child.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       selectedChildId === child.id
-                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-[var(--text-primary)] dark:bg-[var(--bg-main)] text-[var(--white-pure)] dark:text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]'
                     }`}
                   >
                     {child.name}
@@ -172,11 +172,11 @@ export default function ParentDashboard() {
           {selectedChild && (
             <>
               {/* Child Info Header */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+              <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">{selectedChild.name}</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <h2 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{selectedChild.name}</h2>
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {selectedChild.className} {selectedChild.streamName && `(${selectedChild.streamName})`} • {selectedChild.admissionNumber}
                     </p>
                   </div>
@@ -189,26 +189,26 @@ export default function ParentDashboard() {
               {/* Fees Status - Requirements: 15.2 - Fees status displayed prominently */}
               <div className={`rounded-lg border p-5 ${
                 selectedChild.feeSummary.hasArrears 
-                  ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800' 
-                  : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                  ? 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 border-[var(--danger-light)] dark:border-[var(--danger-dark)]' 
+                  : 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 border-emerald-200 dark:border-emerald-800'
               }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Fee Balance</p>
+                    <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Fee Balance</p>
                     <p className={`text-2xl font-semibold mt-1 ${
                       selectedChild.feeSummary.hasArrears 
-                        ? 'text-red-700 dark:text-red-400' 
-                        : 'text-emerald-700 dark:text-emerald-400'
+                        ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' 
+                        : 'text-[var(--success-dark)] dark:text-[var(--success)]'
                     }`}>
                       {formatCurrency(selectedChild.feeSummary.balance)}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                       {selectedChild.feeSummary.hasArrears ? 'Outstanding balance' : 'All fees paid'}
                     </p>
                   </div>
                   <Link
-                    href={`/parent/fees?child=${selectedChild.id}`}
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                    href={`/portals/parent/fees?child=${selectedChild.id}`}
+                    className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
                   >
                     View Details →
                   </Link>
@@ -218,80 +218,80 @@ export default function ParentDashboard() {
               {/* Summary Cards - Requirements: 15.3 - Latest results, attendance summary */}
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Academic Summary */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+                <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Latest Results</h3>
+                    <h3 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">Latest Results</h3>
                     <Link
-                      href={`/parent/academics?child=${selectedChild.id}`}
-                      className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                      href={`/portals/parent/academics?child=${selectedChild.id}`}
+                      className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-secondary)]"
                     >
                       View →
                     </Link>
                   </div>
                   {selectedChild.academicSummary.lastTermAverage !== null ? (
                     <div>
-                      <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                         {selectedChild.academicSummary.lastTermAverage.toFixed(1)}%
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                         Position {selectedChild.academicSummary.lastTermPosition} of {selectedChild.academicSummary.totalStudents}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400 dark:text-gray-500">No results available yet</p>
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">No results available yet</p>
                   )}
                 </div>
 
                 {/* Attendance Summary */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Attendance</h3>
+                <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-3">Attendance</h3>
                   <div className="flex items-center gap-3">
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    <p className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                       {selectedChild.attendanceSummary.percentage}%
                     </p>
                     <div className={`w-3 h-3 rounded-full ${
-                      selectedChild.attendanceSummary.percentage >= 90 ? 'bg-emerald-500' :
-                      selectedChild.attendanceSummary.percentage >= 80 ? 'bg-amber-500' : 'bg-red-500'
+                      selectedChild.attendanceSummary.percentage >= 90 ? 'bg-[var(--success)]' :
+                      selectedChild.attendanceSummary.percentage >= 80 ? 'bg-[var(--warning)]' : 'bg-[var(--danger)]'
                     }`} />
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                     {selectedChild.attendanceSummary.presentDays} of {selectedChild.attendanceSummary.totalDays} days present
                   </p>
                 </div>
               </div>
 
               {/* Quick Actions - Requirements: 15.4 - Plain language */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quick Actions</h3>
+              <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+                <h3 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-4">Quick Actions</h3>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Link
-                    href="/parent/fees"
-                    className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    href="/portals/parent/fees"
+                    className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
                   >
                     <span className="text-2xl">💰</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">View Fees</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Check balance</p>
+                      <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">View Fees</p>
+                      <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Check balance</p>
                     </div>
                   </Link>
                   <Link
-                    href="/parent/academics"
-                    className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    href="/portals/parent/academics"
+                    className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
                   >
                     <span className="text-2xl">📚</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Report Cards</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">View results</p>
+                      <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Report Cards</p>
+                      <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">View results</p>
                     </div>
                   </Link>
                   <Link
-                    href="/parent/messages"
-                    className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    href="/portals/parent/messages"
+                    className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
                   >
                     <span className="text-2xl">✉️</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Messages</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Contact school</p>
+                      <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Messages</p>
+                      <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Contact school</p>
                     </div>
                   </Link>
                 </div>

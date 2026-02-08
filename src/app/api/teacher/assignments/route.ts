@@ -1,136 +1,191 @@
-/**
- * Teacher Assignments API
- * Requirements: 7.1-7.5 - Assignment Management Module
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { assignmentService, AssignmentValidationError } from '@/services/assignment.service'
 import { prisma } from '@/lib/db'
+import { Role } from '@/types/enums'
 
 /**
- * GET /api/teacher/assignments
- * Get all assignments for the logged-in teacher
+ * TEACHER ASSIGNMENTS API
+ * 
+ * Returns only the assignments for the authenticated teacher.
+ * Teachers cannot see other teachers' assignments.
+ * This is a filtered view of the truth table for the specific teacher.
  */
+
+interface TeacherAssignment {
+  classId: string
+  className: string
+  level: number
+  subjects: {
+    subjectId: string
+    subjectName: string
+    subjectCode: string
+    isPrimary: boolean
+    isActive: boolean
+    studentCount: number
+  }[]
+}
+
+interface AssignmentStats {
+  totalClasses: number
+  totalSubjects: number
+  primarySubjects: number
+  coTeachingSubjects: number
+  totalStudents: number
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user?.id || !session?.user?.schoolId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get teacher record
-    const teacher = await prisma.teacher.findFirst({
+    // Only teachers can access this endpoint
+    if (session.user.role !== Role.TEACHER) {
+      return NextResponse.json({ error: 'Access denied - teachers only' }, { status: 403 })
+    }
+
+    const teacherId = session.user.id
+    const schoolId = session.user.schoolId
+    
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 })
+    }
+
+    // Get current academic year and term
+    const currentAcademicYear = await prisma.academicYear.findFirst({
       where: {
-        schoolId: session.user.schoolId,
-        userId: session.user.id,
-      },
-      select: { id: true },
+        schoolId,
+        isCurrent: true
+      }
     })
 
-    if (!teacher) {
-      return NextResponse.json(
-        { error: 'Teacher record not found' },
-        { status: 404 }
-      )
+    if (!currentAcademicYear) {
+      return NextResponse.json({ error: 'No current academic year found' }, { status: 400 })
     }
 
-    // Parse query params
-    const { searchParams } = new URL(request.url)
-    const classId = searchParams.get('classId') || undefined
-    const subjectId = searchParams.get('subjectId') || undefined
-    const status = searchParams.get('status') || undefined
+    const currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
 
-    const assignments = await assignmentService.getTeacherAssignments(
-      teacher.id,
-      session.user.schoolId,
-      { classId, subjectId, status }
+    if (!currentTerm) {
+      return NextResponse.json({ error: 'No current term found' }, { status: 400 })
+    }
+
+    // Fetch assignments for this teacher only
+    const staffAssignments = await prisma.staffSubject.findMany({
+      where: {
+        termId: currentTerm.id,
+        staffId: teacherId,
+        staff: {
+          schoolId,
+          isActive: true
+        }
+      },
+      include: {
+        curriculumSubject: {
+          include: {
+            subject: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                isActive: true
+              }
+            },
+            class: {
+              select: {
+                id: true,
+                name: true,
+                level: true,
+                isActive: true,
+                _count: {
+                  select: {
+                    students: {
+                      where: {
+                        isActive: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    // Group assignments by class
+    const classMap = new Map<string, TeacherAssignment>()
+    
+    staffAssignments.forEach(assignment => {
+      const classId = assignment.curriculumSubject.classId
+      const className = assignment.curriculumSubject.class.name
+      const classLevel = assignment.curriculumSubject.class.level
+      const studentCount = assignment.curriculumSubject.class._count.students
+      
+      if (!classMap.has(classId)) {
+        classMap.set(classId, {
+          classId,
+          className,
+          level: classLevel,
+          subjects: []
+        })
+      }
+      
+      const classAssignment = classMap.get(classId)!
+      classAssignment.subjects.push({
+        subjectId: assignment.curriculumSubject.subject.id,
+        subjectName: assignment.curriculumSubject.subject.name,
+        subjectCode: assignment.curriculumSubject.subject.code,
+        isPrimary: assignment.isPrimary,
+        isActive: assignment.curriculumSubject.subject.isActive,
+        studentCount
+      })
+    })
+
+    const assignments = Array.from(classMap.values())
+
+    // Calculate statistics
+    const totalClasses = assignments.length
+    const totalSubjects = assignments.reduce((sum, a) => sum + a.subjects.length, 0)
+    const primarySubjects = assignments.reduce((sum, a) => 
+      sum + a.subjects.filter(s => s.isPrimary).length, 0
+    )
+    const coTeachingSubjects = totalSubjects - primarySubjects
+    const totalStudents = assignments.reduce((sum, a) => 
+      sum + a.subjects.reduce((subSum, s) => subSum + s.studentCount, 0), 0
     )
 
-    return NextResponse.json({ assignments })
+    const stats: AssignmentStats = {
+      totalClasses,
+      totalSubjects,
+      primarySubjects,
+      coTeachingSubjects,
+      totalStudents
+    }
+
+    return NextResponse.json({
+      assignments,
+      stats,
+      currentTerm: {
+        id: currentTerm.id,
+        name: currentTerm.name
+      },
+      currentAcademicYear: {
+        id: currentAcademicYear.id,
+        name: currentAcademicYear.name
+      }
+    })
+
   } catch (error) {
-    console.error('Error fetching assignments:', error)
+    console.error('Error fetching teacher assignments:', error)
     return NextResponse.json(
       { error: 'Failed to fetch assignments' },
-      { status: 500 }
-    )
-  }
-}
-
-
-/**
- * POST /api/teacher/assignments
- * Create a new assignment
- * Requirement 7.1: Create assignment with subject, class, title, description, deadline, attachments
- */
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    
-    if (!session?.user?.id || !session?.user?.schoolId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Get teacher record
-    const teacher = await prisma.teacher.findFirst({
-      where: {
-        schoolId: session.user.schoolId,
-        userId: session.user.id,
-      },
-      select: { id: true },
-    })
-
-    if (!teacher) {
-      return NextResponse.json(
-        { error: 'Teacher record not found' },
-        { status: 404 }
-      )
-    }
-
-    const body = await request.json()
-    const { classId, subjectId, title, description, deadline, attachments } = body
-
-    // Validate required fields
-    if (!classId || !subjectId || !title || !description || !deadline) {
-      return NextResponse.json(
-        { error: 'Missing required fields: classId, subjectId, title, description, deadline' },
-        { status: 400 }
-      )
-    }
-
-    const assignment = await assignmentService.createAssignment(
-      {
-        schoolId: session.user.schoolId,
-        teacherId: teacher.id,
-        classId,
-        subjectId,
-        title,
-        description,
-        deadline: new Date(deadline),
-        attachments: attachments || [],
-      },
-      session.user.id
-    )
-
-    return NextResponse.json({ assignment }, { status: 201 })
-  } catch (error) {
-    console.error('Error creating assignment:', error)
-    
-    if (error instanceof AssignmentValidationError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to create assignment' },
       { status: 500 }
     )
   }

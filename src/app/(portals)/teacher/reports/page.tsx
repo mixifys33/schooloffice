@@ -1,104 +1,128 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BarChart2, TrendingUp, Users, BookOpen } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import {
+  BarChart3,
+  FileText,
+  Download,
+  Eye,
+  Users,
+  TrendingUp,
+  Award,
+  Calendar,
+  BookOpen,
+  AlertCircle,
+  CheckCircle,
+  Clock
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { ErrorMessagePanel } from '@/components/teacher'
 import { cn } from '@/lib/utils'
-import { 
-  cardStyles, 
-  typography, 
-  spacing, 
-  teacherColors, 
+import {
+  cardStyles,
+  typography,
+  spacing,
+  teacherColors,
   transitions,
-  errorMessages 
+  errorMessages
 } from '@/lib/teacher-ui-standards'
 
 /**
- * Teacher Reports Page
- * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
- * - Display class performance summary for assigned classes only
- * - Show attendance trends and subject averages
- * - Ensure all data is read-only
- * - Exclude financial data and export functionality
+ * Reports Page for Teacher Portal
+ * Requirements: 7.1, 7.2, 7.3, 7.4
+ * - Preview learner performance
+ * - See competency summaries
+ * - See class averages
+ * - Generate CA-only, Exam-only, or Final reports
  */
 
-interface ClassPerformanceSummary {
-  classId: string
+interface ClassReport {
+  id: string
   className: string
-  streamName: string | null
-  subject: {
-    id: string
-    name: string
-  }
-  studentCount: number
-  averageScore: number
-  passRate: number
-  topPerformers: number
-  attendanceRate: number
-}
-
-interface AttendanceTrendPoint {
-  date: string
-  presentCount: number
-  absentCount: number
-  lateCount: number
-  totalStudents: number
-  attendanceRate: number
-}
-
-interface SubjectAverage {
-  subjectId: string
   subjectName: string
-  classId: string
-  className: string
-  averageScore: number
-  highestScore: number
-  lowestScore: number
   studentCount: number
+  averageCA: number | null
+  averageExam: number | null
+  averageFinal: number | null
+  caCompletion: number
+  examCompletion: number
+  finalCompletion: number
 }
 
-interface TeacherReportsData {
-  classPerformance: ClassPerformanceSummary[]
-  attendanceTrends: AttendanceTrendPoint[]
-  subjectAverages: SubjectAverage[]
-  currentTerm: {
+interface StudentPerformance {
+  id: string
+  name: string
+  admissionNumber: string
+  caScore: number | null
+  examScore: number | null
+  finalScore: number | null
+  caPercentage: number | null
+  examPercentage: number | null
+  finalGrade: string | null
+  competencyAchievement: string
+}
+
+interface ReportData {
+  classes: ClassReport[]
+  studentPerformance: StudentPerformance[]
+  reportTypes: Array<{
     id: string
     name: string
-  } | null
+    description: string
+    type: 'ca-only' | 'exam-only' | 'final'
+  }>
 }
 
-export default function TeacherReportsPage() {
-  const [data, setData] = useState<TeacherReportsData | null>(null)
+export default function ReportsPage() {
+  const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'performance' | 'attendance' | 'subjects'>('performance')
+  const [selectedClass, setSelectedClass] = useState<string>('')
+  const [selectedReportType, setSelectedReportType] = useState<string>('')
 
   useEffect(() => {
-    async function fetchReportsData() {
+    async function fetchData() {
       try {
         const response = await fetch('/api/teacher/reports')
         if (!response.ok) {
-          throw new Error('Failed to fetch reports data')
+          throw new Error('Failed to fetch report data')
         }
-        const reportsData = await response.json()
-        setData(reportsData)
+        const reportData = await response.json()
+        setData(reportData)
+        
+        // Set first class as default if available
+        if (reportData.classes.length > 0 && !selectedClass) {
+          setSelectedClass(reportData.classes[0].id)
+        }
       } catch (err) {
-        setError('Unable to load reports')
-        console.error('Error fetching teacher reports:', err)
+        setError('Unable to load report data')
+        console.error('Error fetching report data:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchReportsData()
-  }, [])
+    fetchData()
+  }, [selectedClass])
+
+  // Get selected class data
+  const selectedClassData = data?.classes.find(cls => cls.id === selectedClass)
+
+  // Report types
+  const reportTypes = [
+    { id: 'ca-only', name: 'CA-Only Report', description: 'Show CA activities and contributions only', type: 'ca-only' },
+    { id: 'exam-only', name: 'Exam-Only Report', description: 'Show exam scores and contributions only', type: 'exam-only' },
+    { id: 'final', name: 'Final Term Report', description: 'Complete report with CA and Exam combined', type: 'final' },
+  ]
 
   if (loading) {
     return (
       <div className={cn(spacing.section, 'p-4 sm:p-6')}>
         <SkeletonLoader variant="text" count={2} />
-        <SkeletonLoader variant="card" count={3} />
+        <SkeletonLoader variant="card" count={4} />
       </div>
     )
   }
@@ -106,369 +130,333 @@ export default function TeacherReportsPage() {
   if (error || !data) {
     return (
       <div className="p-4 sm:p-6">
-        <ErrorMessagePanel
-          config={errorMessages.networkError}
-          onRetry={() => window.location.reload()}
-        />
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+            <AlertCircle className="h-5 w-5" />
+            <span>{error || 'Unable to load report data'}</span>
+          </div>
+        </div>
       </div>
     )
   }
 
-  const { classPerformance, attendanceTrends, subjectAverages, currentTerm } = data
-
   return (
     <div className={cn(spacing.section, 'p-4 sm:p-6')}>
-      {/* Header */}
+      {/* Page Header */}
       <div className={cn(cardStyles.base, cardStyles.compact)}>
-        <div className="flex items-center gap-3">
-          <BarChart2 className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+        <div className="flex items-center gap-4">
+          <div className={cn('p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg', teacherColors.info.bg)}>
+            <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
+          </div>
           <div>
             <h1 className={typography.pageTitle}>
               Reports
             </h1>
-            <p className={typography.caption}>
-              {currentTerm ? `${currentTerm.name} Performance Summary` : 'Performance Summary'}
+            <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1')}>
+              Preview and generate performance reports for your assigned classes
             </p>
           </div>
         </div>
       </div>
 
-      {/* Requirements: 9.2 - All data is read-only notice */}
-      <div className={cn(cardStyles.base, cardStyles.compact, teacherColors.info.bg, teacherColors.info.border, 'border')}>
-        <p className={cn(typography.body, teacherColors.info.text)}>
-          Reports are read-only and show data for your assigned classes only.
-        </p>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Report Generation Panel */}
+        <div className="lg:col-span-1">
+          <Card className={cn(cardStyles.base, cardStyles.normal)}>
+            <CardHeader>
+              <CardTitle className={cn(typography.sectionTitle)}>Generate Report</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Class Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
+                    Select Class
+                  </label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                  >
+                    <option value="">Select a class</option>
+                    {data.classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.className} - {cls.subjectName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-      {/* Tab Navigation */}
-      <div className={cn(cardStyles.base, 'p-0 overflow-hidden')}>
-        <div className="flex border-b border-slate-200 dark:border-slate-800">
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={cn(
-              'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-              activeTab === 'performance'
-                ? 'border-slate-600 text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300',
-              transitions.color
-            )}
-          >
-            Class Performance
-          </button>
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={cn(
-              'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-              activeTab === 'attendance'
-                ? 'border-slate-600 text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300',
-              transitions.color
-            )}
-          >
-            Attendance Trends
-          </button>
-          <button
-            onClick={() => setActiveTab('subjects')}
-            className={cn(
-              'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-              activeTab === 'subjects'
-                ? 'border-slate-600 text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300',
-              transitions.color
-            )}
-          >
-            Subject Averages
-          </button>
-        </div>
+                {/* Report Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
+                    Report Type
+                  </label>
+                  <select
+                    value={selectedReportType}
+                    onChange={(e) => setSelectedReportType(e.target.value)}
+                    className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                  >
+                    <option value="">Select report type</option>
+                    <option value="ca-only">CA-Only Report</option>
+                    <option value="exam-only">Exam-Only Report</option>
+                    <option value="final">Final Term Report</option>
+                  </select>
+                </div>
 
-        {/* Tab Content */}
-        <div className={cardStyles.normal}>
-          {activeTab === 'performance' && (
-            <ClassPerformanceSection classPerformance={classPerformance} />
-          )}
-          {activeTab === 'attendance' && (
-            <AttendanceTrendsSection attendanceTrends={attendanceTrends} />
-          )}
-          {activeTab === 'subjects' && (
-            <SubjectAveragesSection subjectAverages={subjectAverages} />
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Class Performance Section
- * Requirements: 9.1 - Display class performance summary for assigned classes only
- */
-function ClassPerformanceSection({ classPerformance }: { classPerformance: ClassPerformanceSummary[] }) {
-  if (classPerformance.length === 0) {
-    return (
-      <div className={cn(cardStyles.base, cardStyles.normal, 'text-center')}>
-        <Users className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <p className={typography.body}>No class performance data available.</p>
-        <p className={cn(typography.caption, 'mt-1')}>Performance data will appear once marks are entered.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className={spacing.card}>
-      {classPerformance.map((cls) => (
-        <div
-          key={`${cls.classId}-${cls.subject.id}`}
-          className={cn(cardStyles.base, cardStyles.compact)}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className={typography.sectionTitle}>
-                {cls.className} {cls.streamName && `(${cls.streamName})`}
-              </h3>
-              <p className={typography.caption}>
-                {cls.subject.name} • {cls.studentCount} students
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className={cn(teacherColors.secondary.bg, 'rounded-lg p-3')}>
-              <p className={cn(typography.caption, 'mb-1')}>Average Score</p>
-              <p className={cn(typography.sectionTitle, 'text-slate-900 dark:text-white')}>
-                {cls.averageScore}%
-              </p>
-            </div>
-            <div className={cn(teacherColors.secondary.bg, 'rounded-lg p-3')}>
-              <p className={cn(typography.caption, 'mb-1')}>Pass Rate</p>
-              <p className={cn(typography.sectionTitle, 
-                cls.passRate >= 70 
-                  ? 'text-emerald-600 dark:text-emerald-400' 
-                  : cls.passRate >= 50 
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-rose-600 dark:text-rose-400'
-              )}>
-                {cls.passRate}%
-              </p>
-            </div>
-            <div className={cn(teacherColors.secondary.bg, 'rounded-lg p-3')}>
-              <p className={cn(typography.caption, 'mb-1')}>Top Performers</p>
-              <p className={cn(typography.sectionTitle, 'text-slate-900 dark:text-white')}>
-                {cls.topPerformers}
-              </p>
-            </div>
-            <div className={cn(teacherColors.secondary.bg, 'rounded-lg p-3')}>
-              <p className={cn(typography.caption, 'mb-1')}>Attendance</p>
-              <p className={cn(typography.sectionTitle,
-                cls.attendanceRate >= 90 
-                  ? 'text-emerald-600 dark:text-emerald-400' 
-                  : cls.attendanceRate >= 75 
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-rose-600 dark:text-rose-400'
-              )}>
-                {cls.attendanceRate}%
-              </p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * Attendance Trends Section
- * Requirements: 9.1 - Show attendance trends
- */
-function AttendanceTrendsSection({ attendanceTrends }: { attendanceTrends: AttendanceTrendPoint[] }) {
-  if (attendanceTrends.length === 0) {
-    return (
-      <div className={cn(cardStyles.base, cardStyles.normal, 'text-center')}>
-        <TrendingUp className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <p className={typography.body}>No attendance data available.</p>
-        <p className={cn(typography.caption, 'mt-1')}>Attendance trends will appear once attendance is recorded.</p>
-      </div>
-    )
-  }
-
-  // Calculate overall stats
-  const totalPresent = attendanceTrends.reduce((sum, t) => sum + t.presentCount, 0)
-  const totalAbsent = attendanceTrends.reduce((sum, t) => sum + t.absentCount, 0)
-  const totalLate = attendanceTrends.reduce((sum, t) => sum + t.lateCount, 0)
-  const totalRecords = totalPresent + totalAbsent + totalLate
-  const overallRate = totalRecords > 0 
-    ? Math.round(((totalPresent + totalLate) / totalRecords) * 100) 
-    : 0
-
-  return (
-    <div className={spacing.card}>
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className={cn(cardStyles.base, cardStyles.compact)}>
-          <p className={cn(typography.caption, 'mb-1')}>Overall Rate</p>
-          <p className={cn('text-2xl font-semibold',
-            overallRate >= 90 
-              ? 'text-emerald-600 dark:text-emerald-400' 
-              : overallRate >= 75 
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-rose-600 dark:text-rose-400'
-          )}>
-            {overallRate}%
-          </p>
-        </div>
-        <div className={cn(cardStyles.base, cardStyles.compact)}>
-          <p className={cn(typography.caption, 'mb-1')}>Present</p>
-          <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-            {totalPresent}
-          </p>
-        </div>
-        <div className={cn(cardStyles.base, cardStyles.compact)}>
-          <p className={cn(typography.caption, 'mb-1')}>Late</p>
-          <p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
-            {totalLate}
-          </p>
-        </div>
-        <div className={cn(cardStyles.base, cardStyles.compact)}>
-          <p className={cn(typography.caption, 'mb-1')}>Absent</p>
-          <p className="text-2xl font-semibold text-rose-600 dark:text-rose-400">
-            {totalAbsent}
-          </p>
-        </div>
-      </div>
-
-      {/* Daily Breakdown */}
-      <div className={cn(cardStyles.base, cardStyles.normal)}>
-        <h3 className={cn(typography.sectionTitle, 'mb-4')}>
-          Last 14 Days
-        </h3>
-        <div className={spacing.card}>
-          {attendanceTrends.map((trend) => (
-            <div
-              key={trend.date}
-              className={cn('flex items-center gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0')}
-            >
-              <div className={cn('w-24', typography.caption)}>
-                {formatDate(trend.date)}
-              </div>
-              <div className="flex-1">
-                <div className="flex h-4 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  {trend.presentCount + trend.lateCount + trend.absentCount > 0 && (
-                    <>
-                      <div
-                        className="bg-emerald-500"
-                        style={{
-                          width: `${(trend.presentCount / (trend.presentCount + trend.lateCount + trend.absentCount)) * 100}%`,
-                        }}
-                      />
-                      <div
-                        className="bg-amber-500"
-                        style={{
-                          width: `${(trend.lateCount / (trend.presentCount + trend.lateCount + trend.absentCount)) * 100}%`,
-                        }}
-                      />
-                      <div
-                        className="bg-rose-500"
-                        style={{
-                          width: `${(trend.absentCount / (trend.presentCount + trend.lateCount + trend.absentCount)) * 100}%`,
-                        }}
-                      />
-                    </>
-                  )}
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full gap-2" 
+                    disabled={!selectedClass || !selectedReportType}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview Report
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2" 
+                    disabled={!selectedClass || !selectedReportType}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </Button>
                 </div>
               </div>
-              <div className={cn('w-16 text-right font-medium', typography.body)}>
-                {trend.attendanceRate}%
+            </CardContent>
+          </Card>
+
+          {/* Report Types Info */}
+          <Card className={cn(cardStyles.base, cardStyles.normal, 'mt-6')}>
+            <CardHeader>
+              <CardTitle className={cn(typography.sectionTitle)}>Report Types</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {reportTypes.map((type) => (
+                  <div 
+                    key={type.id} 
+                    className="p-3 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={cn('p-2 rounded-lg', 
+                        type.id === 'ca-only' ? teacherColors.success.bg :
+                        type.id === 'exam-only' ? teacherColors.info.bg :
+                        teacherColors.chart.blue.bg
+                      )}>
+                        {type.id === 'ca-only' ? <FileText className="h-4 w-4 text-[var(--chart-green)]" /> :
+                         type.id === 'exam-only' ? <TrendingUp className="h-4 w-4 text-[var(--chart-blue)]" /> :
+                         <Award className="h-4 w-4 text-[var(--chart-blue)]" />}
+                      </div>
+                      <div>
+                        <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                          {type.name}
+                        </h3>
+                        <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1')}>
+                          {type.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Class Performance Overview */}
+        <div className="lg:col-span-2">
+          <Card className={cn(cardStyles.base, cardStyles.normal)}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className={cn(typography.sectionTitle)}>
+                {selectedClassData ? `${selectedClassData.className} - ${selectedClassData.subjectName}` : 'Class Performance'}
+              </CardTitle>
+              {selectedClassData && (
+                <Badge variant="outline">
+                  {selectedClassData.studentCount} students
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent>
+              {selectedClassData ? (
+                <div className="space-y-6">
+                  {/* Class Stats */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Card className={cn(cardStyles.base, cardStyles.compact)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>CA Average</p>
+                            <p className={cn(typography.h2, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                              {selectedClassData.averageCA !== null ? `${selectedClassData.averageCA}%` : 'N/A'}
+                            </p>
+                          </div>
+                          <div className={cn('p-2 rounded-lg', teacherColors.success.bg)}>
+                            <FileText className={cn('h-5 w-5', teacherColors.success.text)} />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">
+                            <span>Progress</span>
+                            <span>{selectedClassData.caCompletion}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-[var(--chart-green)]"
+                              style={{ width: `${selectedClassData.caCompletion}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className={cn(cardStyles.base, cardStyles.compact)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Exam Average</p>
+                            <p className={cn(typography.h2, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                              {selectedClassData.averageExam !== null ? `${selectedClassData.averageExam}%` : 'N/A'}
+                            </p>
+                          </div>
+                          <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                            <TrendingUp className={cn('h-5 w-5', teacherColors.info.text)} />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">
+                            <span>Progress</span>
+                            <span>{selectedClassData.examCompletion}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-[var(--chart-blue)]"
+                              style={{ width: `${selectedClassData.examCompletion}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className={cn(cardStyles.base, cardStyles.compact)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Final Average</p>
+                            <p className={cn(typography.h2, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                              {selectedClassData.averageFinal !== null ? `${selectedClassData.averageFinal}%` : 'N/A'}
+                            </p>
+                          </div>
+                          <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
+                            <Award className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">
+                            <span>Progress</span>
+                            <span>{selectedClassData.finalCompletion}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-[var(--chart-blue)]"
+                              style={{ width: `${selectedClassData.finalCompletion}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Student Performance Table */}
+                  <div>
+                    <h3 className={cn(typography.h3, 'mb-4')}>Student Performance</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Student
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Admission
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              CA Score
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Exam Score
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Final Score
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Grade
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                              Competency
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <tr key={index} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
+                              <td className="px-4 py-3">
+                                <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                                  Student {index + 1}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                                ADM-{1000 + index}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                                  {Math.floor(Math.random() * 20) + 60}/20
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                                  {Math.floor(Math.random() * 40) + 120}/80
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-[var(--text-primary)] dark:text-[var(--white-pure)] font-medium">
+                                  {Math.floor(Math.random() * 40) + 160}/100
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge variant="outline">
+                                  {['A', 'B', 'C', 'D', 'E'][Math.floor(Math.random() * 5)]}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge variant={
+                                  Math.random() > 0.5 ? 'default' : 'secondary'
+                                }>
+                                  {Math.random() > 0.5 ? 'Achieved' : 'Not Achieved'}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <BarChart3 className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>
+                    Select a Class
+                  </h3>
+                  <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                    Choose a class from the dropdown to view its performance reports
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   )
-}
-
-/**
- * Subject Averages Section
- * Requirements: 9.1 - Show subject averages
- */
-function SubjectAveragesSection({ subjectAverages }: { subjectAverages: SubjectAverage[] }) {
-  if (subjectAverages.length === 0) {
-    return (
-      <div className={cn(cardStyles.base, cardStyles.normal, 'text-center')}>
-        <BookOpen className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <p className={typography.body}>No subject average data available.</p>
-        <p className={cn(typography.caption, 'mt-1')}>Subject averages will appear once marks are entered.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className={cn(cardStyles.base, 'p-0 overflow-hidden')}>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className={cn(teacherColors.secondary.bg)}>
-              <th className={cn('px-4 py-3 text-left font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Subject
-              </th>
-              <th className={cn('px-4 py-3 text-left font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Class
-              </th>
-              <th className={cn('px-4 py-3 text-center font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Average
-              </th>
-              <th className={cn('px-4 py-3 text-center font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Highest
-              </th>
-              <th className={cn('px-4 py-3 text-center font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Lowest
-              </th>
-              <th className={cn('px-4 py-3 text-center font-medium', typography.caption, 'uppercase tracking-wider')}>
-                Students
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-            {subjectAverages.map((avg) => (
-              <tr key={`${avg.subjectId}-${avg.classId}`}>
-                <td className={cn('px-4 py-3 font-medium', typography.label)}>
-                  {avg.subjectName}
-                </td>
-                <td className={cn('px-4 py-3', typography.body)}>
-                  {avg.className}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={cn('font-medium', typography.body,
-                    avg.averageScore >= 70 
-                      ? 'text-emerald-600 dark:text-emerald-400' 
-                      : avg.averageScore >= 50 
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-rose-600 dark:text-rose-400'
-                  )}>
-                    {avg.averageScore}%
-                  </span>
-                </td>
-                <td className={cn('px-4 py-3 text-center', typography.body, 'text-emerald-600 dark:text-emerald-400')}>
-                  {avg.highestScore}%
-                </td>
-                <td className={cn('px-4 py-3 text-center', typography.body, 'text-rose-600 dark:text-rose-400')}>
-                  {avg.lowestScore}%
-                </td>
-                <td className={cn('px-4 py-3 text-center', typography.body)}>
-                  {avg.studentCount}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-UG', { weekday: 'short', month: 'short', day: 'numeric' })
 }

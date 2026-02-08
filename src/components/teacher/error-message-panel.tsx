@@ -81,7 +81,7 @@ export function ErrorMessagePanel({ config, onRetry, className }: ErrorMessagePa
                   href={actionHref}
                   className={cn(
                     'inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium',
-                    'bg-rose-600 text-white hover:bg-rose-700',
+                    'bg-rose-600 text-[var(--white-pure)] hover:bg-rose-700',
                     'transition-colors duration-150'
                   )}
                 >
@@ -94,8 +94,8 @@ export function ErrorMessagePanel({ config, onRetry, className }: ErrorMessagePa
                   onClick={onRetry}
                   className={cn(
                     'inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium',
-                    'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600',
-                    'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700',
+                    'bg-[var(--bg-main)] dark:bg-slate-800 border border-slate-300 dark:border-slate-600',
+                    'text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:bg-slate-50 dark:hover:bg-slate-700',
                     'transition-colors duration-150'
                   )}
                 >

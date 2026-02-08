@@ -16,22 +16,30 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, touchFriendly = false, error, ...props }, ref) => {
+  ({ className, type, touchFriendly = false, error, style, ...props }, ref) => {
     const hasError = Boolean(error)
+    
+    const inputStyles = {
+      backgroundColor: 'var(--bg-surface)',
+      borderColor: hasError ? 'var(--danger)' : 'var(--border-default)',
+      color: 'var(--text-primary)',
+      ...style,
+    }
     
     return (
       <input
         type={type}
         className={cn(
-          "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex w-full rounded-md border px-3 py-2 text-sm ring-offset-2 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           // Touch-friendly sizing: minimum 44px height for touch targets
           touchFriendly && "h-12 text-base px-4",
           // Default responsive sizing
           !touchFriendly && "h-10 md:h-10",
           // Error state styling - Requirements: 21.4
-          hasError && "border-red-500 focus-visible:ring-red-500",
+          hasError && "focus-visible:ring-2",
           className
         )}
+        style={inputStyles}
         ref={ref}
         aria-invalid={hasError ? "true" : undefined}
         {...props}

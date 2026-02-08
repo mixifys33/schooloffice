@@ -246,13 +246,13 @@ export default function SuperAdminLoginPage() {
   if (mode === 'loading') {
     return (
       <div className="w-full">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--bg-main)] rounded-lg shadow-lg p-8">
           <div className="flex flex-col items-center justify-center py-12">
-            <svg className="animate-spin h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-8 w-8 text-[var(--chart-purple)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Checking system status...</p>
+            <p className="mt-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Checking system status...</p>
           </div>
         </div>
       </div>
@@ -263,18 +263,18 @@ export default function SuperAdminLoginPage() {
   if (mode === 'already-logged-in') {
     return (
       <div className="w-full">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--bg-main)] rounded-lg shadow-lg p-8">
           <div className="text-center mb-6">
-            <div className="mx-auto w-14 h-14 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-7 h-7 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto w-14 h-14 bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] rounded-full flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-[var(--chart-yellow)] dark:text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Already Logged In</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Already Logged In</h1>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
               You are currently logged in as <span className="font-medium">{session?.user?.email}</span>
             </p>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+            <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
               Role: {session?.user?.role?.replace('_', ' ')}
             </p>
           </div>
@@ -282,7 +282,7 @@ export default function SuperAdminLoginPage() {
           <div className="space-y-3">
             <Button 
               onClick={handleSwitchAccount}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-[var(--chart-purple)] hover:bg-[var(--chart-purple)]"
               size="touch"
             >
               Sign Out & Login as Super Admin
@@ -299,8 +299,8 @@ export default function SuperAdminLoginPage() {
           </div>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <a href="/login" className="text-purple-600 hover:text-purple-500 dark:text-purple-400">
+            <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+              <a href="/login" className="text-[var(--chart-purple)] hover:text-[var(--chart-purple)] dark:text-[var(--chart-purple)]">
                 School Admin Login
               </a>
             </p>
@@ -319,18 +319,18 @@ export default function SuperAdminLoginPage() {
             <Toast type={toast.type} message={toast.message} onDismiss={() => setToast(null)} />
           </ToastContainer>
         )}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--bg-main)] rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <div className="mx-auto w-14 h-14 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-7 h-7 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto w-14 h-14 bg-[var(--success-light)] dark:bg-[var(--success-dark)] rounded-full flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-[var(--chart-green)] dark:text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome to SchoolOffice</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Welcome to SchoolOffice</h1>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
               Create your Super Admin account to get started
             </p>
-            <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 text-xs font-medium">
+            <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/50 text-[var(--warning-dark)] dark:text-[var(--warning)] text-xs font-medium">
               <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
@@ -339,8 +339,8 @@ export default function SuperAdminLoginPage() {
           </div>
           
           {errors.general && (
-            <div role="alert" className="mb-6 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400 text-center">{errors.general}</p>
+            <div role="alert" className="mb-6 p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg">
+              <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] text-center">{errors.general}</p>
             </div>
           )}
           
@@ -376,7 +376,7 @@ export default function SuperAdminLoginPage() {
               touchFriendly 
             />
             
-            <div className="text-xs text-gray-500 dark:text-gray-400 -mt-3 ml-1">
+            <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] -mt-3 ml-1">
               Min 8 characters with uppercase, lowercase, number, and special character
             </div>
             
@@ -398,7 +398,7 @@ export default function SuperAdminLoginPage() {
             <Button 
               type="submit" 
               size="touch" 
-              className="w-full bg-emerald-600 hover:bg-emerald-700" 
+              className="w-full bg-[var(--chart-green)] hover:bg-[var(--chart-green)]" 
               disabled={isPending}
             >
               {isPending ? (
@@ -414,9 +414,9 @@ export default function SuperAdminLoginPage() {
           </form>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
               Not a Super Admin?{' '}
-              <a href="/login" className="text-purple-600 hover:text-purple-500 dark:text-purple-400">
+              <a href="/login" className="text-[var(--chart-purple)] hover:text-[var(--chart-purple)] dark:text-[var(--chart-purple)]">
                 School Admin Login
               </a>
             </p>
@@ -435,20 +435,20 @@ export default function SuperAdminLoginPage() {
           <Toast type={toast.type} message={toast.message} onDismiss={() => setToast(null)} />
         </ToastContainer>
       )}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--bg-main)] rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto w-12 h-12 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-full flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-[var(--chart-purple)] dark:text-[var(--chart-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Super Admin Portal</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Platform administration access</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Super Admin Portal</h1>
+          <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Platform administration access</p>
         </div>
         
         {errors.general && (
-          <div role="alert" className="mb-6 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400 text-center">{errors.general}</p>
+          <div role="alert" className="mb-6 p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg">
+            <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] text-center">{errors.general}</p>
           </div>
         )}
         
@@ -487,7 +487,7 @@ export default function SuperAdminLoginPage() {
           <Button 
             type="submit" 
             size="touch" 
-            className="w-full bg-purple-600 hover:bg-purple-700" 
+            className="w-full bg-[var(--chart-purple)] hover:bg-[var(--chart-purple)]" 
             disabled={isPending}
           >
             {isPending ? (
@@ -503,9 +503,9 @@ export default function SuperAdminLoginPage() {
         </form>
         
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             Not a Super Admin?{' '}
-            <a href="/login" className="text-purple-600 hover:text-purple-500 dark:text-purple-400">
+            <a href="/login" className="text-[var(--chart-purple)] hover:text-[var(--chart-purple)] dark:text-[var(--chart-purple)]">
               School Admin Login
             </a>
           </p>

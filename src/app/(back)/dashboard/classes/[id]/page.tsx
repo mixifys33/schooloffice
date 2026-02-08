@@ -173,7 +173,7 @@ export default function ClassDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-500" />
+                <UserCheck className="h-5 w-5 text-[var(--accent-primary)]" />
                 <CardTitle className="text-lg">Class Teacher</CardTitle>
               </div>
               <Button variant="outline" size="sm" onClick={handleAssignTeacher}>
@@ -184,8 +184,8 @@ export default function ClassDetailPage() {
           <CardContent>
             {classData.classTeacher ? (
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="h-10 w-10 rounded-full bg-[var(--info-light)] dark:bg-[var(--info-dark)] flex items-center justify-center">
+                  <User className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
                 </div>
                 <div>
                   <p className="font-medium">
@@ -211,7 +211,7 @@ export default function ClassDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-purple-500" />
+                <Layers className="h-5 w-5 text-[var(--chart-purple)]" />
                 <CardTitle className="text-lg">Streams</CardTitle>
               </div>
               <Button variant="outline" size="sm" onClick={handleAddStream} className="gap-1">
@@ -229,7 +229,7 @@ export default function ClassDetailPage() {
                 {classData.streams.map((stream) => (
                   <div 
                     key={stream.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+                    className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]"
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{stream.name}</Badge>
@@ -254,7 +254,7 @@ export default function ClassDetailPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-green-500" />
+            <BookOpen className="h-5 w-5 text-[var(--success)]" />
             <CardTitle className="text-lg">Subject Teachers</CardTitle>
           </div>
           <CardDescription>
@@ -270,8 +270,8 @@ export default function ClassDetailPage() {
                   className="p-4 rounded-lg border bg-card"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                      <User className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <div className="h-8 w-8 rounded-full bg-[var(--success-light)] dark:bg-[var(--success-dark)] flex items-center justify-center">
+                      <User className="h-4 w-4 text-[var(--chart-green)] dark:text-[var(--success)]" />
                     </div>
                     <p className="font-medium">
                       {teacher.firstName} {teacher.lastName}

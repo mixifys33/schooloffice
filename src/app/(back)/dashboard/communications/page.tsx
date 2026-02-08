@@ -4,7 +4,7 @@
  * Communications Hub - Institutional Communication Center
  * The school's voice, memory, proof, and control center.
  * 
- * Core Channels: SMS, WhatsApp (Business API), Email, In-App Notifications
+ * Core Channels: SMS, Email, In-App Notifications
  * Key Features: Targeted messaging, automation, templates, delivery tracking, permissions
  */
 
@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MessageHistory } from '@/components/communication/message-history'
 import { AnnouncementManagement } from '@/components/communication/announcement-management'
 import { AutomationRules } from '@/components/communication/automation-rules'
+import { TemplatesSection } from '@/components/communication/templates-section'
 import { TargetType, MessageChannel } from '@/types/enums'
 
 interface CommunicationStats {
@@ -105,7 +106,7 @@ export default function CommunicationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: emergencyContent,
-          channels: ['SMS', 'WHATSAPP', 'EMAIL'],
+          channels: ['SMS', 'EMAIL'], // Removed WhatsApp
         }),
       })
 
@@ -221,12 +222,12 @@ export default function CommunicationsPage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Today Sent</p>
                 <p className="text-2xl font-bold">{stats?.today.sent || 0}</p>
               </div>
-              <Send className="h-8 w-8 text-blue-500 opacity-50" />
+              <Send className="h-8 w-8 text-[var(--accent-primary)] opacity-50" />
             </div>
             <div className="mt-2 flex items-center gap-2 text-xs">
-              <span className="text-green-600">{stats?.today.delivered || 0} delivered</span>
+              <span className="text-[var(--chart-green)]">{stats?.today.delivered || 0} delivered</span>
               <span className="text-muted-foreground">•</span>
-              <span className="text-red-600">{stats?.today.failed || 0} failed</span>
+              <span className="text-[var(--chart-red)]">{stats?.today.failed || 0} failed</span>
             </div>
           </CardContent>
         </Card>
@@ -238,12 +239,12 @@ export default function CommunicationsPage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Delivery Rate</p>
                 <p className="text-2xl font-bold">{stats?.deliveryRate || 0}%</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500 opacity-50" />
+              <TrendingUp className="h-8 w-8 text-[var(--success)] opacity-50" />
             </div>
             <div className="mt-2">
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-green-500 rounded-full"
+                  className="h-full bg-[var(--success)] rounded-full"
                   style={{ width: `${stats?.deliveryRate || 0}%` }}
                 />
               </div>
@@ -258,7 +259,7 @@ export default function CommunicationsPage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">This Month</p>
                 <p className="text-2xl font-bold">{stats?.thisMonth.total || 0}</p>
               </div>
-              <BarChart3 className="h-8 w-8 text-purple-500 opacity-50" />
+              <BarChart3 className="h-8 w-8 text-[var(--chart-purple)] opacity-50" />
             </div>
             <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <Smartphone className="h-3 w-3" /> {stats?.thisMonth.sms || 0}
@@ -275,7 +276,7 @@ export default function CommunicationsPage() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">SMS Balance</p>
                 <p className="text-2xl font-bold">{stats?.smsBalance?.toLocaleString() || 0}</p>
               </div>
-              <Smartphone className="h-8 w-8 text-orange-500 opacity-50" />
+              <Smartphone className="h-8 w-8 text-[var(--warning)] opacity-50" />
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
               Credits remaining
@@ -302,13 +303,13 @@ export default function CommunicationsPage() {
                   onClick={action.action}
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-colors text-center ${
                     action.variant === 'destructive'
-                      ? 'border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:hover:bg-red-900'
+                      ? 'border-[var(--danger-light)] bg-[var(--danger-light)] hover:bg-[var(--danger-light)] dark:border-[var(--danger-dark)] dark:bg-[var(--danger-dark)] dark:hover:bg-[var(--danger-dark)]'
                       : 'border-input bg-background hover:bg-accent'
                   }`}
                 >
-                  <Icon className={`h-6 w-6 ${action.variant === 'destructive' ? 'text-red-600' : 'text-primary'}`} />
+                  <Icon className={`h-6 w-6 ${action.variant === 'destructive' ? 'text-[var(--chart-red)]' : 'text-primary'}`} />
                   <div>
-                    <p className={`text-sm font-medium ${action.variant === 'destructive' ? 'text-red-700 dark:text-red-400' : ''}`}>
+                    <p className={`text-sm font-medium ${action.variant === 'destructive' ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : ''}`}>
                       {action.label}
                     </p>
                     <p className="text-xs text-muted-foreground">{action.description}</p>
@@ -376,30 +377,30 @@ export default function CommunicationsPage() {
 
       {/* Emergency Alert Modal */}
       {showEmergencyModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
           <div className="bg-background rounded-lg shadow-lg max-w-md w-full">
-            <div className="p-4 border-b bg-red-50 dark:bg-red-950 rounded-t-lg">
+            <div className="p-4 border-b bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] rounded-t-lg">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
                   <AlertTriangle className="h-5 w-5" />
                   <h3 className="font-semibold">Emergency Alert</h3>
                 </div>
                 <button 
                   onClick={() => setShowEmergencyModal(false)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-[var(--danger)] hover:text-[var(--chart-red)]"
                 >
                   <XCircle className="h-5 w-5" />
                 </button>
               </div>
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                This will immediately notify ALL parents, students, and staff via SMS, WhatsApp, and Email.
+              <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] mt-1">
+                This will immediately notify ALL parents, students, and staff via SMS and Email.
               </p>
             </div>
             <div className="p-4 space-y-4">
               {emergencySuccess ? (
                 <div className="text-center py-6">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <h4 className="text-lg font-semibold text-green-700">Emergency Alert Sent!</h4>
+                  <CheckCircle className="h-16 w-16 text-[var(--success)] mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-[var(--chart-green)]">Emergency Alert Sent!</h4>
                   <p className="text-sm text-muted-foreground mt-2">
                     All recipients are being notified across all channels.
                   </p>
@@ -407,7 +408,7 @@ export default function CommunicationsPage() {
               ) : (
                 <>
                   {emergencyError && (
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30 dark:text-[var(--danger)]">
                       <AlertCircle className="h-4 w-4 flex-shrink-0" />
                       <span className="text-sm">{emergencyError}</span>
                     </div>
@@ -426,12 +427,12 @@ export default function CommunicationsPage() {
                       {emergencyContent.length} characters
                     </p>
                   </div>
-                  <div className="p-3 rounded-md bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-200 text-sm">
+                  <div className="p-3 rounded-md bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] text-[var(--warning-dark)] dark:text-[var(--warning)] text-sm">
                     <p className="font-medium">This action:</p>
                     <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
                       <li>Overrides quiet hours and normal rules</li>
                       <li>Sends immediately to entire school</li>
-                      <li>Uses all available channels (SMS, WhatsApp, Email)</li>
+                      <li>Uses all available channels (SMS, Email)</li>
                       <li>Is logged for audit purposes</li>
                     </ul>
                   </div>
@@ -651,6 +652,10 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
       setError('Please enter a message')
       return
     }
+    if (useCustomContent && selectedChannel === MessageChannel.SMS && customContent.length > 160) {
+      setError(`SMS message exceeds 160 character limit (${customContent.length} characters)`)
+      return
+    }
     if (targetType === TargetType.CLASS && selectedClasses.length === 0) {
       setError('Please select at least one class')
       return
@@ -731,8 +736,6 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
 
   const CHANNEL_OPTIONS = [
     { value: MessageChannel.SMS, label: 'SMS', icon: Smartphone },
-    { value: MessageChannel.WHATSAPP, label: 'WhatsApp', icon: MessageSquare },
-    { value: MessageChannel.EMAIL, label: 'Email', icon: Mail },
   ]
 
   return (
@@ -753,7 +756,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto"><XCircle className="h-4 w-4" /></button>
@@ -761,7 +764,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
         )}
 
         {success && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/20 dark:text-[var(--success)]">
             <CheckCircle className="h-4 w-4" />
             <span className="text-sm">{success}</span>
             <button onClick={() => setSuccess(null)} className="ml-auto"><XCircle className="h-4 w-4" /></button>
@@ -896,24 +899,15 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
         {/* Channel Selection */}
         <div className="space-y-2">
           <label className="block text-sm font-medium">Channel</label>
-          <div className="flex gap-2">
-            {CHANNEL_OPTIONS.map((option) => {
-              const Icon = option.icon
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedChannel(option.value)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md border text-sm ${
-                    selectedChannel === option.value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background border-input hover:bg-accent'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {option.label}
-                </button>
-              )
-            })}
+          <div className="p-3 rounded-md bg-muted/50 border">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4" />
+              <span className="text-sm font-medium">SMS Only</span>
+              <span className="text-xs text-muted-foreground">UGX 45 per message</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Email integration is available for important notifications, while SMS remains the primary channel for universal accessibility.
+            </p>
           </div>
         </div>
 
@@ -939,10 +933,16 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="">Select a template...</option>
-              {templates.filter(t => t.channel === selectedChannel).map((t) => (
-                <option key={t.id} value={t.id}>{t.type.replace(/_/g, ' ')}</option>
+              {templates.filter(t => t.channel === 'SMS').map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
+            {/* Template count info */}
+            {templates.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {templates.filter(t => t.channel === 'SMS').length} SMS templates available
+              </div>
+            )}
           </div>
         )}
 
@@ -951,16 +951,66 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
           <label className="block text-sm font-medium">{useCustomContent ? 'Message' : 'Preview'}</label>
           <textarea
             value={customContent}
-            onChange={(e) => setCustomContent(e.target.value)}
-            placeholder={useCustomContent ? 'Type your message...' : 'Select a template'}
+            onChange={(e) => {
+              const newValue = e.target.value
+              // Strictly enforce 160 character limit for SMS
+              if (selectedChannel === MessageChannel.SMS && newValue.length <= 160) {
+                setCustomContent(newValue)
+              } else if (selectedChannel !== MessageChannel.SMS) {
+                setCustomContent(newValue)
+              }
+            }}
+            onPaste={(e) => {
+              // Handle paste events to enforce character limit for SMS
+              if (selectedChannel === MessageChannel.SMS) {
+                e.preventDefault()
+                const pastedText = e.clipboardData.getData('text')
+                const currentText = customContent
+                const availableSpace = 160 - currentText.length
+                const textToAdd = pastedText.slice(0, availableSpace)
+                setCustomContent(currentText + textToAdd)
+              }
+            }}
+            placeholder={useCustomContent ? 'Type your message... (160 characters max for SMS)' : 'Select a template'}
             rows={4}
             readOnly={!useCustomContent}
-            className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none ${!useCustomContent ? 'bg-muted/50' : ''}`}
+            maxLength={selectedChannel === MessageChannel.SMS ? 160 : undefined}
+            className={`w-full rounded-md border px-3 py-2 text-sm resize-none ${
+              !useCustomContent ? 'bg-muted/50 border-input' : 
+              selectedChannel === MessageChannel.SMS && characterCount > 160 ? 'border-[var(--danger)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20' :
+              selectedChannel === MessageChannel.SMS && characterCount > 140 ? 'border-[var(--warning)] bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/20' :
+              'border-input bg-background'
+            }`}
           />
           {selectedChannel === MessageChannel.SMS && (
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{characterCount} chars</span>
-              <span>{smsSegments} segment{smsSegments > 1 ? 's' : ''} {smsSegments > 1 && '(higher cost)'}</span>
+            <div className="flex justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className={`${
+                  characterCount > 160 ? 'text-[var(--chart-red)]' : 
+                  characterCount > 140 ? 'text-[var(--chart-yellow)]' : 
+                  'text-muted-foreground'
+                }`}>
+                  {characterCount}/160 characters
+                </span>
+                {characterCount > 160 && (
+                  <span className="text-[var(--chart-red)] font-medium">
+                    ({characterCount - 160} over limit)
+                  </span>
+                )}
+                {characterCount > 140 && characterCount <= 160 && (
+                  <span className="text-[var(--chart-yellow)]">
+                    ({160 - characterCount} remaining)
+                  </span>
+                )}
+              </div>
+              <div className="text-muted-foreground">
+                Cost: UGX 45
+              </div>
+            </div>
+          )}
+          {selectedChannel === MessageChannel.SMS && characterCount > 160 && (
+            <div className="text-xs text-[var(--chart-red)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20 p-2 rounded">
+              Message exceeds 160 character limit. Please shorten your message to avoid additional charges.
             </div>
           )}
         </div>
@@ -975,8 +1025,8 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
                 onClick={() => setPriority(p)}
                 className={`px-4 py-2 rounded-md border text-sm capitalize ${
                   priority === p
-                    ? p === 'critical' ? 'bg-red-500 text-white border-red-500'
-                      : p === 'high' ? 'bg-yellow-500 text-white border-yellow-500'
+                    ? p === 'critical' ? 'bg-[var(--danger)] text-[var(--white-pure)] border-[var(--danger)]'
+                      : p === 'high' ? 'bg-[var(--warning)] text-[var(--white-pure)] border-[var(--warning)]'
                       : 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-input hover:bg-accent'
                 }`}
@@ -1032,223 +1082,4 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
   )
 }
 
-/**
- * Templates Section Component
- * Manages message templates with placeholders
- */
-function TemplatesSection() {
-  const [templates, setTemplates] = useState<Array<{
-    id: string
-    type: string
-    channel: string
-    content: string
-    isActive: boolean
-  }>>([])
-  const [loading, setLoading] = useState(true)
-  const [editingTemplate, setEditingTemplate] = useState<string | null>(null)
-  const [editContent, setEditContent] = useState('')
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
-
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/sms/templates')
-      if (response.ok) {
-        const data = await response.json()
-        setTemplates(data.templates || [])
-      }
-    } catch (error) {
-      console.error('Error fetching templates:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSaveTemplate = async (templateId: string) => {
-    try {
-      const response = await fetch(`/api/sms/templates/${templateId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent }),
-      })
-
-      if (response.ok) {
-        setEditingTemplate(null)
-        fetchTemplates()
-      }
-    } catch (error) {
-      console.error('Error saving template:', error)
-    }
-  }
-
-  const templateTypes = [
-    { type: 'TERM_START', label: 'Term Start', description: 'Sent when term begins' },
-    { type: 'ATTENDANCE_ALERT', label: 'Attendance Alert', description: 'Absence/late notifications' },
-    { type: 'FEES_REMINDER', label: 'Fee Reminder', description: 'Outstanding balance alerts' },
-    { type: 'MID_TERM_PROGRESS', label: 'Mid-Term Progress', description: 'Progress reports' },
-    { type: 'REPORT_READY', label: 'Report Ready', description: 'Report card availability' },
-    { type: 'TERM_SUMMARY', label: 'Term Summary', description: 'End of term results' },
-    { type: 'DISCIPLINE_NOTICE', label: 'Discipline Notice', description: 'Behavioral alerts' },
-    { type: 'GENERAL_ANNOUNCEMENT', label: 'General', description: 'Custom messages' },
-  ]
-
-  const placeholders = [
-    { key: '{{studentName}}', desc: 'Student full name' },
-    { key: '{{className}}', desc: 'Class name' },
-    { key: '{{date}}', desc: 'Current date' },
-    { key: '{{balance}}', desc: 'Fee balance' },
-    { key: '{{average}}', desc: 'Average score' },
-    { key: '{{position}}', desc: 'Class position' },
-    { key: '{{link}}', desc: 'Portal link' },
-  ]
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-md bg-muted animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <div className="grid md:grid-cols-3 gap-6">
-      <div className="md:col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Message Templates
-            </CardTitle>
-            <CardDescription>
-              Pre-written templates with variables. Edit to customize for your school.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {templateTypes.map((type) => {
-              const template = templates.find(t => t.type === type.type)
-              const isEditing = editingTemplate === template?.id
-
-              return (
-                <div key={type.type} className="p-4 rounded-lg border">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-medium">{type.label}</h4>
-                      <p className="text-xs text-muted-foreground">{type.description}</p>
-                    </div>
-                    {template && (
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          template.isActive
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                        }`}>
-                          {template.channel}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {isEditing ? (
-                    <div className="space-y-2">
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        rows={3}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none font-mono"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingTemplate(null)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleSaveTemplate(template!.id)}
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm bg-muted/50 p-2 rounded font-mono">
-                        {template?.content || 'No template configured'}
-                      </p>
-                      {template && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingTemplate(template.id)
-                            setEditContent(template.content)
-                          }}
-                        >
-                          Edit Template
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Available Placeholders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {placeholders.map((p) => (
-                <div key={p.key} className="flex items-center justify-between text-sm">
-                  <code className="bg-muted px-2 py-0.5 rounded text-xs">{p.key}</code>
-                  <span className="text-xs text-muted-foreground">{p.desc}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-sm">SMS Character Limits</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-2">
-            <p className="text-muted-foreground">
-              Keep messages concise for cost efficiency:
-            </p>
-            <ul className="space-y-1 text-xs">
-              <li className="flex justify-between">
-                <span>1 segment</span>
-                <span className="font-mono">≤ 160 chars</span>
-              </li>
-              <li className="flex justify-between">
-                <span>2 segments</span>
-                <span className="font-mono">≤ 306 chars</span>
-              </li>
-              <li className="flex justify-between">
-                <span>3 segments</span>
-                <span className="font-mono">≤ 459 chars</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}

@@ -22,4 +22,5 @@ export {
   type DashboardRouterProps,
 } from './dashboard-router'
 export { TeacherContextBar } from './teacher-context-bar'
+export { DoSContextBar } from './dos-context-bar'
 export { TodayPanel, type TodayPanelProps, type ScheduledClass } from './today-panel'

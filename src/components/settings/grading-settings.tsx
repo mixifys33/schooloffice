@@ -262,7 +262,7 @@ export function GradingSettings() {
             <Button type="button" variant="outline" size="sm" onClick={addExamWeight} className="gap-2">
               <Plus className="h-4 w-4" /> Add Exam Type
             </Button>
-            <div className={`text-sm font-medium ${getTotalWeight() === 100 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-sm font-medium ${getTotalWeight() === 100 ? 'text-[var(--chart-green)]' : 'text-[var(--chart-red)]'}`}>
               Total: {getTotalWeight()}%
             </div>
           </div>

@@ -48,18 +48,18 @@ function StatCard({
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'muted'
 }) {
   const variantClasses = {
-    default: 'bg-slate-800 border-slate-700 text-slate-100',
-    success: 'bg-slate-800 border-emerald-700 text-emerald-400',
-    warning: 'bg-slate-800 border-amber-700 text-amber-400',
-    danger: 'bg-slate-800 border-red-700 text-red-400',
-    muted: 'bg-slate-800 border-slate-600 text-slate-300',
+    default: 'bg-slate-800 border-slate-700 text-[var(--text-primary)]',
+    success: 'bg-slate-800 border-emerald-700 text-[var(--success)]',
+    warning: 'bg-slate-800 border-amber-700 text-[var(--warning)]',
+    danger: 'bg-slate-800 border-[var(--chart-red)] text-[var(--danger)]',
+    muted: 'bg-slate-800 border-slate-600 text-[var(--text-muted)]',
   }
 
   return (
     <div className={`p-4 rounded-lg border ${variantClasses[variant]}`}>
-      <p className="text-sm font-medium text-slate-400">{title}</p>
+      <p className="text-sm font-medium text-[var(--text-muted)]">{title}</p>
       <p className="text-2xl font-semibold mt-1">{value}</p>
-      {subtitle && <p className="text-xs mt-1 text-slate-500">{subtitle}</p>}
+      {subtitle && <p className="text-xs mt-1 text-[var(--text-muted)]">{subtitle}</p>}
     </div>
   )
 }
@@ -75,7 +75,7 @@ function SectionCard({
 }) {
   return (
     <div className={`bg-slate-800 rounded-lg border border-slate-700 p-6 ${className}`}>
-      <h2 className="text-base font-medium mb-4 text-slate-200">{title}</h2>
+      <h2 className="text-base font-medium mb-4 text-[var(--text-secondary)]">{title}</h2>
       {children}
     </div>
   )
@@ -120,8 +120,8 @@ export default function SuperAdminDashboard() {
     return (
       <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-100">Super Admin Console</h1>
-          <p className="text-slate-400 text-sm">System-wide metrics and school monitoring</p>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Super Admin Console</h1>
+          <p className="text-[var(--text-muted)] text-sm">System-wide metrics and school monitoring</p>
         </div>
 
         {/* Skeleton for stat cards - Requirements 12.5 */}
@@ -147,14 +147,14 @@ export default function SuperAdminDashboard() {
     return (
       <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-100">Super Admin Console</h1>
-          <p className="text-slate-400 text-sm">System-wide metrics and school monitoring</p>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Super Admin Console</h1>
+          <p className="text-[var(--text-muted)] text-sm">System-wide metrics and school monitoring</p>
         </div>
-        <div className="bg-red-950/50 border border-red-800 rounded-lg p-4">
-          <p className="text-red-400">{error}</p>
+        <div className="bg-[var(--danger-dark)]/50 border border-[var(--danger-dark)] rounded-lg p-4">
+          <p className="text-[var(--danger)]">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-sm text-red-400 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--danger)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -175,8 +175,8 @@ export default function SuperAdminDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Super Admin Console</h1>
-        <p className="text-slate-400 text-sm">System-wide metrics and school monitoring</p>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Super Admin Console</h1>
+        <p className="text-[var(--text-muted)] text-sm">System-wide metrics and school monitoring</p>
       </div>
 
       {/* System Overview Stats - Requirements 12.3 - Dashboard cards */}
@@ -210,19 +210,19 @@ export default function SuperAdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-700/50 rounded-lg">
-                <p className="text-sm text-slate-400">Total SMS Sent</p>
-                <p className="text-2xl font-semibold text-slate-100">
+                <p className="text-sm text-[var(--text-muted)]">Total SMS Sent</p>
+                <p className="text-2xl font-semibold text-[var(--text-primary)]">
                   {data.sms.totalUsage.toLocaleString()}
                 </p>
               </div>
               <div className="p-4 bg-slate-700/50 rounded-lg">
-                <p className="text-sm text-slate-400">Total SMS Cost</p>
-                <p className="text-2xl font-semibold text-slate-100">
+                <p className="text-sm text-[var(--text-muted)]">Total SMS Cost</p>
+                <p className="text-2xl font-semibold text-[var(--text-primary)]">
                   {formatCurrency(data.sms.totalCost)}
                 </p>
               </div>
             </div>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-[var(--text-muted)]">
               Average cost per SMS: {data.sms.totalUsage > 0 
                 ? formatCurrency(Math.round(data.sms.totalCost / data.sms.totalUsage))
                 : 'N/A'}
@@ -235,32 +235,32 @@ export default function SuperAdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-700/50 rounded-lg">
-                <p className="text-sm text-slate-400">Expected Revenue</p>
-                <p className="text-2xl font-semibold text-slate-100">
+                <p className="text-sm text-[var(--text-muted)]">Expected Revenue</p>
+                <p className="text-2xl font-semibold text-[var(--text-primary)]">
                   {formatCurrency(data.revenue.expected)}
                 </p>
               </div>
               <div className="p-4 bg-slate-700/50 rounded-lg">
-                <p className="text-sm text-slate-400">Received Revenue</p>
-                <p className="text-2xl font-semibold text-emerald-400">
+                <p className="text-sm text-[var(--text-muted)]">Received Revenue</p>
+                <p className="text-2xl font-semibold text-[var(--success)]">
                   {formatCurrency(data.revenue.received)}
                 </p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Collection Rate</span>
-                <span className={`font-medium ${revenuePercentage >= 80 ? 'text-emerald-400' : revenuePercentage >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                <span className="text-[var(--text-muted)]">Collection Rate</span>
+                <span className={`font-medium ${revenuePercentage >= 80 ? 'text-[var(--success)]' : revenuePercentage >= 50 ? 'text-[var(--warning)]' : 'text-[var(--danger)]'}`}>
                   {revenuePercentage}%
                 </span>
               </div>
               <div className="w-full bg-slate-700 rounded-full h-1.5">
                 <div
-                  className={`h-1.5 rounded-full ${revenuePercentage >= 80 ? 'bg-emerald-500' : revenuePercentage >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                  className={`h-1.5 rounded-full ${revenuePercentage >= 80 ? 'bg-[var(--success)]' : revenuePercentage >= 50 ? 'bg-[var(--warning)]' : 'bg-[var(--danger)]'}`}
                   style={{ width: `${Math.min(revenuePercentage, 100)}%` }}
                 />
               </div>
-              <div className="text-sm text-slate-500">
+              <div className="text-sm text-[var(--text-muted)]">
                 Outstanding: {formatCurrency(data.revenue.expected - data.revenue.received)}
               </div>
             </div>
@@ -274,28 +274,28 @@ export default function SuperAdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                <th className="text-left py-3 px-4 text-slate-400 font-medium">School Name</th>
-                <th className="text-left py-3 px-4 text-slate-400 font-medium">Code</th>
-                <th className="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
-                <th className="text-left py-3 px-4 text-slate-400 font-medium">Plan</th>
-                <th className="text-left py-3 px-4 text-slate-400 font-medium">Created</th>
-                <th className="text-right py-3 px-4 text-slate-400 font-medium"></th>
+                <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">School Name</th>
+                <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Code</th>
+                <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Status</th>
+                <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Plan</th>
+                <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Created</th>
+                <th className="text-right py-3 px-4 text-[var(--text-muted)] font-medium"></th>
               </tr>
             </thead>
-            <tbody className="text-slate-300">
+            <tbody className="text-[var(--text-muted)]">
               <tr className="border-b border-slate-700/50 hover:bg-slate-700/30">
                 <td className="py-3 px-4">Sample School</td>
                 <td className="py-3 px-4 font-mono text-xs">SAMPLE</td>
                 <td className="py-3 px-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/50 text-emerald-400">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--success-dark)]/50 text-[var(--success)]">
                     Active
                   </span>
                 </td>
                 <td className="py-3 px-4">Pilot</td>
-                <td className="py-3 px-4 text-slate-500">Jan 1, 2026</td>
+                <td className="py-3 px-4 text-[var(--text-muted)]">Jan 1, 2026</td>
                 <td className="py-3 px-4 text-right">
                   {/* Requirements 12.5 - Destructive actions hidden under "More" menu */}
-                  <button className="text-slate-400 hover:text-slate-200 p-1">
+                  <button className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] p-1">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                     </svg>
@@ -306,7 +306,7 @@ export default function SuperAdminDashboard() {
           </table>
         </div>
         <div className="mt-4 pt-4 border-t border-slate-700">
-          <Link href="/dashboard/super-admin/schools" className="text-sm text-slate-400 hover:text-slate-200">
+          <Link href="/dashboard/super-admin/schools" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
             View all schools →
           </Link>
         </div>

@@ -48,24 +48,24 @@ export default function AccessDeniedPage() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
       <div className="mx-auto max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-          <ShieldX className="h-10 w-10 text-red-600 dark:text-red-400" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20">
+          <ShieldX className="h-10 w-10 text-[var(--chart-red)] dark:text-[var(--danger)]" />
         </div>
 
         {/* Title */}
-        <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
           Access Denied
         </h1>
 
         {/* Message */}
-        <p className="mb-6 text-gray-600 dark:text-gray-400">
+        <p className="mb-6 text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
           You don&apos;t have permission to access this page. This might be because
           your role doesn&apos;t include the required permissions, or the resource
           is restricted.
         </p>
 
         {/* Help text */}
-        <p className="mb-8 text-sm text-gray-500 dark:text-gray-500">
+        <p className="mb-8 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           If you believe this is an error, please contact your administrator.
         </p>
 

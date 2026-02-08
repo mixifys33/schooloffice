@@ -1,571 +1,726 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { 
   DollarSign, 
-  Receipt, 
-  Search,
-  RefreshCw,
-  AlertTriangle,
-  TrendingUp,
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  AlertTriangle, 
   CreditCard,
-  Banknote,
   FileText,
-  Download
+  Calendar,
+  RefreshCw,
+  Eye,
+  Download,
+  Filter,
+  Search,
+  ChevronRight,
+  Clock,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
-import { 
-  AlertCard, 
-  QuickActionButton, 
-  StatsCard
-} from '@/components/dashboard'
-import { AlertBanner } from '@/components/ui/alert-banner'
-import { SkeletonLoader, Skeleton } from '@/components/ui/skeleton-loader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertType, AlertSeverity } from '@/types/enums'
-import type { 
-  BursarDashboardData, 
-  BalanceAlert,
-  ReconciliationAlert,
-  ReportAccess
-} from '@/types/staff-dashboard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton-loader'
+import { ErrorMessage } from '@/components/ui/error-message'
 
-/**
- * Bursar Dashboard Page
- * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
- * Displays financial alerts, quick actions, financial overview, reports access
- * Excludes: marks editing, class changes, attendance modification
- */
-
-// Quick actions for bursar dashboard - Requirements: 5.3
-const bursarQuickActions = [
-  {
-    id: 'record-payment',
-    icon: DollarSign,
-    label: 'Record Payment',
-    href: '/dashboard/fees/payments/new',
-    variant: 'primary' as const,
-  },
-  {
-    id: 'issue-receipt',
-    icon: Receipt,
-    label: 'Issue Receipt',
-    href: '/dashboard/fees/receipts/new',
-    variant: 'secondary' as const,
-  },
-  {
-    id: 'view-balance',
-    icon: Search,
-    label: 'View Student Balance',
-    href: '/dashboard/fees/balances',
-    variant: 'outline' as const,
-  },
-  {
-    id: 'fee-reports',
-    icon: FileText,
-    label: 'Fee Reports',
-    href: '/dashboard/fees/reports',
-    variant: 'outline' as const,
-  },
-]
-
-// Payment method icons mapping
-const paymentMethodIcons: Record<string, typeof DollarSign> = {
-  cash: Banknote,
-  mpesa: CreditCard,
-  bank: CreditCard,
-  cheque: FileText,
+interface FinancialMetrics {
+  totalRevenue: number
+  totalExpenses: number
+  netIncome: number
+  totalOutstanding: number
+  collectionRate: number
+  studentsWithBalance: number
+  totalStudents: number
+  recentPayments: RecentPayment[]
+  monthlyTrend: MonthlyTrend[]
+  topDefaulters: TopDefaulter[]
 }
 
-
-// Unpaid Balances Table Component - Requirements: 5.2
-function UnpaidBalancesTable({ balances }: { balances: BalanceAlert[] }) {
-  if (balances.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <DollarSign className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">
-          No unpaid balances to display
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="w-full">
-      {/* Mobile: Card view */}
-      <div className="md:hidden space-y-3">
-        {balances.slice(0, 5).map((balance) => (
-          <div
-            key={balance.id}
-            className="bg-white dark:bg-gray-800 rounded-lg border p-4"
-          >
-            <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
-              {balance.studentName}
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Adm. No.</span>
-                <span className="text-gray-900 dark:text-gray-100">{balance.admissionNumber}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Class</span>
-                <span className="text-gray-900 dark:text-gray-100">{balance.className}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Outstanding</span>
-                <span className="font-medium text-red-600 dark:text-red-400">
-                  KES {balance.outstandingBalance.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Days Overdue</span>
-                <span className={balance.daysOverdue > 30 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-900 dark:text-gray-100'}>
-                  {balance.daysOverdue} days
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop: Table view */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 dark:bg-gray-800">
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
-                Student Name
-              </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
-                Adm. No.
-              </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-left">
-                Class
-              </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-right">
-                Outstanding
-              </th>
-              <th className="py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-right">
-                Days Overdue
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {balances.slice(0, 10).map((balance) => (
-              <tr
-                key={balance.id}
-                className="border-b hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <td className="py-3 px-4">{balance.studentName}</td>
-                <td className="py-3 px-4">{balance.admissionNumber}</td>
-                <td className="py-3 px-4">{balance.className}</td>
-                <td className="py-3 px-4 text-right">
-                  <span className="font-medium text-red-600 dark:text-red-400">
-                    KES {balance.outstandingBalance.toLocaleString()}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <span className={balance.daysOverdue > 30 ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
-                    {balance.daysOverdue} days
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {balances.length > 10 && (
-        <div className="mt-3 text-center">
-          <Link 
-            href="/dashboard/fees/balances" 
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            View all {balances.length} unpaid balances →
-          </Link>
-        </div>
-      )}
-    </div>
-  )
+interface RecentPayment {
+  id: string
+  studentName: string
+  amount: number
+  paymentMethod: string
+  timestamp: string
+  status: 'completed' | 'pending' | 'failed'
+  reference: string
 }
 
-
-// Payment Methods Breakdown Component - Requirements: 5.4
-function PaymentMethodsBreakdown({ methods }: { methods: { method: string; amount: number }[] }) {
-  const total = methods.reduce((sum, m) => sum + m.amount, 0)
-  
-  if (methods.length === 0 || total === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          No payments recorded today
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {methods.map((method) => {
-        const percentage = total > 0 ? Math.round((method.amount / total) * 100) : 0
-        const Icon = paymentMethodIcons[method.method.toLowerCase()] || DollarSign
-        
-        return (
-          <div key={method.method} className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-              <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                  {method.method}
-                </span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  KES {method.amount.toLocaleString()}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div 
-                  className="bg-green-500 dark:bg-green-400 h-2 rounded-full transition-all"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">
-              {percentage}%
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
+interface MonthlyTrend {
+  month: string
+  revenue: number
+  expenses: number
+  collections: number
 }
 
-// Reports Access Component - Requirements: 5.5
-function ReportsAccessList({ reports }: { reports: ReportAccess[] }) {
-  if (reports.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          No reports available
-        </p>
-      </div>
-    )
-  }
-
-  const reportTypeIcons: Record<string, typeof FileText> = {
-    fee_report: FileText,
-    payment_summary: Receipt,
-    audit_export: Download,
-  }
-
-  return (
-    <div className="space-y-2">
-      {reports.map((report) => {
-        const Icon = reportTypeIcons[report.type] || FileText
-        return (
-          <Link
-            key={report.id}
-            href={report.url}
-            className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <div className="flex-shrink-0 p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50">
-              <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {report.name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                {report.type.replace(/_/g, ' ')}
-              </p>
-            </div>
-            <Download className="h-4 w-4 text-gray-400" />
-          </Link>
-        )
-      })}
-    </div>
-  )
+interface TopDefaulter {
+  id: string
+  studentName: string
+  className: string
+  outstandingAmount: number
+  daysPastDue: number
+  lastPayment: string | null
 }
 
-
-// Loading skeleton for bursar dashboard
-function BursarDashboardSkeleton() {
-  return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <div>
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-64 mt-2" />
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <SkeletonLoader key={i} variant="stat" count={1} />
-        ))}
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
-      <div className="space-y-3">
-        <Skeleton className="h-16 w-full rounded-lg" />
-        <Skeleton className="h-16 w-full rounded-lg" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SkeletonLoader variant="table" count={1} />
-        <SkeletonLoader variant="card" count={2} />
-      </div>
-    </div>
-  )
+interface DashboardState {
+  metrics: FinancialMetrics | null
+  loading: boolean
+  error: string | null
+  refreshing: boolean
+  lastUpdated: Date | null
 }
 
-export default function BursarDashboardPage() {
+export default function EnhancedBursarDashboard() {
+  const { data: session, status } = useSession()
   const router = useRouter()
-  const [data, setData] = useState<BursarDashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  
+  const [state, setState] = useState<DashboardState>({
+    metrics: null,
+    loading: true,
+    error: null,
+    refreshing: false,
+    lastUpdated: null
+  })
 
-  const fetchDashboardData = useCallback(async () => {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedPeriod, setSelectedPeriod] = useState('current-term')
+
+  // Authentication check
+  useEffect(() => {
+    if (status === 'loading') return // Still loading
+    
+    if (!session?.user) {
+      console.log('No session found, redirecting to login')
+      router.push('/login')
+      return
+    }
+    
+    // Check if user has required data
+    if (!session.user.schoolId) {
+      console.warn('User has no schoolId, this may cause API issues')
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Session error: No school ID found. Please log out and log in again.'
+      }))
+      return
+    }
+  }, [session, status, router])
+
+  const fetchDashboardData = async (isRefresh = false) => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch('/api/dashboard/bursar')
+      setState(prev => ({ 
+        ...prev, 
+        loading: !isRefresh, 
+        refreshing: isRefresh, 
+        error: null 
+      }))
+
+      // Get current term first
+      const termResponse = await fetch('/api/terms/current')
+      const termData = await termResponse.json()
+      const termId = termData.term?.id
+
+      if (!termId) {
+        if (termResponse.status === 404) {
+          const errorData = await termResponse.json().catch(() => ({}))
+          let userFriendlyMessage = ''
+
+          switch (errorData.suggestion) {
+            case 'setup_academic_year':
+              userFriendlyMessage = 'No academic years found. Please set up an academic year first.'
+              break
+            case 'setup_terms':
+              userFriendlyMessage = 'Academic year exists but no terms found. Please create terms for your academic year.'
+              break
+            case 'activate_academic_year':
+              userFriendlyMessage = 'Academic year and terms exist but none are currently active. Please activate your academic year.'
+              break
+            default:
+              userFriendlyMessage = errorData.error || 'Academic setup required. Please set up an active academic year and term before accessing the bursar dashboard.'
+          }
+
+          setState(prev => ({
+            ...prev,
+            loading: false,
+            refreshing: false,
+            error: userFriendlyMessage
+          }))
+          return
+        } else {
+          throw new Error('Unable to retrieve term information')
+        }
+      }
+
+      // Fetch all dashboard data
+      const [metricsRes, paymentsRes, defaultersRes] = await Promise.all([
+        fetch(`/api/bursar/dashboard/metrics?termId=${termId}&period=${selectedPeriod}`),
+        fetch(`/api/bursar/dashboard/recent-payments?termId=${termId}&limit=10`),
+        fetch(`/api/bursar/dashboard/top-defaulters?termId=${termId}&limit=5`)
+      ])
+
+      if (!metricsRes.ok || !paymentsRes.ok || !defaultersRes.ok) {
+        // Log specific response statuses for debugging
+        if (!metricsRes.ok) console.error('Metrics API failed with status:', metricsRes.status)
+        if (!paymentsRes.ok) console.error('Payments API failed with status:', paymentsRes.status)
+        if (!defaultersRes.ok) console.error('Defaulters API failed with status:', defaultersRes.status)
+        
+        const failedRequests = []
+        if (!metricsRes.ok) failedRequests.push('financial metrics')
+        if (!paymentsRes.ok) failedRequests.push('recent payments')
+        if (!defaultersRes.ok) failedRequests.push('defaulter information')
+
+        throw new Error(`Failed to load ${failedRequests.join(', ')}. Please try again.`)
+      }
+
+      const [metricsData, paymentsData, defaultersData] = await Promise.all([
+        metricsRes.json(),
+        paymentsRes.json(),
+        defaultersRes.json()
+      ])
+
+      if (!metricsData.success || !paymentsData.success || !defaultersData.success) {
+        // Log specific response data for debugging
+        if (!metricsData.success) console.error('Metrics API returned success=false:', metricsData)
+        if (!paymentsData.success) console.error('Payments API returned success=false:', paymentsData)
+        if (!defaultersData.success) console.error('Defaulters API returned success=false:', defaultersData)
+        
+        const failedData = []
+        if (!metricsData.success) failedData.push('financial metrics')
+        if (!paymentsData.success) failedData.push('recent payments')
+        if (!defaultersData.success) failedData.push('defaulter information')
+
+        throw new Error(`Invalid data received for ${failedData.join(', ')}. Please contact support.`)
+      }
+
+      // Combine all data
+      const combinedMetrics: FinancialMetrics = {
+        ...metricsData.metrics,
+        recentPayments: paymentsData.payments || [],
+        topDefaulters: defaultersData.defaulters || []
+      }
+
+      setState(prev => ({
+        ...prev,
+        metrics: combinedMetrics,
+        loading: false,
+        refreshing: false,
+        lastUpdated: new Date()
+      }))
+
+    } catch (error) {
+      console.error('Error fetching bursar dashboard data:', error)
       
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/login')
-          return
+      let userFriendlyMessage = 'Failed to load dashboard data'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to load')) {
+          userFriendlyMessage = error.message
+        } else if (error.message.includes('Invalid data received')) {
+          userFriendlyMessage = error.message
+        } else if (error.message.includes('fetch')) {
+          userFriendlyMessage = 'Unable to connect to the server. Please check your internet connection and try again.'
+        } else {
+          userFriendlyMessage = 'Unable to load financial data. Please check your connection and try again.'
         }
-        if (response.status === 403) {
-          router.push('/dashboard/access-denied')
-          return
-        }
-        throw new Error('Failed to fetch dashboard data')
       }
       
-      const dashboardData = await response.json()
-      setData(dashboardData)
-    } catch (err) {
-      console.error('Error fetching bursar dashboard:', err)
-      setError('Unable to load dashboard data. Please try again.')
-    } finally {
-      setLoading(false)
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        refreshing: false,
+        error: userFriendlyMessage
+      }))
     }
-  }, [router])
-
-  useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
-
-  if (loading) {
-    return <BursarDashboardSkeleton />
   }
 
-  if (error) {
+  useEffect(() => {
+    // Only fetch data after authentication is confirmed
+    if (status === 'authenticated' && session?.user?.schoolId) {
+      fetchDashboardData()
+    }
+  }, [selectedPeriod, status, session?.user?.schoolId])
+
+  const handleRefresh = () => {
+    fetchDashboardData(true)
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: 'UGX',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-UG', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getPaymentStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'default'
+      case 'pending':
+        return 'secondary'
+      case 'failed':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
+  }
+
+  // Show loading while checking authentication
+  if (status === 'loading') {
     return (
-      <div className="space-y-6 p-4 sm:p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Bursar Dashboard
-          </h1>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          <p className="text-sm text-gray-600">Loading...</p>
         </div>
-        <AlertBanner
-          type="danger"
-          message={error}
-          action={{ label: 'Retry', onClick: fetchDashboardData }}
+      </div>
+    )
+  }
+
+  // Don't render anything if no session (will redirect)
+  if (!session?.user) {
+    return null
+  }
+
+  if (state.loading) {
+    return (
+      <div className="p-4 lg:p-6 space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* Metrics Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-5 rounded" />
+                </div>
+                <Skeleton className="h-8 w-32 mb-1" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div>
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div>
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (state.error) {
+    return (
+      <div className="p-4 lg:p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)]">
+              Bursar Dashboard
+            </h1>
+            <p className="text-[var(--text-secondary)]">
+              Financial management and oversight
+            </p>
+          </div>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            disabled={state.refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${state.refreshing ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
+        </div>
+
+        <ErrorMessage
+          title="Failed to load financial dashboard"
+          message={state.error}
+          suggestedActions={
+            state.error.includes('Academic setup required') 
+              ? [
+                  'Go to Settings → Academic Years to set up an academic year',
+                  'Create and activate a term for the current period',
+                  'Ensure the term dates cover the current date',
+                  'Contact your system administrator if you need help'
+                ]
+              : state.error.includes('Unable to retrieve term information')
+              ? [
+                  'Check your internet connection',
+                  'Try refreshing the page',
+                  'Contact support if the problem persists'
+                ]
+              : [
+                  'Check your internet connection',
+                  'Try refreshing the page',
+                  'Contact support if the problem persists'
+                ]
+          }
         />
       </div>
     )
   }
 
-  if (!data) return null
+  const { metrics } = state
 
-  const { alerts, financialOverview, reports } = data
-
-
-  // Combine all alerts into a single array for display - Requirements: 5.2
-  const allAlerts = [
-    ...alerts.unpaidBalances.slice(0, 3).map((alert) => ({
-      id: alert.id,
-      type: AlertType.UNPAID_BALANCE,
-      severity: alert.daysOverdue > 60 ? AlertSeverity.CRITICAL : 
-               alert.daysOverdue > 30 ? AlertSeverity.WARNING : AlertSeverity.INFO,
-      message: alert.message,
-      actionUrl: `/dashboard/fees/students/${alert.studentId}`,
-      actionLabel: 'View Balance',
-    })),
-    ...alerts.reconciliationIssues.map((alert) => ({
-      id: alert.id,
-      type: AlertType.RECONCILIATION_ISSUE,
-      severity: AlertSeverity.WARNING,
-      message: alert.details,
-      actionUrl: '/dashboard/fees/reconciliation',
-      actionLabel: 'Review',
-    })),
-    ...alerts.pendingApprovals.map((alert) => ({
-      id: alert.id,
-      type: AlertType.PENDING_APPROVAL,
-      severity: AlertSeverity.INFO,
-      message: alert.message,
-      actionUrl: '/dashboard/fees/approvals',
-      actionLabel: 'Review',
-    })),
-  ]
+  if (!metrics) {
+    return (
+      <div className="p-4 lg:p-6">
+        <div className="text-center py-12">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-[var(--warning)]" />
+          <h3 className="text-lg font-semibold mb-2">No Data Available</h3>
+          <p className="text-[var(--text-secondary)] mb-4">
+            Unable to load financial data at this time.
+          </p>
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="p-4 lg:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)]">
             Bursar Dashboard
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Financial overview and management
+          <p className="text-[var(--text-secondary)]">
+            Financial management and oversight
+            {state.lastUpdated && (
+              <span className="ml-2 text-xs">
+                • Last updated {state.lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
-        <button
-          onClick={fetchDashboardData}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          aria-label="Refresh dashboard"
-        >
-          <RefreshCw className="h-5 w-5" />
-        </button>
+        <div className="flex items-center space-x-3">
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="px-3 py-2 border rounded-md text-sm bg-[var(--bg-surface)] border-[var(--border-default)]"
+          >
+            <option value="current-term">Current Term</option>
+            <option value="current-month">Current Month</option>
+            <option value="last-30-days">Last 30 Days</option>
+            <option value="current-year">Current Year</option>
+          </select>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            disabled={state.refreshing}
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${state.refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      {/* Financial Overview Stats - Requirements: 5.4 */}
-      <section aria-label="Financial Overview">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          Financial Overview
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatsCard
-            title="Collections Today"
-            value={`KES ${financialOverview.collectionsToday.toLocaleString()}`}
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatsCard
-            title="Outstanding Fees"
-            value={`KES ${financialOverview.outstandingFees.toLocaleString()}`}
-            icon={AlertTriangle}
-            color={financialOverview.outstandingFees > 0 ? 'red' : 'gray'}
-          />
-          <StatsCard
-            title="Unpaid Accounts"
-            value={alerts.unpaidBalances.length}
-            subtitle="Students with balances"
-            icon={DollarSign}
-            color={alerts.unpaidBalances.length > 0 ? 'yellow' : 'gray'}
-          />
-        </div>
-      </section>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <Card>
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
+                Total Revenue
+              </span>
+              <DollarSign className="h-5 w-5 text-[var(--success)]" />
+            </div>
+            <p className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)]">
+              {formatCurrency(metrics.totalRevenue)}
+            </p>
+            <p className="text-xs text-[var(--success)] flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Revenue collected
+            </p>
+          </CardContent>
+        </Card>
 
-      {/* Quick Actions Row - Requirements: 5.3 */}
-      <section aria-label="Quick Actions">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {bursarQuickActions.map((action) => (
-            <QuickActionButton
-              key={action.id}
-              icon={action.icon}
-              label={action.label}
-              href={action.href}
-              variant={action.variant}
-            />
-          ))}
-        </div>
-      </section>
+        <Card>
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
+                Outstanding Amount
+              </span>
+              <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
+            </div>
+            <p className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)]">
+              {formatCurrency(metrics.totalOutstanding)}
+            </p>
+            <p className="text-xs text-[var(--warning)] flex items-center mt-1">
+              <Users className="h-3 w-3 mr-1" />
+              {metrics.studentsWithBalance} students
+            </p>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
+                Collection Rate
+              </span>
+              <TrendingUp className="h-5 w-5 text-[var(--info)]" />
+            </div>
+            <p className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)]">
+              {metrics.collectionRate.toFixed(1)}%
+            </p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Payment efficiency
+            </p>
+          </CardContent>
+        </Card>
 
-      {/* Financial Alerts Section - Requirements: 5.2 */}
-      {allAlerts.length > 0 && (
-        <section aria-label="Financial Alerts">
-          <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Alerts
-          </h2>
-          <div className="space-y-3">
-            {allAlerts.map((alert) => (
-              <AlertCard
-                key={alert.id}
-                type={alert.type}
-                severity={alert.severity}
-                message={alert.message}
-                actionUrl={alert.actionUrl}
-                actionLabel={alert.actionLabel}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        <Card>
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
+                Net Income
+              </span>
+              <TrendingUp className={`h-5 w-5 ${metrics.netIncome >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`} />
+            </div>
+            <p className={`text-2xl lg:text-3xl font-bold ${metrics.netIncome >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
+              {formatCurrency(metrics.netIncome)}
+            </p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Revenue - Expenses
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Main Content Grid */}
+      {/* Recent Activity & Top Defaulters */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Unpaid Balances Section - Requirements: 5.2 */}
-        <section aria-label="Unpaid Balances">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-red-500" />
-                  Unpaid Balances
-                </CardTitle>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {alerts.unpaidBalances.length} student{alerts.unpaidBalances.length !== 1 ? 's' : ''}
-                </span>
+        {/* Recent Payments */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Recent Payments</CardTitle>
+            <Button variant="ghost" size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              View All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {metrics.recentPayments.length === 0 ? (
+              <div className="text-center py-8">
+                <CreditCard className="h-8 w-8 mx-auto mb-2 text-[var(--text-muted)]" />
+                <p className="text-sm text-[var(--text-secondary)]">No recent payments</p>
               </div>
-            </CardHeader>
-            <CardContent>
-              <UnpaidBalancesTable balances={alerts.unpaidBalances} />
-            </CardContent>
-          </Card>
-        </section>
+            ) : (
+              <div className="space-y-4">
+                {metrics.recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {getPaymentStatusIcon(payment.status)}
+                      <div>
+                        <p className="font-medium text-sm">{payment.studentName}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          {formatDate(payment.timestamp)} • {payment.paymentMethod}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">{formatCurrency(payment.amount)}</p>
+                      <Badge variant={getStatusBadgeVariant(payment.status)} className="text-xs">
+                        {payment.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Right Column - Payment Methods & Reports */}
-        <div className="space-y-6">
-          {/* Payment Methods Breakdown - Requirements: 5.4 */}
-          <section aria-label="Payment Methods">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-blue-500" />
-                  Today&apos;s Collections by Method
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PaymentMethodsBreakdown methods={financialOverview.paymentMethods} />
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Reports Access - Requirements: 5.5 */}
-          <section aria-label="Reports">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-purple-500" />
-                  Reports
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReportsAccessList reports={reports} />
-              </CardContent>
-            </Card>
-          </section>
-        </div>
+        {/* Top Defaulters */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Top Defaulters</CardTitle>
+            <Button variant="ghost" size="sm">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              View All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {metrics.topDefaulters.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-[var(--success)]" />
+                <p className="text-sm text-[var(--text-secondary)]">No outstanding balances</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {metrics.topDefaulters.map((defaulter) => (
+                  <div key={defaulter.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{defaulter.studentName}</p>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        {defaulter.className} • {defaulter.daysPastDue} days overdue
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm text-[var(--danger)]">
+                        {formatCurrency(defaulter.outstandingAmount)}
+                      </p>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                        Contact
+                        <ChevronRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 
-        Requirements: 5.6 - Bursar Dashboard exclusions
-        This dashboard does NOT display:
-        - Marks editing features
-        - Class changes
-        - Attendance modification features
-        These are intentionally excluded to maintain role separation
-      */}
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-start gap-2 text-left"
+              onClick={() => window.location.href = '/dashboard/bursar/payment-tracking'}
+            >
+              <div className="p-2 rounded-lg bg-[var(--success-light)] text-[var(--success)]">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-medium">Track Payments</p>
+                <p className="text-xs text-[var(--text-secondary)]">Monitor payment status</p>
+              </div>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-start gap-2 text-left"
+              onClick={() => window.location.href = '/dashboard/bursar/fee-structures'}
+            >
+              <div className="p-2 rounded-lg bg-[var(--info-light)] text-[var(--info)]">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-medium">Fee Structures</p>
+                <p className="text-xs text-[var(--text-secondary)]">Manage fee schedules</p>
+              </div>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-start gap-2 text-left"
+              onClick={() => window.location.href = '/dashboard/bursar/reports'}
+            >
+              <div className="p-2 rounded-lg bg-[var(--warning-light)] text-[var(--warning)]">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-medium">Financial Reports</p>
+                <p className="text-xs text-[var(--text-secondary)]">Generate reports</p>
+              </div>
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-start gap-2 text-left"
+              onClick={() => window.location.href = '/dashboard/bursar/defaulters'}
+            >
+              <div className="p-2 rounded-lg bg-[var(--danger-light)] text-[var(--danger)]">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-medium">Defaulter Management</p>
+                <p className="text-xs text-[var(--text-secondary)]">Handle overdue accounts</p>
+              </div>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

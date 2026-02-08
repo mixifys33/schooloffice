@@ -72,14 +72,14 @@ export function DataTable<T extends Record<string, unknown>>({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--chart-blue)]" />
       </div>
     )
   }
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12 text-gray-500">
+      <div className="flex items-center justify-center py-12 text-[var(--text-muted)]">
         {emptyMessage}
       </div>
     )
@@ -87,35 +87,35 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={cn('w-full', className)}>
-      {/* Mobile: Card view */}
+      {/* Mobile: Card view - Enhanced for touch interaction */}
       <div className="md:hidden space-y-3">
         {data.map((row) => (
           <div
             key={keyExtractor(row)}
             className={cn(
-              'bg-white dark:bg-gray-800 rounded-lg border p-4',
-              onRowClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'
+              'bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4 min-h-[44px]',
+              onRowClick && 'cursor-pointer hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] active:bg-[var(--bg-surface)] dark:active:bg-[var(--text-secondary)] transition-colors'
             )}
             onClick={() => onRowClick?.(row)}
           >
-            {/* Primary value */}
-            <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {/* Primary value - Larger text for mobile */}
+            <div className="font-medium text-base text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-3">
               {renderCell(primaryColumn, row)}
             </div>
             
-            {/* Secondary values */}
-            <div className="space-y-1">
+            {/* Secondary values - Optimized spacing for mobile */}
+            <div className="space-y-2">
               {secondaryColumns
                 .filter((col) => !col.hideOnMobile)
                 .map((column) => (
                   <div
                     key={String(column.key)}
-                    className="flex justify-between text-sm"
+                    className="flex justify-between items-start text-sm min-h-[24px]"
                   >
-                    <span className="text-gray-500 dark:text-gray-400">
+                    <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)] font-medium flex-shrink-0 mr-3">
                       {column.header}
                     </span>
-                    <span className="text-gray-900 dark:text-gray-100">
+                    <span className="text-[var(--text-primary)] dark:text-[var(--text-primary)] text-right flex-1">
                       {renderCell(column, row)}
                     </span>
                   </div>
@@ -125,56 +125,63 @@ export function DataTable<T extends Record<string, unknown>>({
         ))}
       </div>
 
-      {/* Tablet/Desktop: Table view */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50 dark:bg-gray-800">
-              {columns
-                .filter((col) => !col.hideOnTablet)
-                .map((column) => (
-                  <th
-                    key={String(column.key)}
-                    className={cn(
-                      'py-3 px-4 font-medium text-gray-700 dark:text-gray-300',
-                      column.align === 'center' && 'text-center',
-                      column.align === 'right' && 'text-right',
-                      column.align !== 'center' && column.align !== 'right' && 'text-left'
-                    )}
-                  >
-                    {column.header}
-                  </th>
-                ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr
-                key={keyExtractor(row)}
-                className={cn(
-                  'border-b hover:bg-gray-50 dark:hover:bg-gray-800',
-                  onRowClick && 'cursor-pointer'
-                )}
-                onClick={() => onRowClick?.(row)}
-              >
+      {/* Tablet/Desktop: Table view - Enhanced horizontal scroll */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
+            <thead>
+              <tr className="border-b bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
                 {columns
                   .filter((col) => !col.hideOnTablet)
                   .map((column) => (
-                    <td
+                    <th
                       key={String(column.key)}
                       className={cn(
-                        'py-3 px-4',
+                        'py-3 px-4 font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] whitespace-nowrap',
                         column.align === 'center' && 'text-center',
-                        column.align === 'right' && 'text-right'
+                        column.align === 'right' && 'text-right',
+                        column.align !== 'center' && column.align !== 'right' && 'text-left'
                       )}
                     >
-                      {renderCell(column, row)}
-                    </td>
+                      {column.header}
+                    </th>
                   ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((row) => (
+                <tr
+                  key={keyExtractor(row)}
+                  className={cn(
+                    'border-b hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors',
+                    onRowClick && 'cursor-pointer active:bg-[var(--bg-surface)] dark:active:bg-[var(--border-strong)]'
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {columns
+                    .filter((col) => !col.hideOnTablet)
+                    .map((column) => (
+                      <td
+                        key={String(column.key)}
+                        className={cn(
+                          'py-3 px-4 whitespace-nowrap',
+                          column.align === 'center' && 'text-center',
+                          column.align === 'right' && 'text-right'
+                        )}
+                      >
+                        {renderCell(column, row)}
+                      </td>
+                    ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Horizontal scroll indicator for tablet */}
+        <div className="md:block lg:hidden mt-2 text-xs text-[var(--text-muted)] text-center">
+          ← Scroll horizontally to see more columns →
+        </div>
       </div>
     </div>
   )

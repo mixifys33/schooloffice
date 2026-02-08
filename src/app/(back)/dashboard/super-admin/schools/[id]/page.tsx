@@ -156,12 +156,12 @@ export default function SchoolDetailPage() {
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Schools
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">School Details</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">School Details</h1>
         </div>
         <SkeletonLoader variant="card" count={2} />
       </div>
@@ -174,18 +174,18 @@ export default function SchoolDetailPage() {
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Schools
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">School Details</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">School Details</h1>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error || 'School not found'}</p>
+        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
+          <p className="text-[var(--chart-red)]">{error || 'School not found'}</p>
           <button
             onClick={fetchSchool}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -211,19 +211,19 @@ export default function SchoolDetailPage() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Schools
         </button>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-blue-600" />
+            <div className="h-16 w-16 rounded-xl bg-[var(--info-light)] flex items-center justify-center">
+              <Building2 className="h-8 w-8 text-[var(--chart-blue)]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{school.name}</h1>
-              <p className="text-gray-500">{school.code}</p>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">{school.name}</h1>
+              <p className="text-[var(--text-muted)]">{school.code}</p>
             </div>
           </div>
           <SchoolStatusBadge status={getStatus()} plan={school.licenseType as 'FREE_PILOT' | 'BASIC' | 'PREMIUM'} />
@@ -232,52 +232,52 @@ export default function SchoolDetailPage() {
 
       {/* School Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-gray-500 mb-1">
+        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
+          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
             <Users className="h-4 w-4" />
             <span className="text-sm">Students</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{school._count.students}</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{school._count.students}</p>
         </div>
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-gray-500 mb-1">
+        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
+          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
             <Users className="h-4 w-4" />
             <span className="text-sm">Staff</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{school._count.staff}</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{school._count.staff}</p>
         </div>
-        <div className="bg-white rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-gray-500 mb-1">
+        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
+          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
             <MessageSquare className="h-4 w-4" />
             <span className="text-sm">SMS Budget</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(school.smsBudgetPerTerm)}</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(school.smsBudgetPerTerm)}</p>
         </div>
       </div>
 
       {/* Contact Info */}
-      <div className="bg-white rounded-lg border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
+      <div className="bg-[var(--bg-main)] rounded-lg border p-6 mb-6">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Contact Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-gray-400" />
+            <Mail className="h-5 w-5 text-[var(--text-muted)]" />
             <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="text-gray-900">{school.email || 'Not provided'}</p>
+              <p className="text-sm text-[var(--text-muted)]">Email</p>
+              <p className="text-[var(--text-primary)]">{school.email || 'Not provided'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Phone className="h-5 w-5 text-gray-400" />
+            <Phone className="h-5 w-5 text-[var(--text-muted)]" />
             <div>
-              <p className="text-sm text-gray-500">Phone</p>
-              <p className="text-gray-900">{school.phone || 'Not provided'}</p>
+              <p className="text-sm text-[var(--text-muted)]">Phone</p>
+              <p className="text-[var(--text-primary)]">{school.phone || 'Not provided'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 md:col-span-2">
-            <Calendar className="h-5 w-5 text-gray-400" />
+            <Calendar className="h-5 w-5 text-[var(--text-muted)]" />
             <div>
-              <p className="text-sm text-gray-500">Created</p>
-              <p className="text-gray-900">
+              <p className="text-sm text-[var(--text-muted)]">Created</p>
+              <p className="text-[var(--text-primary)]">
                 {new Date(school.createdAt).toLocaleDateString('en-UG', {
                   year: 'numeric',
                   month: 'long',
@@ -290,32 +290,32 @@ export default function SchoolDetailPage() {
       </div>
 
       {/* Settings Form - Requirement 13.5 */}
-      <div className="bg-white rounded-lg border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">School Settings</h2>
+      <div className="bg-[var(--bg-main)] rounded-lg border p-6 mb-6">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">School Settings</h2>
         
         <div className="space-y-4">
           {/* License Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               License Type
             </label>
             <select
               value={licenseType}
               onChange={(e) => setLicenseType(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
             >
               <option value="FREE_PILOT">Free Pilot</option>
               <option value="BASIC">Basic</option>
               <option value="PREMIUM">Premium</option>
             </select>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Changing the license type will update available features
             </p>
           </div>
 
           {/* SMS Budget - Requirement 13.5 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               SMS Budget Per Term (UGX)
             </label>
             <input
@@ -324,9 +324,9 @@ export default function SchoolDetailPage() {
               onChange={(e) => setSmsBudgetPerTerm(Number(e.target.value))}
               min={0}
               step={10000}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
             />
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Maximum SMS budget allocated to this school per term
             </p>
           </div>
@@ -336,7 +336,7 @@ export default function SchoolDetailPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50"
             >
               {saving ? (
                 <>
@@ -355,22 +355,22 @@ export default function SchoolDetailPage() {
       </div>
 
       {/* Features */}
-      <div className="bg-white rounded-lg border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Enabled Features</h2>
+      <div className="bg-[var(--bg-main)] rounded-lg border p-6">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Enabled Features</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {Object.entries(school.features).map(([key, enabled]) => (
             <div 
               key={key}
               className={`p-3 rounded-lg border ${
                 enabled 
-                  ? 'bg-green-50 border-green-200' 
-                  : 'bg-gray-50 border-gray-200'
+                  ? 'bg-[var(--success-light)] border-[var(--success-light)]' 
+                  : 'bg-[var(--bg-surface)] border-[var(--border-default)]'
               }`}
             >
-              <div className={`text-sm font-medium ${enabled ? 'text-green-700' : 'text-gray-500'}`}>
+              <div className={`text-sm font-medium ${enabled ? 'text-[var(--chart-green)]' : 'text-[var(--text-muted)]'}`}>
                 {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
               </div>
-              <div className={`text-xs ${enabled ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`text-xs ${enabled ? 'text-[var(--chart-green)]' : 'text-[var(--text-muted)]'}`}>
                 {enabled ? 'Enabled' : 'Disabled'}
               </div>
             </div>

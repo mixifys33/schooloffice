@@ -201,14 +201,19 @@ export async function POST(request: NextRequest) {
       accessLevel,
       permissions,
       channelConfig,
+      examinationRoles, // Remove this from teacherData as it's not part of CreateTeacherInput
       ...teacherData 
     } = body
+
+    // Default to granting system access if not explicitly specified to prevent profile linking issues
+    const shouldGrantAccess = grantSystemAccess !== false // Default to true unless explicitly set to false
+    const shouldSendInvite = sendLoginInvite !== false && shouldGrantAccess // Default to true if granting access
 
     // Create teacher using the service (Requirements 1.1-1.6)
     const teacher = await teacherManagementService.createTeacher(schoolId, teacherData, userId)
 
-    // If sendLoginInvite is true, grant system access and send invitation email
-    if (sendLoginInvite && teacher.email) {
+    // If shouldGrantAccess is true, grant system access and send invitation email
+    if (shouldGrantAccess && teacher.email) {
       try {
         // Generate a temporary password
         const temporaryPassword = generateTemporaryPassword()
@@ -250,8 +255,10 @@ export async function POST(request: NextRequest) {
           employmentStatus: teacherWithAccess.employmentStatus,
           hasSystemAccess: teacherWithAccess.hasSystemAccess,
           accessLevel: teacherWithAccess.accessLevel,
-          inviteSent: true,
-          message: 'Teacher created and login invitation sent successfully',
+          inviteSent: shouldSendInvite,
+          message: shouldSendInvite 
+            ? 'Teacher created with user account and login invitation sent successfully'
+            : 'Teacher created with user account successfully',
         }, { status: 201 })
       } catch (accessError) {
         // Teacher was created but access grant failed
@@ -271,7 +278,7 @@ export async function POST(request: NextRequest) {
           employmentStatus: teacher.employmentStatus,
           hasSystemAccess: false,
           inviteSent: false,
-          warning: 'Teacher created but failed to send login invitation. You can grant access manually from the teacher details page.',
+          warning: 'Teacher created with user account but failed to send login invitation. You can grant access manually from the teacher details page.',
         }, { status: 201 })
       }
     }

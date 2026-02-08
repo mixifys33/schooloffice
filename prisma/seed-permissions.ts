@@ -276,6 +276,36 @@ const ROLE_PERMISSION_MAP: Record<Role, Permission[]> = {
     { feature: FEATURES.MESSAGES, type: PermissionType.VIEW },
     { feature: FEATURES.MESSAGES, type: PermissionType.CREATE },
   ],
+
+  [Role.DOS]: [
+    { feature: FEATURES.STUDENTS, type: PermissionType.VIEW },
+    { feature: FEATURES.STAFF, type: PermissionType.VIEW },
+    { feature: FEATURES.CLASSES, type: PermissionType.VIEW },
+    { feature: FEATURES.SUBJECTS, type: PermissionType.VIEW },
+    { feature: FEATURES.STREAMS, type: PermissionType.VIEW },
+    { feature: FEATURES.ATTENDANCE, type: PermissionType.VIEW },
+    { feature: FEATURES.MARKS, type: PermissionType.VIEW },
+    { feature: FEATURES.RESULTS, type: PermissionType.VIEW },
+    { feature: FEATURES.RESULTS, type: PermissionType.EDIT },
+    { feature: FEATURES.RESULTS, type: PermissionType.APPROVE },
+    { feature: FEATURES.REPORT_CARDS, type: PermissionType.VIEW },
+    { feature: FEATURES.REPORT_CARDS, type: PermissionType.EDIT },
+    { feature: FEATURES.REPORT_CARDS, type: PermissionType.APPROVE },
+    { feature: FEATURES.EXAMS, type: PermissionType.VIEW },
+    { feature: FEATURES.EXAMS, type: PermissionType.CREATE },
+    { feature: FEATURES.EXAMS, type: PermissionType.EDIT },
+    { feature: FEATURES.TIMETABLE, type: PermissionType.VIEW },
+    { feature: FEATURES.TIMETABLE, type: PermissionType.CREATE },
+    { feature: FEATURES.TIMETABLE, type: PermissionType.EDIT },
+    { feature: FEATURES.TIMETABLE, type: PermissionType.DELETE },
+    { feature: FEATURES.TIMETABLE, type: PermissionType.APPROVE },
+    { feature: FEATURES.ANNOUNCEMENTS, type: PermissionType.VIEW },
+    { feature: FEATURES.DISCIPLINE, type: PermissionType.VIEW },
+    { feature: FEATURES.DISCIPLINE, type: PermissionType.CREATE },
+    { feature: FEATURES.DISCIPLINE, type: PermissionType.EDIT },
+    { feature: FEATURES.REPORTS, type: PermissionType.VIEW },
+    { feature: FEATURES.REPORTS, type: PermissionType.EXPORT },
+  ],
 }
 
 
@@ -304,10 +334,9 @@ async function seedPermissions() {
 
   console.log(`Seeding ${permissionRecords.length} permission records...`)
 
-  // Insert all permissions
+  // Insert permissions using createMany without skipDuplicates
   const result = await prisma.rolePermission.createMany({
     data: permissionRecords,
-    skipDuplicates: true,
   })
 
   console.log(`Successfully seeded ${result.count} permission records`)

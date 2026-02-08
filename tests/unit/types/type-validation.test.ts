@@ -91,8 +91,8 @@ describe('Enum Value Constraints', () => {
   })
 
   describe('MessageChannel enum', () => {
-    it('should contain SMS, WHATSAPP, and EMAIL values', () => {
-      expect(Object.values(MessageChannel)).toEqual(['SMS', 'WHATSAPP', 'EMAIL'])
+    it('should contain SMS and EMAIL values', () => {
+      expect(Object.values(MessageChannel)).toEqual(['SMS', 'EMAIL'])
     })
   })
 
@@ -125,7 +125,6 @@ describe('Entity Type Validation', () => {
         licenseType: LicenseType.BASIC,
         features: {
           smsEnabled: true,
-          whatsappEnabled: false,
           paymentIntegration: true,
           advancedReporting: false,
           bulkMessaging: false,
@@ -254,14 +253,12 @@ describe('Entity Type Validation', () => {
     it('should accept valid feature flags', () => {
       const validFlags: FeatureFlags = {
         smsEnabled: true,
-        whatsappEnabled: true,
         paymentIntegration: false,
         advancedReporting: true,
         bulkMessaging: false,
       }
 
       expect(typeof validFlags.smsEnabled).toBe('boolean')
-      expect(typeof validFlags.whatsappEnabled).toBe('boolean')
       expect(typeof validFlags.paymentIntegration).toBe('boolean')
       expect(typeof validFlags.advancedReporting).toBe('boolean')
       expect(typeof validFlags.bulkMessaging).toBe('boolean')

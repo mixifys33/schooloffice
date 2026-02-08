@@ -31,14 +31,14 @@ interface QueueHealthIndicatorProps {
 
 function QueueHealthIndicator({ health, isPaused }: QueueHealthIndicatorProps) {
   const getHealthColor = () => {
-    if (isPaused) return 'bg-amber-500'
+    if (isPaused) return 'bg-[var(--warning)]'
     switch (health) {
       case QueueHealthStatus.HEALTHY:
-        return 'bg-emerald-500'
+        return 'bg-[var(--success)]'
       case QueueHealthStatus.SLOW:
-        return 'bg-amber-500'
+        return 'bg-[var(--warning)]'
       case QueueHealthStatus.STUCK:
-        return 'bg-red-500'
+        return 'bg-[var(--danger)]'
       default:
         return 'bg-slate-500'
     }
@@ -61,7 +61,7 @@ function QueueHealthIndicator({ health, isPaused }: QueueHealthIndicatorProps) {
   return (
     <div className="flex items-center space-x-2">
       <div className={`w-3 h-3 rounded-full ${getHealthColor()}`} />
-      <span className="text-sm text-slate-300">{getHealthText()}</span>
+      <span className="text-sm text-[var(--text-muted)]">{getHealthText()}</span>
     </div>
   )
 }
@@ -80,19 +80,19 @@ function QueueStatusCard({
     switch (channel) {
       case MessageChannel.SMS:
         return (
-          <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--chart-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         )
       case MessageChannel.WHATSAPP:
         return (
-          <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--success)]" fill="currentColor" viewBox="0 0 24 24">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.700"/>
           </svg>
         )
       case MessageChannel.EMAIL:
         return (
-          <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--chart-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         )
@@ -112,7 +112,7 @@ function QueueStatusCard({
           <div className="flex items-center space-x-3">
             {getChannelIcon(queue.channel)}
             <div>
-              <h3 className="text-lg font-semibold text-slate-100">{queue.channel}</h3>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">{queue.channel}</h3>
               <QueueHealthIndicator health={queue.health} isPaused={queue.isPaused} />
             </div>
           </div>
@@ -121,7 +121,7 @@ function QueueStatusCard({
               <Button
                 size="sm"
                 onClick={() => onResume(queue.channel)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-[var(--chart-green)] hover:bg-[var(--chart-green)] text-[var(--white-pure)]"
               >
                 Resume
               </Button>
@@ -130,7 +130,7 @@ function QueueStatusCard({
                 size="sm"
                 variant="outline"
                 onClick={() => onPause(queue.channel)}
-                className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                className="bg-[var(--chart-yellow)] hover:bg-[var(--warning)] text-[var(--white-pure)] border-amber-600"
               >
                 Pause
               </Button>
@@ -140,22 +140,22 @@ function QueueStatusCard({
 
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-semibold text-slate-100">
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">
               {queue.messageCount.toLocaleString()}
             </div>
-            <div className="text-xs text-slate-400">Messages</div>
+            <div className="text-xs text-[var(--text-muted)]">Messages</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-semibold text-slate-100">
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">
               {queue.oldestMessageAge > 0 ? formatAge(queue.oldestMessageAge) : '-'}
             </div>
-            <div className="text-xs text-slate-400">Oldest</div>
+            <div className="text-xs text-[var(--text-muted)]">Oldest</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-semibold text-slate-100">
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">
               {queue.processingRate.toFixed(1)}
             </div>
-            <div className="text-xs text-slate-400">Rate/min</div>
+            <div className="text-xs text-[var(--text-muted)]">Rate/min</div>
           </div>
         </div>
       </CardContent>
@@ -168,13 +168,13 @@ function PriorityBadge({ priority }: { priority: MessagePriority }) {
   const getPriorityColor = (priority: MessagePriority) => {
     switch (priority) {
       case MessagePriority.CRITICAL:
-        return 'bg-red-900/50 text-red-400'
+        return 'bg-[var(--danger-dark)]/50 text-[var(--danger)]'
       case MessagePriority.HIGH:
-        return 'bg-amber-900/50 text-amber-400'
+        return 'bg-[var(--warning-dark)]/50 text-[var(--warning)]'
       case MessagePriority.NORMAL:
-        return 'bg-slate-900/50 text-slate-400'
+        return 'bg-slate-900/50 text-[var(--text-muted)]'
       default:
-        return 'bg-slate-900/50 text-slate-400'
+        return 'bg-slate-900/50 text-[var(--text-muted)]'
     }
   }
 
@@ -189,13 +189,13 @@ function StatusBadge({ status }: { status: QueuedMessageStatus }) {
   const getStatusColor = (status: QueuedMessageStatus) => {
     switch (status) {
       case QueuedMessageStatus.PENDING:
-        return 'bg-blue-900/50 text-blue-400'
+        return 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)]'
       case QueuedMessageStatus.PROCESSING:
-        return 'bg-amber-900/50 text-amber-400'
+        return 'bg-[var(--warning-dark)]/50 text-[var(--warning)]'
       case QueuedMessageStatus.FAILED:
-        return 'bg-red-900/50 text-red-400'
+        return 'bg-[var(--danger-dark)]/50 text-[var(--danger)]'
       default:
-        return 'bg-slate-900/50 text-slate-400'
+        return 'bg-slate-900/50 text-[var(--text-muted)]'
     }
   }
 
@@ -301,8 +301,8 @@ export default function QueuesTab({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-100">Queue Monitor</h2>
-        <p className="text-sm text-slate-400">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Queue Monitor</h2>
+        <p className="text-sm text-[var(--text-muted)]">
           Monitor and control message queues across all channels
         </p>
       </div>
@@ -323,21 +323,21 @@ export default function QueuesTab({
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-slate-200">Queued Messages</CardTitle>
+            <CardTitle className="text-[var(--text-secondary)]">Queued Messages</CardTitle>
             {showBulkActions && (
               <div className="flex space-x-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleBulkCancel}
-                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                  className="bg-[var(--chart-red)] hover:bg-[var(--chart-red)] text-[var(--white-pure)] border-[var(--chart-red)]"
                 >
                   Cancel Selected ({selectedMessages.size})
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleBulkRetry}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)] text-[var(--white-pure)]"
                 >
                   Retry Selected ({selectedMessages.size})
                 </Button>
@@ -352,7 +352,7 @@ export default function QueuesTab({
               <select
                 value={filters.channel || ''}
                 onChange={(e) => setFilters(prev => ({ ...prev, channel: e.target.value as MessageChannel || undefined }))}
-                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 text-sm"
+                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)] text-sm"
               >
                 <option value="">All Channels</option>
                 <option value={MessageChannel.SMS}>SMS</option>
@@ -362,7 +362,7 @@ export default function QueuesTab({
               <select
                 value={filters.priority || ''}
                 onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value as MessagePriority || undefined }))}
-                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 text-sm"
+                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)] text-sm"
               >
                 <option value="">All Priorities</option>
                 <option value={MessagePriority.CRITICAL}>Critical</option>
@@ -372,7 +372,7 @@ export default function QueuesTab({
               <select
                 value={filters.status || ''}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as QueuedMessageStatus || undefined }))}
-                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 text-sm"
+                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)] text-sm"
               >
                 <option value="">All Status</option>
                 <option value={QueuedMessageStatus.PENDING}>Pending</option>
@@ -403,20 +403,20 @@ export default function QueuesTab({
                         type="checkbox"
                         checked={selectedMessages.size === queuedMessages.length && queuedMessages.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="rounded border-slate-600 bg-slate-700 text-blue-600"
+                        className="rounded border-slate-600 bg-slate-700 text-[var(--chart-blue)]"
                       />
                     </th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">School</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Channel</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Recipient</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Priority</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Attempts</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Age</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Error</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">School</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Channel</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Recipient</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Priority</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Status</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Attempts</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Age</th>
+                    <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Error</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-300">
+                <tbody className="text-[var(--text-muted)]">
                   {queuedMessages.map((message) => (
                     <tr key={message.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                       <td className="py-3 px-4">
@@ -424,7 +424,7 @@ export default function QueuesTab({
                           type="checkbox"
                           checked={selectedMessages.has(message.id)}
                           onChange={(e) => handleSelectMessage(message.id, e.target.checked)}
-                          className="rounded border-slate-600 bg-slate-700 text-blue-600"
+                          className="rounded border-slate-600 bg-slate-700 text-[var(--chart-blue)]"
                         />
                       </td>
                       <td className="py-3 px-4">
@@ -443,20 +443,20 @@ export default function QueuesTab({
                         <StatusBadge status={message.status} />
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <span className={`font-medium ${message.attempts > 3 ? 'text-red-400' : 'text-slate-400'}`}>
+                        <span className={`font-medium ${message.attempts > 3 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                           {message.attempts}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-xs text-slate-500">
+                      <td className="py-3 px-4 text-xs text-[var(--text-muted)]">
                         {formatAge(message.createdAt)}
                       </td>
                       <td className="py-3 px-4">
                         {message.lastError ? (
-                          <div className="max-w-xs truncate text-xs text-red-400" title={message.lastError}>
+                          <div className="max-w-xs truncate text-xs text-[var(--danger)]" title={message.lastError}>
                             {message.lastError}
                           </div>
                         ) : (
-                          <span className="text-slate-500">-</span>
+                          <span className="text-[var(--text-muted)]">-</span>
                         )}
                       </td>
                     </tr>
@@ -466,11 +466,11 @@ export default function QueuesTab({
             </div>
           ) : (
             <div className="text-center py-12">
-              <svg className="w-12 h-12 text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 text-[var(--text-secondary)] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <p className="text-slate-400 text-lg mb-2">No messages in queue</p>
-              <p className="text-slate-500 text-sm">
+              <p className="text-[var(--text-muted)] text-lg mb-2">No messages in queue</p>
+              <p className="text-[var(--text-muted)] text-sm">
                 All messages are being processed normally
               </p>
             </div>

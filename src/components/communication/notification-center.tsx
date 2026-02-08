@@ -43,11 +43,11 @@ interface NotificationCenterProps {
 }
 
 const TYPE_CONFIG: Record<NotificationType, { icon: React.ElementType; color: string }> = {
-  [NotificationType.ALERT]: { icon: AlertTriangle, color: 'text-red-500' },
-  [NotificationType.REMINDER]: { icon: Clock, color: 'text-yellow-500' },
-  [NotificationType.TASK]: { icon: Check, color: 'text-blue-500' },
-  [NotificationType.MESSAGE]: { icon: MessageSquare, color: 'text-green-500' },
-  [NotificationType.SYSTEM]: { icon: Settings, color: 'text-gray-500' },
+  [NotificationType.ALERT]: { icon: AlertTriangle, color: 'text-[var(--danger)]' },
+  [NotificationType.REMINDER]: { icon: Clock, color: 'text-[var(--warning)]' },
+  [NotificationType.TASK]: { icon: Check, color: 'text-[var(--accent-primary)]' },
+  [NotificationType.MESSAGE]: { icon: MessageSquare, color: 'text-[var(--success)]' },
+  [NotificationType.SYSTEM]: { icon: Settings, color: 'text-[var(--text-muted)]' },
 }
 
 const PRIORITY_ORDER: Record<NotificationPriority, number> = {
@@ -172,7 +172,7 @@ export function NotificationCenter({ onNotificationClick, compact = false }: Not
             <Bell className="h-5 w-5" />
           )}
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
+            <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold text-[var(--white-pure)] bg-[var(--danger)] rounded-full">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -189,7 +189,7 @@ export function NotificationCenter({ onNotificationClick, compact = false }: Not
             {unreadCount > 0 ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
             Notifications
             {unreadCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">
+              <span className="ml-2 px-2 py-0.5 text-xs font-bold text-[var(--white-pure)] bg-[var(--danger)] rounded-full">
                 {unreadCount}
               </span>
             )}
@@ -244,7 +244,7 @@ export function NotificationCenter({ onNotificationClick, compact = false }: Not
 
         {/* Error State */}
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
           </div>
@@ -287,7 +287,7 @@ export function NotificationCenter({ onNotificationClick, compact = false }: Not
                         {notification.title}
                       </span>
                       {notification.priority === NotificationPriority.HIGH && (
-                        <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
+                        <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30 dark:text-[var(--danger)] rounded">
                           High
                         </span>
                       )}
@@ -370,7 +370,7 @@ export function NotificationBell({ onClick }: { onClick?: () => void }) {
         <Bell className="h-5 w-5" />
       )}
       {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
+        <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold text-[var(--white-pure)] bg-[var(--danger)] rounded-full">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

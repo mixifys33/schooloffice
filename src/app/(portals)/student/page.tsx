@@ -70,14 +70,14 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Welcome Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{student.name}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.name}</h1>
+            <p className="text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1 text-sm">
               {student.className} {student.streamName && `(${student.streamName})`} • {student.admissionNumber}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{student.currentTerm}</p>
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">{student.currentTerm}</p>
           </div>
           <Badge variant={student.status === 'ACTIVE' ? 'default' : 'secondary'}>
             {student.status === 'ACTIVE' ? 'Active' : student.status}
@@ -88,73 +88,73 @@ export default function StudentDashboard() {
       {/* Summary Cards - Requirements: 16.1 - Timetable, results sections */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Academic Summary */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-2xl">📊</span>
-            <Link href="/student/results" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+            <Link href="/student/results" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]">
               View →
             </Link>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Last Term Average</p>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-white">{student.academicSummary.lastTermAverage.toFixed(1)}%</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Last Term Average</p>
+          <p className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.academicSummary.lastTermAverage.toFixed(1)}%</p>
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Position {student.academicSummary.lastTermPosition}/{student.academicSummary.totalStudents}
           </p>
         </div>
 
         {/* Attendance Summary */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-2xl">📅</span>
             <div className={`w-3 h-3 rounded-full ${
-              student.attendanceSummary.percentage >= 90 ? 'bg-emerald-500' :
-              student.attendanceSummary.percentage >= 80 ? 'bg-amber-500' : 'bg-red-500'
+              student.attendanceSummary.percentage >= 90 ? 'bg-[var(--success)]' :
+              student.attendanceSummary.percentage >= 80 ? 'bg-[var(--warning)]' : 'bg-[var(--danger)]'
             }`} />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Attendance</p>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-white">{student.attendanceSummary.percentage}%</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Attendance</p>
+          <p className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.attendanceSummary.percentage}%</p>
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {student.attendanceSummary.presentDays}/{student.attendanceSummary.totalDays} days
           </p>
         </div>
 
         {/* Fees Summary */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-2xl">💰</span>
-            <Link href="/student/fees" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+            <Link href="/student/fees" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]">
               View →
             </Link>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Fee Balance</p>
-          <p className={`text-2xl font-semibold ${student.feeSummary.hasArrears ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Fee Balance</p>
+          <p className={`text-2xl font-semibold ${student.feeSummary.hasArrears ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : 'text-[var(--chart-green)] dark:text-[var(--success)]'}`}>
             {formatCurrency(student.feeSummary.balance)}
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {student.feeSummary.hasArrears ? 'Outstanding' : 'Fully Paid'}
           </p>
         </div>
       </div>
 
       {/* Today's Schedule - Requirements: 16.1 - Timetable section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-medium text-gray-900 dark:text-white">Today&apos;s Schedule</h2>
-          <Link href="/student/timetable" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+          <h2 className="text-base font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Today&apos;s Schedule</h2>
+          <Link href="/student/timetable" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]">
             Full Timetable →
           </Link>
         </div>
         <div className="space-y-3">
           {student.todaySchedule.map((period) => (
-            <div key={period.period} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-700 dark:text-gray-300 font-medium text-sm">
+            <div key={period.period} className="flex items-center gap-4 p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+              <div className="w-10 h-10 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg flex items-center justify-center text-[var(--text-primary)] dark:text-[var(--text-muted)] font-medium text-sm">
                 P{period.period}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">{period.subject}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{period.teacher} • {period.room}</p>
+                <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{period.subject}</p>
+                <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{period.teacher} • {period.room}</p>
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{period.time}</div>
+              <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{period.time}</div>
             </div>
           ))}
         </div>
@@ -162,17 +162,17 @@ export default function StudentDashboard() {
 
       {/* Upcoming Exams */}
       {student.upcomingExams.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
-          <h2 className="text-base font-medium text-gray-900 dark:text-white mb-4">Upcoming Exams</h2>
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+          <h2 className="text-base font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-4">Upcoming Exams</h2>
           <div className="space-y-3">
             {student.upcomingExams.map((exam, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-3 bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{exam.subject}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{exam.type} Examination</p>
+                  <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{exam.subject}</p>
+                  <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{exam.type} Examination</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-gray-900 dark:text-white">{formatDate(exam.date)}</p>
+                  <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{formatDate(exam.date)}</p>
                 </div>
               </div>
             ))}
@@ -181,37 +181,37 @@ export default function StudentDashboard() {
       )}
 
       {/* Quick Actions - Requirements: 16.2 - Minimal interaction capabilities */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quick Actions</h3>
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+        <h3 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-4">Quick Actions</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <Link
             href="/student/timetable"
-            className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           >
             <span className="text-2xl">📅</span>
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Timetable</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Weekly schedule</p>
+              <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Timetable</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Weekly schedule</p>
             </div>
           </Link>
           <Link
             href="/student/results"
-            className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           >
             <span className="text-2xl">📊</span>
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Results</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Report cards</p>
+              <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Results</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">Report cards</p>
             </div>
           </Link>
           <Link
             href="/student/fees"
-            className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-3 p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           >
             <span className="text-2xl">💰</span>
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Fee Status</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">View balance</p>
+              <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Fee Status</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">View balance</p>
             </div>
           </Link>
         </div>

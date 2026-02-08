@@ -104,12 +104,12 @@ interface ReviewSectionProps {
 
 function ReviewSection({ title, children, hasErrors }: ReviewSectionProps) {
   return (
-    <Card className={cn(hasErrors && 'border-red-300 dark:border-red-700')}>
+    <Card className={cn(hasErrors && 'border-[var(--danger)] dark:border-[var(--chart-red)]')}>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           {title}
           {hasErrors && (
-            <span className="text-xs text-red-600 dark:text-red-400 font-normal">
+            <span className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)] font-normal">
               (incomplete)
             </span>
           )}
@@ -132,9 +132,9 @@ function ReviewField({ label, value, required, missing }: ReviewFieldProps) {
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 py-1">
       <span className="text-sm text-muted-foreground min-w-[140px]">
         {label}
-        {required && <span className="text-red-500">*</span>}:
+        {required && <span className="text-[var(--danger)]">*</span>}:
       </span>
-      <span className={cn('text-sm font-medium', missing && 'text-red-600 dark:text-red-400 italic')}>
+      <span className={cn('text-sm font-medium', missing && 'text-[var(--chart-red)] dark:text-[var(--danger)] italic')}>
         {value || (missing ? 'Required' : 'Not specified')}
       </span>
     </div>
@@ -197,14 +197,14 @@ export function TeacherReviewStep({
   return (
     <div className="space-y-6">
       {/* Summary Header */}
-      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+      <div className="p-4 bg-[var(--info-light)] dark:bg-[var(--info-dark)] border border-[var(--info-light)] dark:border-[var(--info-dark)] rounded-lg">
+        <h3 className="font-medium text-[var(--info-dark)] dark:text-[var(--info)] mb-2">
           {mode === 'create' ? 'Review Teacher Information' : 'Review Changes'}
         </h3>
-        <p className="text-sm text-blue-700 dark:text-blue-300">
+        <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)]">
           Please review all the information below before {mode === 'create' ? 'creating' : 'updating'} the teacher record.
           {(hasIdentityErrors || hasEmploymentErrors) && (
-            <span className="block mt-1 text-red-600 dark:text-red-400">
+            <span className="block mt-1 text-[var(--chart-red)] dark:text-[var(--danger)]">
               Some required fields are missing. Please go back and complete them.
             </span>
           )}
@@ -336,9 +336,9 @@ export function TeacherReviewStep({
             label="System Access"
             value={
               accessPermissions.grantSystemAccess ? (
-                <span className="text-green-600 dark:text-green-400">Enabled</span>
+                <span className="text-[var(--chart-green)] dark:text-[var(--success)]">Enabled</span>
               ) : (
-                <span className="text-amber-600 dark:text-amber-400">
+                <span className="text-[var(--chart-yellow)] dark:text-[var(--warning)]">
                   Record-only (no login)
                 </span>
               )
@@ -406,7 +406,7 @@ export function TeacherReviewStep({
 
 
       {/* Action Summary */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
         <h4 className="font-medium mb-3">What happens next?</h4>
         <div className="space-y-2 text-sm text-muted-foreground">
           {accessPermissions.grantSystemAccess ? (
@@ -447,8 +447,8 @@ function PermissionBadge({ label, enabled }: PermissionBadgeProps) {
       className={cn(
         'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm',
         enabled
-          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+          ? 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)] dark:text-[var(--success)]'
+          : 'bg-[var(--bg-surface)] text-[var(--text-muted)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
       )}
     >
       {enabled ? (
@@ -477,10 +477,10 @@ function ChannelBadge({ label, enabled, warning }: ChannelBadgeProps) {
       className={cn(
         'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm',
         enabled && warning
-          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+          ? 'bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)] dark:text-[var(--warning)]'
           : enabled
-          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+          ? 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)] dark:text-[var(--success)]'
+          : 'bg-[var(--bg-surface)] text-[var(--text-muted)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
       )}
     >
       {enabled ? (

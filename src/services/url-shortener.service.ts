@@ -370,8 +370,8 @@ export class UrlShortenerService {
     // Calculate unique clicks by IP
     const uniqueIps = new Set(
       shortUrl.clicks
-        .filter(c => c.ipAddress)
-        .map(c => c.ipAddress)
+        .filter((c: any) => c.ipAddress)
+        .map((c: any) => c.ipAddress)
     )
 
     // Group clicks by day
@@ -546,9 +546,9 @@ export class UrlShortenerService {
   }
 
   /**
-   * Generate a short URL for WhatsApp message
+   * Generate a short URL for SMS message
    */
-  async shortenForWhatsApp(
+  async shortenForSMS(
     originalUrl: string,
     context: {
       schoolId?: string
@@ -561,7 +561,7 @@ export class UrlShortenerService {
       schoolId: context.schoolId,
       studentId: context.studentId,
       messageId: context.messageId,
-      channel: MessageChannel.WHATSAPP,
+      channel: MessageChannel.SMS,
     })
 
     return buildShortUrl(shortUrl.code)

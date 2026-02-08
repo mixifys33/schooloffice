@@ -1,5 +1,15 @@
 {
   "buildCommand": "npm run build",
   "installCommand": "npm ci --legacy-peer-deps",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/automation/finance-reminders",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/automation/friday-fee-reminders",
+      "schedule": "45 19 * * 5"  // 7:45 PM every Friday (day 5)
+    }
+  ]
 }

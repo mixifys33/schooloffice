@@ -6,4 +6,6 @@
 export * from './onboarding-provider'
 export * from './session-provider'
 export * from './theme-provider'
-export { ToastProvider, useToast } from '@/components/ui/toast'
+export * from './staff-onboarding-provider'
+export { ToastProvider } from '@/components/ui/toast'
+export { useToast } from '@/hooks/use-toast'

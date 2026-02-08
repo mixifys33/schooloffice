@@ -44,10 +44,9 @@ describe('FallbackService', () => {
   })
 
   describe('determineFallbackChain', () => {
-    it('should create fallback chain for WhatsApp primary channel', () => {
+    it('should create fallback chain for SMS primary channel', () => {
       const params: FallbackParams = {
-        primaryChannel: MessageChannel.WHATSAPP,
-        recipientHasWhatsApp: true,
+        primaryChannel: MessageChannel.SMS,
         recipientHasEmail: true,
         recipientHasPhone: true,
         messageType: MessageType.GENERAL,
@@ -56,7 +55,6 @@ describe('FallbackService', () => {
       const chain = fallbackService.determineFallbackChain(params)
 
       expect(chain).toEqual([
-        MessageChannel.WHATSAPP,
         MessageChannel.SMS,
         MessageChannel.EMAIL,
       ])
@@ -65,7 +63,6 @@ describe('FallbackService', () => {
     it('should create fallback chain for SMS primary channel', () => {
       const params: FallbackParams = {
         primaryChannel: MessageChannel.SMS,
-        recipientHasWhatsApp: true,
         recipientHasEmail: true,
         recipientHasPhone: true,
         messageType: MessageType.GENERAL,
@@ -75,7 +72,6 @@ describe('FallbackService', () => {
 
       expect(chain).toEqual([
         MessageChannel.SMS,
-        MessageChannel.WHATSAPP,
         MessageChannel.EMAIL,
       ])
     })
@@ -83,7 +79,6 @@ describe('FallbackService', () => {
     it('should create fallback chain for Email primary channel', () => {
       const params: FallbackParams = {
         primaryChannel: MessageChannel.EMAIL,
-        recipientHasWhatsApp: true,
         recipientHasEmail: true,
         recipientHasPhone: true,
         messageType: MessageType.GENERAL,
@@ -94,14 +89,12 @@ describe('FallbackService', () => {
       expect(chain).toEqual([
         MessageChannel.EMAIL,
         MessageChannel.SMS,
-        MessageChannel.WHATSAPP,
       ])
     })
 
     it('should prioritize SMS for emergency messages', () => {
       const params: FallbackParams = {
         primaryChannel: MessageChannel.EMAIL,
-        recipientHasWhatsApp: true,
         recipientHasEmail: true,
         recipientHasPhone: true,
         messageType: MessageType.EMERGENCY,
@@ -111,15 +104,13 @@ describe('FallbackService', () => {
 
       expect(chain).toEqual([
         MessageChannel.SMS,
-        MessageChannel.WHATSAPP,
         MessageChannel.EMAIL,
       ])
     })
 
     it('should only include available channels', () => {
       const params: FallbackParams = {
-        primaryChannel: MessageChannel.WHATSAPP,
-        recipientHasWhatsApp: false,
+        primaryChannel: MessageChannel.SMS,
         recipientHasEmail: false,
         recipientHasPhone: true,
         messageType: MessageType.GENERAL,
@@ -127,13 +118,12 @@ describe('FallbackService', () => {
 
       const chain = fallbackService.determineFallbackChain(params)
 
-      expect(chain).toEqual([MessageChannel.WHATSAPP, MessageChannel.SMS])
+      expect(chain).toEqual([MessageChannel.SMS])
     })
 
     it('should handle case where recipient has no capabilities', () => {
       const params: FallbackParams = {
         primaryChannel: MessageChannel.SMS,
-        recipientHasWhatsApp: false,
         recipientHasEmail: false,
         recipientHasPhone: false,
         messageType: MessageType.GENERAL,

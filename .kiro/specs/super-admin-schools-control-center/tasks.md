@@ -1,0 +1,314 @@
+# Implementation Plan: Super Admin Schools Control Center
+
+## Overview
+
+This implementation plan breaks down the Super Admin Schools Control Center feature into discrete, incremental coding tasks. Each task builds on previous steps, with testing integrated throughout to validate functionality early. The plan follows a bottom-up approach: database schema → services → API endpoints → UI components → integration.
+
+## Tasks
+
+- [x] 1. Set up database schema and models
+  - Add SchoolHealthMetrics, SchoolAlert, and SuperAdminAuditLog models to Prisma schema
+  - Add relations to existing School model
+  - Generate Prisma client and run migrations
+  - _Requirements: 4.1-4.8, 5.1-5.7, 9.1-9.6_
+
+- [x] 2. Implement Health Score Service
+  - [x] 2.1 Create health score calculation service
+    - Implement calculateHealthScore function with all component calculations
+    - Implement activity score logic (30 points based on last login)
+    - Implement data completeness score logic (20 points based on populated fields)
+    - Implement SMS engagement score logic (20 points based on usage ratio)
+    - Implement payment discipline score logic (20 points based on payment status)
+    - Implement growth score logic (10 points based on enrollment trend)
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
+  - [ ]\* 2.2 Write property test for health score calculation
+    - **Property 1: Health Score Calculation Correctness**
+    - **Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7**
+  - [x] 2.3 Create background job for daily health score calculation
+    - Implement calculateAllHealthScores function
+    - Set up cron job or scheduled task
+    - Add error handling and logging
+    - _Requirements: 4.8_
+
+- [x] 3. Implement Alert Service
+  - [x] 3.1 Create alert checking service
+    - Implement checkAlerts function
+    - Implement low SMS balance check (< 100 messages)
+    - Implement inactive admin check (14+ days no login)
+    - Implement payment overdue check (7+ days overdue)
+    - Implement critical health check (score < 50)
+    - Implement declining enrollment check (2 consecutive months)
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [ ]\* 3.2 Write property test for alert generation
+    - **Property 2: Alert Generation Completeness**
+    - **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.7**
+  - [x] 3.3 Create background job for hourly alert checking
+    - Implement scheduled alert checking
+    - Add error handling and logging
+    - _Requirements: 5.6_
+
+- [x] 4. Implement Audit Service
+  - [x] 4.1 Create audit logging service
+    - Implement logAction function
+    - Implement getSchoolAuditLog function
+    - Implement getGlobalAuditLog function
+    - Ensure immutability (no updates/deletes)
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
+  - [ ]\* 4.2 Write property test for audit logging
+    - **Property 14: Control Action State Changes**
+    - **Property 15: Audit Log Field Completeness**
+    - **Validates: Requirements 7.1-7.8, 9.1, 9.5**
+
+- [x] 5. Checkpoint - Ensure services work correctly
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement Dashboard API endpoints
+  - [x] 6.1 Create GET /api/super-admin/dashboard endpoint
+    - Implement global statistics calculation
+    - Implement school list query with pagination
+    - Add caching with 5-minute TTL for stats, 1-minute for list
+    - _Requirements: 1.1, 1.2, 1.5_
+  - [x] 6.2 Create GET /api/super-admin/schools endpoint
+    - Implement search across name, email, school ID
+    - Implement stackable filters (plan, health range, payment, activity, alerts)
+    - Implement pagination (50 schools per page)
+    - Add caching with 1-minute TTL
+    - _Requirements: 2.1, 2.3, 11.6_
+  - [ ]\* 6.3 Write property tests for search and filtering
+    - **Property 3: Search Multi-Field Coverage**
+    - **Property 4: Filter Stacking Correctness**
+    - **Property 6: Filter Count Accuracy**
+    - **Validates: Requirements 2.1, 2.3, 2.6**
+
+- [x] 7. Implement School Management API endpoints
+  - [x] 7.1 Create GET /api/super-admin/schools/[id] endpoint
+    - Implement detailed school profile query
+    - Include all metrics, alerts, and recent audit logs
+    - Add caching with 30-second TTL
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
+  - [x] 7.2 Create POST /api/super-admin/schools/[id]/suspend endpoint
+    - Implement suspend action with confirmation and reason
+    - Update school status to suspended
+    - Disable school access
+    - Create audit log entry
+    - Invalidate caches
+    - _Requirements: 7.1, 7.7, 7.8_
+  - [x] 7.3 Create POST /api/super-admin/schools/[id]/reactivate endpoint
+    - Implement reactivate action with confirmation and reason
+    - Update school status to active
+    - Restore school access
+    - Create audit log entry
+    - Invalidate caches
+    - _Requirements: 7.2, 7.7, 7.8_
+  - [x] 7.4 Create POST /api/super-admin/schools/[id]/change-plan endpoint
+    - Implement plan change action
+    - Update subscription plan and billing
+    - Create audit log entry
+    - Invalidate caches
+    - _Requirements: 7.3, 7.7, 7.8_
+  - [x] 7.5 Create POST /api/super-admin/schools/[id]/reset-password endpoint
+    - Generate password reset token
+    - Send reset link to admin email
+    - Create audit log entry
+    - _Requirements: 7.4, 7.7, 7.8_
+  - [x] 7.6 Create POST /api/super-admin/schools/[id]/force-logout endpoint
+    - Invalidate all active sessions for school users
+    - Create audit log entry
+    - _Requirements: 7.5, 7.7, 7.8_
+  - [x] 7.7 Create POST /api/super-admin/schools/[id]/impersonate endpoint
+    - Log super admin into school admin account
+    - Maintain audit trail of impersonation
+    - Create audit log entry
+    - _Requirements: 7.6, 7.7, 7.8_
+  - [ ]\* 7.8 Write property test for control actions
+    - **Property 14: Control Action State Changes**
+    - **Validates: Requirements 7.1-7.8, 9.1**
+
+- [x] 8. Implement Bulk Action API endpoints
+  - [x] 8.1 Create POST /api/super-admin/schools/bulk-suspend endpoint
+    - Process multiple schools with suspend action
+    - Return individual results for each school
+    - Create individual audit log entries
+    - _Requirements: 3.2, 3.3, 3.4, 3.6_
+  - [x] 8.2 Create POST /api/super-admin/schools/bulk-reactivate endpoint
+    - Process multiple schools with reactivate action
+    - Return individual results for each school
+    - Create individual audit log entries
+    - _Requirements: 3.2, 3.3, 3.4, 3.6_
+  - [x] 8.3 Create POST /api/super-admin/schools/bulk-notice endpoint
+    - Send notice to multiple schools
+    - Return individual results for each school
+    - Create individual audit log entries
+    - _Requirements: 3.2, 3.3, 3.4, 3.6_
+  - [ ]\* 8.4 Write property tests for bulk actions
+    - **Property 8: Bulk Action Individual Processing**
+    - **Property 9: Bulk Action Audit Logging**
+    - **Validates: Requirements 3.4, 3.6**
+
+- [x] 9. Implement Business Intelligence API endpoint
+  - [x] 9.1 Create GET /api/super-admin/business-intelligence endpoint
+    - Calculate total MRR across active schools
+    - Calculate average health score
+    - Calculate churn rate (30-day)
+    - Calculate revenue per school
+    - Calculate health score distribution
+    - Calculate plan distribution
+    - Calculate alert distribution
+    - Add caching with 5-minute TTL
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8_
+  - [ ]\* 9.2 Write property tests for BI calculations
+    - **Property 17: Business Intelligence MRR Calculation**
+    - **Property 18: Business Intelligence Average Health Score**
+    - **Property 19: Business Intelligence Churn Rate Calculation**
+    - **Property 20: Business Intelligence Revenue Per School**
+    - **Property 21: Business Intelligence Distribution Accuracy**
+    - **Validates: Requirements 8.1-8.7**
+
+- [x] 10. Checkpoint - Ensure all API endpoints work correctly
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 11. Implement Dashboard UI Component
+  - [x] 11.1 Create dashboard page component
+    - Create /app/(portals)/super-admin/dashboard/page.tsx
+    - Implement global statistics cards
+    - Implement school table with all columns
+    - Implement color-coded health scores
+    - Implement critical alerts display at top
+    - _Requirements: 1.1, 1.2, 1.3, 1.4_
+  - [x] 11.2 Implement search and filter UI
+    - Add search bar with real-time filtering
+    - Add filter chips for plan, health range, payment, activity, alerts
+    - Implement filter state persistence
+    - Display filter count
+    - _Requirements: 2.1, 2.3, 2.5, 2.6_
+  - [x] 11.3 Implement multi-select and bulk actions UI
+    - Add checkbox column for multi-select
+    - Add bulk action toolbar
+    - Implement confirmation dialogs
+    - Show bulk action results
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [ ]\* 11.4 Write unit tests for dashboard component
+    - Test global statistics rendering
+    - Test school table rendering
+    - Test color coding
+    - Test search and filter UI
+    - Test multi-select and bulk actions
+    - _Requirements: 1.1-1.4, 2.1-2.6, 3.1-3.5_
+
+- [x] 12. Implement School Profile UI Component
+  - [x] 12.1 Create school profile page component
+    - Create /app/(portals)/super-admin/schools/[id]/page.tsx
+    - Implement header section with health score and status
+    - Implement quick action buttons
+    - Implement core information section
+    - Implement usage metrics section
+    - Implement financial metrics section
+    - Implement activity timeline
+    - Implement alert flags display
+    - Implement audit log display
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
+  - [x] 12.2 Implement control action dialogs
+    - Create confirmation dialogs for all control actions
+    - Require reason input for actions
+    - Show success/error feedback
+    - _Requirements: 7.1-7.8_
+  - [ ]\* 12.3 Write unit tests for school profile component
+    - Test all sections render correctly
+    - Test activity timeline ordering
+    - Test control action dialogs
+    - _Requirements: 6.1-6.8, 7.1-7.8_
+
+- [x] 13. Implement Business Intelligence UI Component
+  - [x] 13.1 Create business intelligence page component
+    - Create /app/(portals)/super-admin/business-intelligence/page.tsx
+    - Implement metric cards (MRR, avg health, churn, revenue per school)
+    - Implement health score distribution chart
+    - Implement plan distribution chart
+    - Implement alert distribution chart
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+  - [ ]\* 13.2 Write unit tests for BI component
+    - Test metric calculations
+    - Test chart rendering
+    - _Requirements: 8.1-8.7_
+
+- [-] 14. Implement Authentication and Authorization
+  - [x] 14.1 Add super admin route protection
+    - Create middleware to check SUPER_ADMIN role
+    - Redirect unauthorized users
+    - Log authentication failures
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+  - [ ]\* 14.2 Write property tests for authorization
+    - **Property 23: Authorization Enforcement**
+    - **Property 24: Authentication Failure Logging**
+    - **Validates: Requirements 12.2, 12.4, 12.5**
+
+- [ ] 15. Implement Mobile Responsiveness
+  - [ ] 15.1 Add responsive layouts
+    - Implement mobile breakpoints (320-767px)
+    - Implement tablet breakpoints (768-1023px)
+    - Implement desktop breakpoints (1024px+)
+    - Adapt dashboard to single-column on mobile
+    - Optimize table display for mobile
+    - Ensure touch-friendly controls (44x44px minimum)
+    - _Requirements: 10.1, 10.2, 10.3, 10.5_
+  - [ ]\* 15.2 Write unit tests for responsive behavior
+    - Test breakpoint behavior
+    - Test mobile layout
+    - Test touch target sizes
+    - _Requirements: 10.1-10.5_
+
+- [ ] 16. Implement Accessibility Features
+  - [ ] 16.1 Add accessibility attributes
+    - Add ARIA labels for screen readers
+    - Implement keyboard navigation
+    - Add focus indicators
+    - Ensure color contrast ratios
+    - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+  - [ ]\* 16.2 Write accessibility tests
+    - Test keyboard navigation
+    - Test ARIA labels
+    - Test focus indicators
+    - _Requirements: 13.2, 13.3, 13.5_
+
+- [ ] 17. Implement Caching Layer
+  - [ ] 17.1 Set up caching infrastructure
+    - Configure Redis or in-memory cache
+    - Implement cache service with get/set/invalidate methods
+    - Add cache keys for all cached data
+    - _Requirements: 11.4_
+  - [ ] 17.2 Integrate caching in API endpoints
+    - Add caching to dashboard endpoint (5-minute TTL for stats, 1-minute for list)
+    - Add caching to school list endpoint (1-minute TTL)
+    - Add caching to school profile endpoint (30-second TTL)
+    - Add caching to BI endpoint (5-minute TTL)
+    - Add cache invalidation on control actions
+    - _Requirements: 11.4_
+
+- [ ] 18. Final checkpoint - Integration testing
+  - [ ] 18.1 Test complete user flows
+    - Test: Login → Dashboard → Filter → Bulk Action → Verify Audit Log
+    - Test: Dashboard → School Profile → Control Action → Verify State Change
+    - Test: Background Job → Health Score Update → Dashboard Refresh
+    - Test: Background Job → Alert Creation → Dashboard Alert Display
+  - [ ]\* 18.2 Run all property tests
+    - Execute all 24 property tests with 100 iterations each
+    - Verify all properties pass
+  - [ ]\* 18.3 Run performance tests
+    - Verify dashboard loads within 2 seconds for 1,000 schools
+    - Verify search returns within 500ms
+    - Verify filters update within 300ms
+    - _Requirements: 1.5, 2.2, 2.4, 11.1, 11.2, 11.3_
+
+- [ ] 19. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties
+- Unit tests validate specific examples and edge cases
+- Background jobs should be implemented with error handling and logging
+- All control actions must create audit log entries
+- Cache invalidation is critical for data consistency

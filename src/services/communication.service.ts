@@ -1,8 +1,10 @@
 /**
  * Communication Service
- * Handles tiered messaging (SMS/WhatsApp/Email) with limits and fallback
- * Requirements: 5.3-5.8, 19.1, 19.2, 19.3, 19.4, 19.5, 22.1, 22.3, 25.3, 26.1, 26.2, 26.3, 26.4, 26.5
+ * Handles SMS and Email messaging with limits and fallback
+ * Requirements: 5.3-5.8, 19.1, 19.2, 19.3, 19.4, 19.5, 26.1, 26.2, 26.3, 26.4, 26.5
  * Requirements: 29.1, 29.2, 29.3, 29.4, 29.5 (Bulk Messaging)
+ * 
+ * FOCUS: SMS as primary, Email as fallback. No WhatsApp complexity.
  */
 import { prisma } from '@/lib/db'
 import {
@@ -15,12 +17,6 @@ import {
   BulkMessageProgress,
 } from '@/types'
 import { MessageChannel, MessageStatus, PilotType, MessageTemplateType, BulkMessageJobStatus } from '@/types/enums'
-import { 
-  whatsappGateway, 
-  WhatsAppSendResult, 
-  WhatsAppDeliveryStatus,
-  WhatsAppAttachment 
-} from './whatsapp-gateway.service'
 import {
   emailGateway,
   EmailSendResult,
@@ -169,14 +165,12 @@ export class CommunicationService {
     // Check daily limits for each channel
     const dailyChecks = await Promise.all([
       this.checkChannelQuota(schoolId, MessageChannel.SMS, todayStart, messagingConfig.smsLimitDaily),
-      this.checkChannelQuota(schoolId, MessageChannel.WHATSAPP, todayStart, messagingConfig.whatsappLimitDaily),
       this.checkChannelQuota(schoolId, MessageChannel.EMAIL, todayStart, messagingConfig.emailLimitDaily),
     ])
 
     // Check monthly limits for each channel
     const monthlyChecks = await Promise.all([
       this.checkChannelQuota(schoolId, MessageChannel.SMS, monthStart, messagingConfig.smsLimitMonthly),
-      this.checkChannelQuota(schoolId, MessageChannel.WHATSAPP, monthStart, messagingConfig.whatsappLimitMonthly),
       this.checkChannelQuota(schoolId, MessageChannel.EMAIL, monthStart, messagingConfig.emailLimitMonthly),
     ])
 
@@ -318,15 +312,8 @@ export class CommunicationService {
     const smsLimitReached = student.smsSentCount >= student.smsLimitPerTerm
     const guardian = student.studentGuardians[0]?.guardian
 
-    // If SMS limit reached, fallback to WhatsApp or Email
+    // If SMS limit reached, fallback to Email
     if (smsLimitReached) {
-      if (guardian?.whatsappNumber) {
-        return {
-          channel: MessageChannel.WHATSAPP,
-          reason: 'SMS limit reached, using WhatsApp',
-          smsLimitReached: true,
-        }
-      }
       return {
         channel: MessageChannel.EMAIL,
         reason: 'SMS limit reached, using Email',
@@ -381,192 +368,7 @@ export class CommunicationService {
   // WHATSAPP INTEGRATION
   // ============================================
 
-  /**
-   * Send WhatsApp message to a guardian
-   * Requirement 22.1: Deliver text content with optional PDF attachment
-   */
-  async sendWhatsApp(
-    recipient: string,
-    content: string,
-    attachment?: Buffer
-  ): Promise<WhatsAppSendResult> {
-    // If attachment is provided, send as PDF
-    if (attachment) {
-      return whatsappGateway.sendWhatsAppWithPDF(
-        recipient,
-        content,
-        attachment,
-        'document.pdf'
-      )
-    }
 
-    return whatsappGateway.sendWhatsApp({
-      to: recipient,
-      message: content,
-    })
-  }
-
-  /**
-   * Send WhatsApp message with report card PDF
-   * Requirement 22.3: Attach PDF to WhatsApp messages
-   */
-  async sendWhatsAppWithReportCard(
-    recipient: string,
-    content: string,
-    pdfBuffer: Buffer,
-    studentName: string
-  ): Promise<WhatsAppSendResult> {
-    const filename = `Report_Card_${studentName.replace(/\s+/g, '_')}.pdf`
-    return whatsappGateway.sendWhatsAppWithPDF(recipient, content, pdfBuffer, filename)
-  }
-
-  /**
-   * Track WhatsApp read receipts
-   * Requirement 25.3: Track read receipts where available from the API
-   */
-  async trackWhatsAppReadReceipt(messageId: string): Promise<{
-    hasReadReceipt: boolean
-    readAt?: Date
-    status: WhatsAppDeliveryStatus
-  }> {
-    const status = await whatsappGateway.getMessageStatus(messageId)
-    
-    return {
-      hasReadReceipt: status.status === 'read',
-      readAt: status.readAt,
-      status,
-    }
-  }
-
-  /**
-   * Process WhatsApp status webhook callback
-   * Requirement 25.3: Track read receipts where available
-   */
-  async processWhatsAppStatusCallback(
-    payload: Record<string, string>
-  ): Promise<void> {
-    const status = whatsappGateway.processStatusCallback(payload)
-    
-    // Find the message by external message ID and update status
-    const message = await prisma.message.findFirst({
-      where: {
-        channel: MessageChannel.WHATSAPP,
-        // In production, we'd store the external messageId
-        // For now, we'll use a custom field or the shortUrl field
-      },
-    })
-
-    if (message) {
-      let newStatus: MessageStatus
-      switch (status.status) {
-        case 'delivered':
-          newStatus = MessageStatus.DELIVERED
-          break
-        case 'read':
-          newStatus = MessageStatus.READ
-          break
-        case 'failed':
-          newStatus = MessageStatus.FAILED
-          break
-        default:
-          newStatus = MessageStatus.SENT
-      }
-
-      await prisma.message.update({
-        where: { id: message.id },
-        data: {
-          status: newStatus,
-          deliveredAt: status.deliveredAt,
-          readAt: status.readAt,
-        },
-      })
-    }
-  }
-
-  /**
-   * Send WhatsApp message for a student notification
-   * Combines student lookup with WhatsApp sending
-   */
-  async sendWhatsAppToGuardian(
-    studentId: string,
-    content: string,
-    attachment?: Buffer
-  ): Promise<MessageResult> {
-    // Get student and guardian info
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      include: {
-        school: true,
-        studentGuardians: {
-          where: { isPrimary: true },
-          include: { guardian: true },
-        },
-      },
-    })
-
-    if (!student) {
-      return {
-        messageId: '',
-        channel: MessageChannel.WHATSAPP,
-        status: MessageStatus.FAILED,
-        error: 'Student not found',
-      }
-    }
-
-    const guardian = student.studentGuardians[0]?.guardian
-    if (!guardian) {
-      return {
-        messageId: '',
-        channel: MessageChannel.WHATSAPP,
-        status: MessageStatus.FAILED,
-        error: 'No primary guardian found',
-      }
-    }
-
-    // Use WhatsApp number if available, otherwise fall back to phone
-    const whatsappNumber = guardian.whatsappNumber || guardian.phone
-    if (!whatsappNumber) {
-      return {
-        messageId: '',
-        channel: MessageChannel.WHATSAPP,
-        status: MessageStatus.FAILED,
-        error: 'No WhatsApp number available for guardian',
-      }
-    }
-
-    // Create message record
-    const message = await prisma.message.create({
-      data: {
-        schoolId: student.schoolId,
-        studentId,
-        guardianId: guardian.id,
-        templateType: MessageTemplateType.GENERAL_ANNOUNCEMENT,
-        channel: MessageChannel.WHATSAPP,
-        content,
-        status: MessageStatus.QUEUED,
-      },
-    })
-
-    // Send via WhatsApp gateway
-    const result = await this.sendWhatsApp(whatsappNumber, content, attachment)
-
-    // Update message status based on result
-    await prisma.message.update({
-      where: { id: message.id },
-      data: {
-        status: result.success ? MessageStatus.SENT : MessageStatus.FAILED,
-        sentAt: result.success ? new Date() : undefined,
-        errorMessage: result.error,
-      },
-    })
-
-    return {
-      messageId: message.id,
-      channel: MessageChannel.WHATSAPP,
-      status: result.success ? MessageStatus.SENT : MessageStatus.FAILED,
-      error: result.error,
-    }
-  }
 
   /**
    * Update WhatsApp message read status
@@ -980,13 +782,11 @@ export class CommunicationService {
 
   /**
    * Get next fallback channel
-   * Requirement 26.2, 26.3: SMS -> WhatsApp -> Email
+   * Updated to SMS -> Email (removed WhatsApp)
    */
   getNextFallbackChannel(currentChannel: MessageChannel): MessageChannel | null {
     switch (currentChannel) {
       case MessageChannel.SMS:
-        return MessageChannel.WHATSAPP
-      case MessageChannel.WHATSAPP:
         return MessageChannel.EMAIL
       case MessageChannel.EMAIL:
         return null // No more fallbacks
@@ -1209,7 +1009,6 @@ export class CommunicationService {
   ): Promise<MessageResult> {
     // Validate teacher can send this message
     const channelKey = channel === MessageChannel.SMS ? 'sms'
-      : channel === MessageChannel.WHATSAPP ? 'whatsapp'
       : channel === MessageChannel.EMAIL ? 'email'
       : 'inAppMessaging'
 
@@ -1323,9 +1122,8 @@ export class CommunicationService {
       },
     })
 
-    // Track teacher message in performance metrics
-    const { teacherPerformanceService } = await import('./teacher-performance.service')
-    await teacherPerformanceService.recordMessageSent(teacherId, channel, new Date())
+    // Message sent successfully - no performance tracking needed
+    // Teachers just need to know message was sent
 
     return {
       messageId: message.id,
@@ -1367,8 +1165,8 @@ export class CommunicationService {
   private getDefaultTemplate(templateType: MessageTemplateType): string {
     const templates: Record<MessageTemplateType, string> = {
       [MessageTemplateType.TERM_START]: 'Dear Parent, Term has started. {{studentName}} is enrolled in {{className}}.{{arrearsMessage}}',
-      [MessageTemplateType.ATTENDANCE_ALERT]: 'Dear Parent, {{studentName}} was absent on {{date}}. Periods: {{periods}}.{{arrearsMessage}}',
-      [MessageTemplateType.FEES_REMINDER]: 'Dear Parent, {{studentName}} has an outstanding balance of UGX {{balance}}.',
+      [MessageTemplateType.ATTENDANCE_ALERT]: '{{studentName}} absent {{date}}. Confirm safety.{{arrearsMessage}}',
+      [MessageTemplateType.FEES_REMINDER]: '{{studentName}} owes UGX {{balance}}. Pay ASAP to avoid suspension.',
       [MessageTemplateType.MID_TERM_PROGRESS]: 'Dear Parent, {{studentName}} mid-term progress: Average {{average}}%.{{arrearsMessage}}',
       [MessageTemplateType.REPORT_READY]: 'Dear Parent, {{studentName}} report card is ready. View: {{link}}{{arrearsMessage}}',
       [MessageTemplateType.TERM_SUMMARY]: 'Dear Parent, {{studentName}} term summary: Position {{position}}, Average {{average}}%.{{arrearsMessage}}',

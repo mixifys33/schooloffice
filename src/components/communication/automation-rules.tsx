@@ -99,11 +99,11 @@ const TRIGGER_TYPE_CONFIG: Record<TriggerType, { label: string; icon: React.Elem
 }
 
 const EXECUTION_STATUS_CONFIG: Record<ExecutionStatus, { color: string; icon: React.ElementType }> = {
-  [ExecutionStatus.PENDING]: { color: 'text-gray-500', icon: Clock },
-  [ExecutionStatus.RUNNING]: { color: 'text-blue-500', icon: RefreshCw },
-  [ExecutionStatus.COMPLETED]: { color: 'text-green-500', icon: CheckCircle },
-  [ExecutionStatus.FAILED]: { color: 'text-red-500', icon: XCircle },
-  [ExecutionStatus.CANCELLED]: { color: 'text-orange-500', icon: XCircle },
+  [ExecutionStatus.PENDING]: { color: 'text-[var(--text-muted)]', icon: Clock },
+  [ExecutionStatus.RUNNING]: { color: 'text-[var(--accent-primary)]', icon: RefreshCw },
+  [ExecutionStatus.COMPLETED]: { color: 'text-[var(--success)]', icon: CheckCircle },
+  [ExecutionStatus.FAILED]: { color: 'text-[var(--danger)]', icon: XCircle },
+  [ExecutionStatus.CANCELLED]: { color: 'text-[var(--warning)]', icon: XCircle },
 }
 
 const TARGET_TYPE_OPTIONS = [
@@ -372,7 +372,7 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
       <CardContent className="space-y-4">
         {/* Error State */}
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto">
@@ -420,8 +420,8 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
                           <h4 className="font-medium">{rule.name}</h4>
                           <span className={`px-2 py-0.5 text-xs rounded-full ${
                             rule.isActive
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              ? 'bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/30 dark:text-[var(--success)]'
+                              : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
                           }`}>
                             {rule.isActive ? 'Active' : 'Inactive'}
                           </span>
@@ -481,7 +481,7 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
                         size="sm"
                         onClick={() => { setDeletingRule(rule.id); setConfirmDelete(true) }}
                         title="Delete rule"
-                        className="text-red-500 hover:text-red-600"
+                        className="text-[var(--danger)] hover:text-[var(--chart-red)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -495,7 +495,7 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
 
         {/* Rule Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold">{editingRule ? 'Edit Rule' : 'Create Rule'}</h3>
@@ -665,7 +665,7 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
 
         {/* Execution History Modal */}
         {selectedRuleHistory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
               <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -712,15 +712,15 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
                             </div>
                             <div>
                               <span className="text-muted-foreground">Success:</span>
-                              <span className="ml-1 font-medium text-green-600">{exec.successCount}</span>
+                              <span className="ml-1 font-medium text-[var(--chart-green)]">{exec.successCount}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Failed:</span>
-                              <span className="ml-1 font-medium text-red-600">{exec.failureCount}</span>
+                              <span className="ml-1 font-medium text-[var(--chart-red)]">{exec.failureCount}</span>
                             </div>
                           </div>
                           {exec.errorMessage && (
-                            <p className="mt-2 text-xs text-red-600 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                            <p className="mt-2 text-xs text-[var(--chart-red)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20 p-2 rounded">
                               {exec.errorMessage}
                             </p>
                           )}
@@ -736,10 +736,10 @@ export function AutomationRules({ onRuleCreated, onRuleUpdated, onRuleDeleted }:
 
         {/* Delete Confirmation Modal */}
         {confirmDelete && deletingRule && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                <div className="p-2 rounded-full bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <h3 className="font-semibold">Delete Rule?</h3>

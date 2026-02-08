@@ -150,9 +150,9 @@ export function AssignmentForm({ assignedClasses, onSuccess, onCancel }: Assignm
               onChange={(e) => setFormData({ ...formData, classSubject: e.target.value })}
               className={cn(
                 'w-full px-3 py-2 rounded-md border',
-                'bg-white dark:bg-slate-800',
+                'bg-[var(--bg-main)] dark:bg-slate-800',
                 'border-slate-300 dark:border-slate-600',
-                'text-slate-900 dark:text-white',
+                'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                 'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                 transitions.color
               )}
@@ -180,9 +180,9 @@ export function AssignmentForm({ assignedClasses, onSuccess, onCancel }: Assignm
               placeholder="e.g., Chapter 5 Homework"
               className={cn(
                 'w-full px-3 py-2 rounded-md border',
-                'bg-white dark:bg-slate-800',
+                'bg-[var(--bg-main)] dark:bg-slate-800',
                 'border-slate-300 dark:border-slate-600',
-                'text-slate-900 dark:text-white',
+                'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                 'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                 transitions.color
               )}
@@ -202,9 +202,9 @@ export function AssignmentForm({ assignedClasses, onSuccess, onCancel }: Assignm
               placeholder="Describe the assignment requirements..."
               className={cn(
                 'w-full px-3 py-2 rounded-md border min-h-[120px]',
-                'bg-white dark:bg-slate-800',
+                'bg-[var(--bg-main)] dark:bg-slate-800',
                 'border-slate-300 dark:border-slate-600',
-                'text-slate-900 dark:text-white',
+                'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                 'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                 transitions.color
               )}
@@ -225,9 +225,9 @@ export function AssignmentForm({ assignedClasses, onSuccess, onCancel }: Assignm
               min={getMinDate()}
               className={cn(
                 'w-full px-3 py-2 rounded-md border',
-                'bg-white dark:bg-slate-800',
+                'bg-[var(--bg-main)] dark:bg-slate-800',
                 'border-slate-300 dark:border-slate-600',
-                'text-slate-900 dark:text-white',
+                'text-[var(--text-primary)] dark:text-[var(--white-pure)]',
                 'focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
                 transitions.color
               )}

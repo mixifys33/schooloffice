@@ -24,18 +24,18 @@ interface AuditTabProps {
 
 function ActionTypeBadge({ action }: { action: HubAuditActionType }) {
   const colors: Record<string, string> = {
-    PAUSE_SCHOOL_MESSAGING: 'bg-amber-900/50 text-amber-400',
-    RESUME_SCHOOL_MESSAGING: 'bg-emerald-900/50 text-emerald-400',
-    UPDATE_QUOTA: 'bg-blue-900/50 text-blue-400',
-    ADD_CREDITS: 'bg-green-900/50 text-green-400',
-    CANCEL_MESSAGES: 'bg-red-900/50 text-red-400',
-    RETRY_MESSAGES: 'bg-purple-900/50 text-purple-400',
-    PAUSE_QUEUE: 'bg-amber-900/50 text-amber-400',
-    RESUME_QUEUE: 'bg-emerald-900/50 text-emerald-400',
-    CREATE_TEMPLATE: 'bg-blue-900/50 text-blue-400',
-    UPDATE_TEMPLATE: 'bg-blue-900/50 text-blue-400',
-    ACKNOWLEDGE_ALERT: 'bg-slate-900/50 text-slate-400',
-    EMERGENCY_OVERRIDE: 'bg-red-900/50 text-red-400'
+    PAUSE_SCHOOL_MESSAGING: 'bg-[var(--warning-dark)]/50 text-[var(--warning)]',
+    RESUME_SCHOOL_MESSAGING: 'bg-[var(--success-dark)]/50 text-[var(--success)]',
+    UPDATE_QUOTA: 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)]',
+    ADD_CREDITS: 'bg-[var(--success-dark)]/50 text-[var(--success)]',
+    CANCEL_MESSAGES: 'bg-[var(--danger-dark)]/50 text-[var(--danger)]',
+    RETRY_MESSAGES: 'bg-[var(--info-dark)]/50 text-[var(--chart-purple)]',
+    PAUSE_QUEUE: 'bg-[var(--warning-dark)]/50 text-[var(--warning)]',
+    RESUME_QUEUE: 'bg-[var(--success-dark)]/50 text-[var(--success)]',
+    CREATE_TEMPLATE: 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)]',
+    UPDATE_TEMPLATE: 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)]',
+    ACKNOWLEDGE_ALERT: 'bg-[var(--bg-surface)] text-[var(--text-muted)]',
+    EMERGENCY_OVERRIDE: 'bg-[var(--danger-dark)]/50 text-[var(--danger)]'
   }
 
   const formatAction = (action: string) => {
@@ -43,7 +43,7 @@ function ActionTypeBadge({ action }: { action: HubAuditActionType }) {
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[action] || 'bg-slate-900/50 text-slate-400'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[action] || 'bg-[var(--bg-surface)] text-[var(--text-muted)]'}`}>
       {formatAction(action)}
     </span>
   )
@@ -51,15 +51,15 @@ function ActionTypeBadge({ action }: { action: HubAuditActionType }) {
 
 function TargetTypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    school: 'bg-blue-900/30 text-blue-300',
-    queue: 'bg-purple-900/30 text-purple-300',
-    template: 'bg-green-900/30 text-green-300',
-    quota: 'bg-amber-900/30 text-amber-300',
-    alert: 'bg-red-900/30 text-red-300'
+    school: 'bg-[var(--info-dark)]/30 text-[var(--info)]',
+    queue: 'bg-[var(--info-dark)]/30 text-[var(--chart-purple)]',
+    template: 'bg-[var(--success-dark)]/30 text-[var(--success)]',
+    quota: 'bg-[var(--warning-dark)]/30 text-[var(--warning)]',
+    alert: 'bg-[var(--danger-dark)]/30 text-[var(--danger)]'
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs capitalize ${colors[type] || 'bg-slate-900/30 text-slate-300'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs capitalize ${colors[type] || 'bg-[var(--bg-surface)]/30 text-[var(--text-muted)]'}`}>
       {type}
     </span>
   )
@@ -69,29 +69,29 @@ function AuditLogDetails({ log }: { log: AuditLog }) {
   const { details } = log
   
   if (!details.before && !details.after && !details.reason) {
-    return <span className="text-slate-500 text-xs">No additional details</span>
+    return <span className="text-[var(--text-muted)] text-xs">No additional details</span>
   }
 
   return (
     <div className="space-y-2 text-xs">
       {details.reason && (
         <div>
-          <span className="text-slate-400">Reason: </span>
-          <span className="text-slate-300">{details.reason}</span>
+          <span className="text-[var(--text-muted)]">Reason: </span>
+          <span className="text-[var(--text-muted)]">{details.reason}</span>
         </div>
       )}
       {details.before && (
         <div>
-          <span className="text-slate-400">Before: </span>
-          <code className="text-slate-300 bg-slate-800 px-1 rounded">
+          <span className="text-[var(--text-muted)]">Before: </span>
+          <code className="text-[var(--text-muted)] bg-[var(--bg-surface)] px-1 rounded">
             {JSON.stringify(details.before, null, 2)}
           </code>
         </div>
       )}
       {details.after && (
         <div>
-          <span className="text-slate-400">After: </span>
-          <code className="text-slate-300 bg-slate-800 px-1 rounded">
+          <span className="text-[var(--text-muted)]">After: </span>
+          <code className="text-[var(--text-muted)] bg-[var(--bg-surface)] px-1 rounded">
             {JSON.stringify(details.after, null, 2)}
           </code>
         </div>
@@ -189,39 +189,39 @@ export default function AuditTab({ onExport }: AuditTabProps) {
   return (
     <div className="space-y-4">
       {/* Filters Section */}
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-slate-300">Filters</CardTitle>
+          <CardTitle className="text-sm font-medium text-[var(--text-muted)]">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Date Range */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Start Date</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Start Date</label>
               <Input
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="bg-slate-900 border-slate-600 text-slate-200 text-sm"
+                className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-secondary)] text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">End Date</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">End Date</label>
               <Input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="bg-slate-900 border-slate-600 text-slate-200 text-sm"
+                className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-secondary)] text-sm"
               />
             </div>
 
             {/* Action Type Filter */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Action Type</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Action Type</label>
               <select
                 value={selectedAction}
                 onChange={(e) => setSelectedAction(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-2"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-secondary)] text-sm rounded-md px-3 py-2"
               >
                 <option value="">All Actions</option>
                 {actionOptions.map(action => (
@@ -234,11 +234,11 @@ export default function AuditTab({ onExport }: AuditTabProps) {
 
             {/* Target Type Filter */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Target Type</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Target Type</label>
               <select
                 value={selectedTargetType}
                 onChange={(e) => setSelectedTargetType(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-2"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-secondary)] text-sm rounded-md px-3 py-2"
               >
                 <option value="">All Targets</option>
                 {targetTypeOptions.map(type => (
@@ -251,13 +251,13 @@ export default function AuditTab({ onExport }: AuditTabProps) {
 
             {/* Search */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Search</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">Search</label>
               <Input
                 type="text"
                 placeholder="Search by admin, target..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-slate-200 text-sm"
+                className="bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-secondary)] text-sm"
               />
             </div>
           </div>
@@ -266,13 +266,13 @@ export default function AuditTab({ onExport }: AuditTabProps) {
 
       {/* Actions Bar */}
       <div className="flex justify-between items-center">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-[var(--text-muted)]">
           {filteredLogs.length} audit log entries
         </p>
         <Button
           onClick={handleExport}
           disabled={exporting || filteredLogs.length === 0}
-          className="bg-slate-700 hover:bg-slate-600 text-slate-200"
+          className="bg-[var(--bg-surface)] hover:bg-[var(--border-default)] text-[var(--text-secondary)]"
         >
           {exporting ? (
             <>
@@ -294,7 +294,7 @@ export default function AuditTab({ onExport }: AuditTabProps) {
       </div>
 
       {/* Audit Log Table */}
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-[var(--bg-surface)] border-[var(--border-strong)]">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-4">
@@ -302,33 +302,33 @@ export default function AuditTab({ onExport }: AuditTabProps) {
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center py-12">
-              <svg className="w-12 h-12 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 mx-auto text-[var(--text-secondary)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p className="text-slate-400">No audit logs found</p>
-              <p className="text-slate-500 text-sm mt-1">Try adjusting your filters</p>
+              <p className="text-[var(--text-muted)]">No audit logs found</p>
+              <p className="text-[var(--text-muted)] text-sm mt-1">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-900/50">
+                <thead className="bg-[var(--bg-surface)]/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Timestamp
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Admin
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Action
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Target
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       IP Address
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Details
                     </th>
                   </tr>
@@ -337,13 +337,13 @@ export default function AuditTab({ onExport }: AuditTabProps) {
                   {filteredLogs.map((log) => (
                     <React.Fragment key={log.id}>
                       <tr 
-                        className="hover:bg-slate-700/50 cursor-pointer"
+                        className="hover:bg-[var(--bg-surface)]/50 cursor-pointer"
                         onClick={() => toggleExpand(log.id)}
                       >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-muted)]">
                           {new Date(log.timestamp).toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-300">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-muted)]">
                           {log.adminEmail}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -352,16 +352,16 @@ export default function AuditTab({ onExport }: AuditTabProps) {
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             <TargetTypeBadge type={log.targetType} />
-                            <span className="text-sm text-slate-400">
+                            <span className="text-sm text-[var(--text-muted)]">
                               {log.targetName || log.targetId}
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-400">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-muted)]">
                           {log.ipAddress}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button className="text-slate-400 hover:text-slate-200">
+                          <button className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
                             <svg 
                               className={`w-4 h-4 transition-transform ${expandedLog === log.id ? 'rotate-180' : ''}`} 
                               fill="none" 
@@ -374,7 +374,7 @@ export default function AuditTab({ onExport }: AuditTabProps) {
                         </td>
                       </tr>
                       {expandedLog === log.id && (
-                        <tr className="bg-slate-900/30">
+                        <tr className="bg-[var(--bg-surface)]/30">
                           <td colSpan={6} className="px-4 py-3">
                             <AuditLogDetails log={log} />
                           </td>

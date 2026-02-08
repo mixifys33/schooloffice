@@ -22,6 +22,36 @@ enum Role {
   ACCOUNTANT
   STUDENT
   PARENT
+  DOS // Director of Studies
+}
+
+// Super Admin Control Center - Alert Types
+enum AlertType {
+  LOW_SMS
+  INACTIVE_ADMIN
+  PAYMENT_OVERDUE
+  CRITICAL_HEALTH
+  DECLINING_ENROLLMENT
+}
+
+// Super Admin Control Center - Alert Severity
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// Super Admin Control Center - Action Types
+enum ActionType {
+  SUSPEND
+  REACTIVATE
+  CHANGE_PLAN
+  RESET_PASSWORD
+  FORCE_LOGOUT
+  IMPERSONATE
+  BULK_SUSPEND
+  BULK_REACTIVATE
+  BULK_NOTICE
 }
 
 enum PilotType {
@@ -59,6 +89,36 @@ enum ExamType {
   CA
 }
 
+// DoS-specific enums
+enum AssessmentType {
+  TEST
+  ASSIGNMENT
+  PROJECT
+  PRACTICAL
+  QUIZ
+}
+
+enum GradeDescriptor {
+  DISTINCTION
+  CREDIT
+  PASS
+  FAIL
+}
+
+enum PromotionStatus {
+  PROMOTED
+  REPEAT
+  RETAKE
+  PENDING
+}
+
+enum ReportCardStatus {
+  DRAFT
+  APPROVED
+  PUBLISHED
+  LOCKED
+}
+
 enum PaymentMethod {
   CASH
   MOBILE_MONEY
@@ -67,7 +127,6 @@ enum PaymentMethod {
 
 enum MessageChannel {
   SMS
-  WHATSAPP
   EMAIL
 }
 
@@ -77,6 +136,11 @@ enum MessageStatus {
   DELIVERED
   FAILED
   READ
+}
+
+enum MessageType {
+  AUTOMATED
+  MANUAL
 }
 
 enum RelationshipType {
@@ -249,7 +313,7 @@ model School {
   email              String?
   logo               String?
   licenseType        LicenseType @default(FREE_PILOT)
-  features           Json        @default("{\"smsEnabled\":false,\"whatsappEnabled\":false,\"paymentIntegration\":false,\"advancedReporting\":false,\"bulkMessaging\":false}")
+  features           Json        @default("{\"smsEnabled\":true,\"emailEnabled\":true,\"paymentIntegration\":true}")
   smsBudgetPerTerm   Int         @default(0)
   isActive           Boolean     @default(true)
   termsAcceptedAt    DateTime? // Legal acknowledgment timestamp
@@ -274,6 +338,42 @@ model School {
   announcements    Announcement[]
   authAuditLogs    AuthAuditLog[]
   hubAlerts        HubAlert[]
+  // Health metrics removed - not needed for core operations
+  // healthMetrics    SchoolHealthMetrics?
+  alerts           SchoolAlert[]
+
+  // SMS Template System Relations
+  customSMSTemplates  CustomSMSTemplate[]
+  smsAutomationRules  SMSAutomationRule[]
+  smsCreditProtection SMSCreditProtection?
+  smsAuditLogs        SMSAuditLog[]
+
+  // New Curriculum Report Card Relations
+  reportCardTemplates      ReportCardTemplate[]
+  newCurriculumReportCards NewCurriculumReportCard[]
+
+  // DoS Module Relations
+  dosCurriculumSubjects DoSCurriculumSubject[]
+  dosTimetables         DoSTimetable[]
+  curriculumSubjects    CurriculumSubject[]
+
+  // Support System Relations
+  supportRequests SupportRequest[]
+
+  // Timetable System Relations
+  schoolTimeStructures        SchoolTimeStructure[]
+  subjectPeriodRequirements   SubjectPeriodRequirement[]
+  teacherConstraints          TeacherConstraint[]
+  roomConstraints             RoomConstraint[]
+  timetableDrafts             TimetableDraft[]
+  timetableVersions           TimetableVersion[]
+  conflictLogs                TimetableConflictLog[]
+  timetableGenerationSettings TimetableGenerationSettings?
+  rooms                       Room[]
+
+  // Finance Relations
+  studentAccounts StudentAccount[]
+  smsLogs         SmsLog[]
 
   @@index([isActive])
 }
@@ -289,6 +389,7 @@ model AcademicYear {
   startDate DateTime
   endDate   DateTime
   isActive  Boolean  @default(false)
+  isCurrent Boolean  @default(false) // Current academic year flag
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -312,11 +413,30 @@ model Term {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  academicYear  AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  exams         Exam[]
-  results       Result[]
-  payments      Payment[]
-  feeStructures FeeStructure[]
+  academicYear      AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  exams             Exam[]
+  results           Result[]
+  payments          Payment[]
+  feeStructures     FeeStructure[]
+  milestoneTrackers StudentMilestoneStatus[]
+  studentAccounts   StudentAccount[]
+
+  // DoS Module Relations
+  dosAssessmentPlans       DoSAssessmentPlan[]       @relation("DoSAssessmentPlans")
+  dosExams                 DoSExam[]
+  finalScores              DoSFinalScore[]
+  dosTimetables            DoSTimetable[]
+  promotionDecisions       DoSPromotionDecision[]
+  dosReportCards           DoSReportCard[]
+  newCurriculumReportCards NewCurriculumReportCard[]
+  assessmentPlans          AssessmentPlan[]
+
+  // Timetable System Relations
+  timetableDrafts TimetableDraft[]
+
+  // Class Teacher Marks Management Relations
+  caEntries                CAEntry[]
+  examEntries              ExamEntry[]
 
   @@unique([academicYearId, name])
   @@index([academicYearId])
@@ -335,10 +455,26 @@ model Class {
   streams          Stream[]
   students         Student[]
   classSubjects    ClassSubject[]
+  staffSubjects    StaffSubject[]
   timetableEntries TimetableEntry[]
   feeStructures    FeeStructure[]
   attendance       Attendance[]
   staffClasses     StaffClass[]
+
+  // DoS Module Relations
+  dosCurriculumSubjects DoSCurriculumSubject[] @relation("DoSCurriculumSubjects")
+  dosTimetables         DoSTimetable[]
+  promotionDecisions    DoSPromotionDecision[]
+  curriculumSubjects    CurriculumSubject[]
+  dosApprovals          DosApproval[]
+
+  // Teacher Section Relations
+  learningEvidences  LearningEvidence[]
+  teacherAssessments TeacherAssessment[]
+
+  // Timetable System Relations
+  subjectPeriodRequirements SubjectPeriodRequirement[]
+  timetableSlots            TimetableSlot[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -360,25 +496,42 @@ model Stream {
 }
 
 model Subject {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId        String   @db.ObjectId
-  name            String
-  code            String
-  gradingSystemId String?  @db.ObjectId
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String     @db.ObjectId
+  name           String // e.g. Mathematics
+  code           String // e.g. MTC
+  educationLevel SchoolType // PRIMARY or SECONDARY
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   // Relations
   school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  gradingSystem    GradingSystem?   @relation(fields: [gradingSystemId], references: [id])
   classSubjects    ClassSubject[]
   staffSubjects    StaffSubject[]
   marks            Mark[]
   timetableEntries TimetableEntry[]
 
+  // DoS Module Relations
+  dosCurriculumSubjects DoSCurriculumSubject[] @relation("DoSCurriculumSubjects")
+  curriculumSubjects    CurriculumSubject[]
+  dosApprovals          DosApproval[]
+
+  // Teacher Section Relations
+  learningEvidences  LearningEvidence[]
+  teacherAssessments TeacherAssessment[]
+
+  // Timetable System Relations
+  subjectPeriodRequirements SubjectPeriodRequirement[]
+  timetableSlots            TimetableSlot[]
+
+  // Class Teacher Marks Management Relations
+  caEntries                 CAEntry[]
+  examEntries               ExamEntry[]
+
   @@unique([schoolId, code])
   @@index([schoolId])
-  @@index([gradingSystemId])
+  @@index([isActive])
 }
 
 model GradingSystem {
@@ -389,9 +542,8 @@ model GradingSystem {
   updatedAt DateTime @updatedAt
 
   // Relations
-  school   School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  grades   GradeRange[]
-  subjects Subject[]
+  school School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  grades GradeRange[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -414,10 +566,13 @@ model GradeRange {
 }
 
 model ClassSubject {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  classId   String   @db.ObjectId
-  subjectId String   @db.ObjectId
-  createdAt DateTime @default(now())
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId         String   @db.ObjectId
+  subjectId       String   @db.ObjectId
+  maxMark         Float    @default(100)
+  appearsOnReport Boolean  @default(true)
+  affectsPosition Boolean  @default(true)
+  createdAt       DateTime @default(now())
 
   // Relations
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -552,18 +707,37 @@ model Student {
   updatedAt       DateTime      @updatedAt
 
   // Relations
-  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  class            Class             @relation(fields: [classId], references: [id])
-  stream           Stream?           @relation(fields: [streamId], references: [id])
-  studentGuardians StudentGuardian[]
-  attendance       Attendance[]
-  marks            Mark[]
-  results          Result[]
-  payments         Payment[]
-  messages         Message[]
-  disciplineCases  DisciplineCase[]
-  documents        StudentDocument[]
-  account          StudentAccount?
+  school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class             Class                    @relation(fields: [classId], references: [id])
+  stream            Stream?                  @relation(fields: [streamId], references: [id])
+  studentGuardians  StudentGuardian[]
+  attendance        Attendance[]
+  marks             Mark[]
+  results           Result[]
+  payments          Payment[]
+  messages          Message[]
+  disciplineCases   DisciplineCase[]
+  documents         StudentDocument[]
+  milestoneTrackers StudentMilestoneStatus[]
+  studentAccounts   StudentAccount[]
+  smsLogs           SmsLog[]
+
+  // DoS Module Relations
+  continuousAssessments    DoSContinuousAssessment[]
+  dosExamResults           DoSExamResult[]
+  finalScores              DoSFinalScore[]
+  dosReportCards           DoSReportCard[]
+  newCurriculumReportCards NewCurriculumReportCard[]
+  promotionDecisions       DoSPromotionDecision[]
+  caResults                CAResult[]
+
+  // Teacher Section Relations
+  teacherAssessmentResults TeacherAssessmentResult[]
+  learningEvidences        LearningEvidence[]
+
+  // Class Teacher Marks Management Relations
+  caEntries                CAEntry[]
+  examEntries              ExamEntry[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -581,7 +755,8 @@ model Guardian {
   phoneVerified      Boolean          @default(false)
   email              String?
   emailVerified      Boolean          @default(false)
-  whatsappNumber     String?
+  // WhatsApp removed - SMS and Email only
+  // whatsappNumber     String?
   nationalId         String?
   address            String?
   relationship       RelationshipType @default(GUARDIAN)
@@ -604,6 +779,7 @@ model Guardian {
   documents        GuardianDocument[]
   portalAccess     GuardianPortalAccess?
   auditLogs        GuardianAuditLog[]
+  smsLogs          SmsLog[]
 
   @@index([phone])
   @@index([email])
@@ -710,6 +886,14 @@ model Staff {
   department     String? // Department assignment
   lastActivityAt DateTime? // Last system activity timestamp
 
+  // Teacher-specific dashboard fields - New Curriculum Support
+  isTeacher      Boolean @default(false) // Whether this staff member is a subject teacher
+  teacherCode    String? // Teacher identification code
+  qualifications String? // Teacher qualifications
+  subjectsTaught Int     @default(0) // Number of subjects taught
+  classesHandled Int     @default(0) // Number of classes handled
+  activeAlerts   Int     @default(0) // Count of active alerts/obligations
+
   // Relations
   user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   school           School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -724,6 +908,30 @@ model Staff {
   documents        StaffDocument[]
   tasks            StaffTask[]
 
+  // DoS Module Relations
+  continuousAssessments DoSContinuousAssessment[]
+  dosExamResults        DoSExamResult[]
+  dosTimetableEntries   DoSTimetableEntry[]
+  assessmentPlans       AssessmentPlan[]
+  caResults             CAResult[]
+
+  // Teacher Section Relations - New Curriculum Support
+  alerts                   TeacherAlert[]
+  learningEvidences        LearningEvidence[]
+  teacherAssessments       TeacherAssessment[]
+  teacherAssessmentResults TeacherAssessmentResult[]
+
+  // Timetable System Relations
+  teacherConstraints TeacherConstraint[]
+  timetableSlots     TimetableSlot[]
+
+  // Teacher SMS Permission Relations
+  createdPermissionCodes TeacherSmsPermissionCode[] @relation("PermissionCodeCreated")
+
+  // Class Teacher Marks Management Relations
+  caEntries                  CAEntry[]
+  examEntries                ExamEntry[]
+
   @@unique([schoolId, employeeNumber])
   @@index([schoolId])
   @@index([primaryRole])
@@ -731,18 +939,23 @@ model Staff {
 }
 
 model StaffSubject {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  staffId   String   @db.ObjectId
-  subjectId String   @db.ObjectId
-  createdAt DateTime @default(now())
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  staffId    String   @db.ObjectId
+  subjectId  String   @db.ObjectId
+  classId    String   @db.ObjectId
+  isPrimary  Boolean  @default(true) // Primary teacher vs co-teacher
+  assignedBy String   @db.ObjectId // DoS who made the assignment
+  createdAt  DateTime @default(now())
 
   // Relations
   staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id])
 
-  @@unique([staffId, subjectId])
+  @@unique([staffId, subjectId, classId])
   @@index([staffId])
   @@index([subjectId])
+  @@index([classId])
 }
 
 model StaffClass {
@@ -764,6 +977,135 @@ model StaffClass {
 // STAFF DASHBOARD MODELS
 // Requirements: 2.3, 3.2, 3.4, 12.1, 12.2, 13.1, 14.1
 // ============================================
+
+// Teacher Dashboard Alerts & Obligations
+enum TeacherAlertType {
+  CA_PENDING_SUBMISSION
+  EVIDENCE_NOT_UPLOADED
+  ASSESSMENT_DEADLINE_APPROACHING
+  MISSING_MARKS
+  TIMETABLE_CHANGE
+}
+
+model TeacherAlert {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  staffId         String           @db.ObjectId
+  alertType       TeacherAlertType
+  message         String
+  isRead          Boolean          @default(false)
+  priority        Int              @default(1) // 1-5 scale
+  dueDate         DateTime?
+  relatedResource String? // Link to related resource (e.g., assessment ID)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([alertType])
+  @@index([isRead])
+  @@index([priority])
+  @@index([dueDate])
+}
+
+// Learning Evidence Upload for New Curriculum
+enum EvidenceType {
+  ASSIGNMENT
+  PROJECT
+  PRACTICAL_WORK
+  OBSERVATIONAL_NOTE
+  PORTFOLIO
+  OTHER
+}
+
+model LearningEvidence {
+  id                 String       @id @default(auto()) @map("_id") @db.ObjectId
+  staffId            String       @db.ObjectId
+  classId            String       @db.ObjectId
+  subjectId          String       @db.ObjectId
+  studentId          String?      @db.ObjectId
+  evidenceType       EvidenceType
+  title              String
+  description        String?
+  fileUrl            String // URL to uploaded evidence
+  fileName           String
+  fileSize           Int
+  mimeType           String
+  competencyRef      String? // Competency being demonstrated
+  linkedAssessmentId String?      @db.ObjectId // Link to related assessment
+  uploadedAt         DateTime     @default(now())
+  uploadedBy         String       @db.ObjectId
+
+  // Relations
+  staff   Staff    @relation(fields: [staffId], references: [id])
+  class   Class    @relation(fields: [classId], references: [id])
+  subject Subject  @relation(fields: [subjectId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+
+  @@index([staffId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([studentId])
+  @@index([evidenceType])
+  @@index([uploadedAt])
+}
+
+// Teacher Assessment Entry - Supporting multiple CA entries per subject
+model TeacherAssessment {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  staffId          String         @db.ObjectId
+  classId          String         @db.ObjectId
+  subjectId        String         @db.ObjectId
+  assessmentType   AssessmentType // From existing enum (TEST, ASSIGNMENT, PROJECT, etc.)
+  name             String // e.g. "Assignment 1 - Algebra"
+  maxScore         Float // Not always 100
+  dateAssigned     DateTime
+  dueDate          DateTime?
+  linkedCompetency String? // Which competency this assesses
+  description      String?
+  isLocked         Boolean        @default(false) // Locked after DoS approval
+  submittedAt      DateTime?
+  submittedBy      String?        @db.ObjectId
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  staff   Staff                     @relation(fields: [staffId], references: [id])
+  class   Class                     @relation(fields: [classId], references: [id])
+  subject Subject                   @relation(fields: [subjectId], references: [id])
+  results TeacherAssessmentResult[]
+
+  @@index([staffId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([assessmentType])
+  @@index([dateAssigned])
+  @@index([dueDate])
+  @@index([isLocked])
+}
+
+// Teacher Assessment Result for individual students
+model TeacherAssessmentResult {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  assessmentId   String   @db.ObjectId
+  studentId      String   @db.ObjectId
+  score          Float // Raw score out of maxScore
+  percentage     Float? // Calculated percentage
+  teacherRemarks String?
+  enteredAt      DateTime @default(now())
+  enteredBy      String   @db.ObjectId
+
+  // Relations
+  assessment     TeacherAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student        Student           @relation(fields: [studentId], references: [id])
+  enteredByStaff Staff             @relation(fields: [enteredBy], references: [id])
+
+  @@unique([assessmentId, studentId])
+  @@index([assessmentId])
+  @@index([studentId])
+  @@index([percentage])
+}
 
 // Staff Responsibility - tracks specific duties assigned to staff
 // Requirements: 3.4 - Responsibility assignment separate from permissions
@@ -1064,6 +1406,23 @@ enum PaymentRecordStatus {
   CANCELLED
 }
 
+enum StudentAccountStatus {
+  OK
+  WARNING
+  CRITICAL
+}
+
+enum TrackerStatus {
+  PENDING
+  CLEARED
+}
+
+enum AutomationFrequency {
+  WEEKLY
+  BIWEEKLY
+  TRI_WEEKLY
+}
+
 model FeeStructure {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
   schoolId    String      @db.ObjectId
@@ -1076,6 +1435,10 @@ model FeeStructure {
   createdBy   String      @db.ObjectId
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  // Milestones for automation (PART 2.1)
+  milestones Json? // Array of { week: number, percentage: number }
+  lockedAt   DateTime? // When term starts/rules are frozen
 
   // Relations
   school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -1109,29 +1472,38 @@ model FeeItem {
   @@index([category])
 }
 
-// Student Account - tracks individual student financial status
+// Student Account - tracks individual student financial status per term
 model StudentAccount {
-  id                String      @id @default(auto()) @map("_id") @db.ObjectId
-  studentId         String      @unique @db.ObjectId
-  schoolId          String      @db.ObjectId
-  studentType       StudentType @default(DAY)
-  totalFees         Float       @default(0)
-  totalPaid         Float       @default(0)
-  totalDiscounts    Float       @default(0)
-  totalPenalties    Float       @default(0)
-  balance           Float       @default(0) // totalFees - totalPaid - totalDiscounts + totalPenalties
+  id                String               @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String               @db.ObjectId
+  schoolId          String               @db.ObjectId
+  termId            String               @db.ObjectId
+  studentType       StudentType          @default(DAY)
+  totalFees         Float                @default(0)
+  totalPaid         Float                @default(0)
+  totalDiscounts    Float                @default(0)
+  totalPenalties    Float                @default(0)
+  balance           Float                @default(0) // totalFees - totalPaid - totalDiscounts + totalPenalties
+  status            StudentAccountStatus @default(OK)
+  isExempted        Boolean              @default(false)
+  exemptionReason   String?
   lastPaymentDate   DateTime?
   lastPaymentAmount Float?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   // Relations
-  student   Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  discounts StudentDiscount[]
-  penalties StudentPenalty[]
+  student           Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  term              Term                     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  discounts         StudentDiscount[]
+  penalties         StudentPenalty[]
+  milestoneStatuses StudentMilestoneStatus[]
 
-  @@unique([studentId, schoolId])
+  // CORRECTED: Now scoped per student, per term, per school
+  @@unique([studentId, termId]) // Non-negotiable: (studentId, termId) identity
   @@index([schoolId])
+  @@index([termId])
   @@index([balance])
 }
 
@@ -1396,32 +1768,41 @@ model FinanceAuditLog {
 // Finance Notification Log - tracks all finance-related notifications
 // Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
 model FinanceNotificationLog {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId    String    @db.ObjectId
-  guardianId  String    @db.ObjectId
-  studentId   String?   @db.ObjectId
-  type        String // PAYMENT_CONFIRMATION, FEE_REMINDER, PENALTY_NOTICE, BALANCE_SUMMARY
-  channel     String // SMS, WHATSAPP, EMAIL
-  content     String
-  status      String // QUEUED, SENT, DELIVERED, FAILED, BOUNCED
-  sentAt      DateTime?
-  deliveredAt DateTime?
-  error       String?
-  metadata    String? // JSON string with additional data
-  createdAt   DateTime  @default(now())
+  id                  String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String      @db.ObjectId
+  guardianId          String      @db.ObjectId
+  studentId           String?     @db.ObjectId
+  studentAccountId    String?     @db.ObjectId // Added link to specific account
+  type                String // PAYMENT_CONFIRMATION, FEE_REMINDER, PENALTY_NOTICE, BALANCE_SUMMARY
+  messageType         MessageType @default(AUTOMATED) // Added to distinguish automated vs manual
+  channel             String // SMS, EMAIL
+  content             String
+  status              String // QUEUED, SENT, DELIVERED, FAILED, BOUNCED
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  error               String?
+  metadata            String? // JSON string with additional data
+  // Legal shield fields
+  recipientPhone      String?
+  milestonePercentage Float?
+  academicWeek        Int? // Week number when reminder was sent
+  createdAt           DateTime    @default(now())
 
   @@index([schoolId])
   @@index([guardianId])
   @@index([studentId])
+  @@index([studentAccountId])
   @@index([type])
   @@index([status])
   @@index([createdAt])
+  @@index([messageType])
 }
 
-// Finance Settings per school
+// Finance Settings per school per term
 model FinanceSettings {
   id                     String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId               String   @unique @db.ObjectId
+  schoolId               String   @db.ObjectId
+  termId                 String?  @db.ObjectId // Added term scoping
   currency               String   @default("UGX")
   currencySymbol         String   @default("UGX")
   receiptPrefix          String   @default("RCP")
@@ -1437,7 +1818,268 @@ model FinanceSettings {
   gracePeriodDays        Int      @default(7)
   enableDiscountApproval Boolean  @default(true)
   createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+
+  // Automation Settings
+  enableAutomatedReminders        Boolean             @default(false)
+  enableGuaranteedFridayReminders Boolean             @default(false)
+  fridayOverrideEnabled           Boolean             @default(false) // Allow Friday reminders when automation is disabled
+  automationFrequency             AutomationFrequency @default(WEEKLY)
+  automationDayOfWeek             Int                 @default(1) // 1 = Monday
+  maxRemindersPerMilestone        Int                 @default(2)
+  paymentMilestones               Json? // Array of { week: number, percentage: number }
+  lastAutomationRunAt             DateTime?
+  lastFridayRunAt                 DateTime? // Last time Friday automation ran
+  lockedAt                        DateTime? // When term starts/rules are frozen
+
+  updatedAt DateTime @updatedAt
+
+  // Updated unique constraint to include termId
+  @@unique([schoolId, termId]) // Changed from @unique on schoolId to composite key
+  @@index([schoolId])
+  @@index([termId])
+}
+
+model StudentMilestoneStatus {
+  id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  studentId           String        @db.ObjectId
+  termId              String        @db.ObjectId
+  milestonePercentage Float
+  requiredByWeek      Int
+  clearedAt           DateTime? // When milestone was achieved
+  reminderCount       Int           @default(0)
+  lastReminderSentAt  DateTime?
+  status              TrackerStatus @default(PENDING)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  // Relations
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term           Term           @relation(fields: [termId], references: [id], onDelete: Cascade)
+  studentAccount StudentAccount @relation(fields: [studentId, termId], references: [studentId, termId])
+
+  @@unique([studentId, termId, milestonePercentage])
+  @@index([studentId])
+  @@index([termId])
+  @@index([status])
+}
+
+// SMS Log for tracking infrastructure
+model SmsLog {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String    @db.ObjectId
+  studentId    String    @db.ObjectId
+  guardianId   String    @db.ObjectId
+  phoneNumber  String
+  message      String
+  messageType  String // FEE_REMINDER, PAYMENT_CONFIRMATION, etc.
+  status       String    @default("QUEUED") // QUEUED, SENT, DELIVERED, FAILED
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  errorMessage String?
+  cost         Float?
+  segments     Int       @default(1)
+  senderId     String    @db.ObjectId
+  metadata     Json? // Additional data for tracking
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id])
+  guardian Guardian @relation(fields: [guardianId], references: [id])
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([guardianId])
+  @@index([status])
+  @@index([sentAt])
+}
+
+// ============================================
+// ENHANCED BURSAR MODULE - BUDGET & EXPENSE TRACKING
+// ============================================
+
+// Budget Categories for school-wide financial planning
+model BudgetCategory {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String       @db.ObjectId
+  name            String
+  description     String?
+  budgetedAmount  Float
+  spentAmount     Float        @default(0)
+  remainingAmount Float
+  percentage      Float        @default(0) // Percentage of budget used
+  status          BudgetStatus @default(ON_TRACK)
+  department      String?
+  period          BudgetPeriod @default(TERMLY)
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean      @default(true)
+  createdBy       String       @db.ObjectId
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  expenses     Expense[]
+  budgetAlerts BudgetAlert[]
+
+  @@index([schoolId])
+  @@index([status])
+  @@index([period])
+  @@index([isActive])
+}
+
+// Budget Status Enum
+enum BudgetStatus {
+  ON_TRACK
+  AT_RISK
+  OVER_BUDGET
+  COMPLETED
+}
+
+// Budget Period Enum
+enum BudgetPeriod {
+  MONTHLY
+  TERMLY
+  ANNUALLY
+}
+
+// Expense records for tracking actual spending
+model Expense {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String        @db.ObjectId
+  budgetCategoryId String        @db.ObjectId
+  description      String
+  amount           Float
+  expenseDate      DateTime
+  vendor           String?
+  receiptNumber    String?
+  receiptUrl       String? // ImageKit URL for receipt
+  paymentMethod    PaymentMethod
+  status           ExpenseStatus @default(PENDING)
+  approvedBy       String?       @db.ObjectId
+  approvedAt       DateTime?
+  rejectedBy       String?       @db.ObjectId
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  notes            String?
+  createdBy        String        @db.ObjectId
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  budgetCategory BudgetCategory @relation(fields: [budgetCategoryId], references: [id])
+
+  @@index([schoolId])
+  @@index([budgetCategoryId])
+  @@index([status])
+  @@index([expenseDate])
+}
+
+// Expense Status Enum
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+// Budget Alerts for monitoring spending
+model BudgetAlert {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String          @db.ObjectId
+  budgetCategoryId String          @db.ObjectId
+  alertType        BudgetAlertType
+  threshold        Float // Percentage threshold that triggered alert
+  currentSpending  Float
+  budgetAmount     Float
+  message          String
+  isActive         Boolean         @default(true)
+  acknowledgedBy   String?         @db.ObjectId
+  acknowledgedAt   DateTime?
+  createdAt        DateTime        @default(now())
+
+  // Relations
+  budgetCategory BudgetCategory @relation(fields: [budgetCategoryId], references: [id])
+
+  @@index([schoolId])
+  @@index([budgetCategoryId])
+  @@index([alertType])
+  @@index([isActive])
+}
+
+// Budget Alert Types
+enum BudgetAlertType {
+  WARNING_75 // 75% of budget used
+  CRITICAL_90 // 90% of budget used
+  EXCEEDED_100 // Budget exceeded
+  MONTHLY_LIMIT // Monthly spending limit exceeded
+}
+
+// Cash Flow Projections
+model CashFlowProjection {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String   @db.ObjectId
+  projectionDate    DateTime
+  projectedIncome   Float
+  projectedExpenses Float
+  projectedBalance  Float
+  actualIncome      Float?
+  actualExpenses    Float?
+  actualBalance     Float?
+  variance          Float? // Difference between projected and actual
+  notes             String?
+  createdBy         String   @db.ObjectId
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([projectionDate])
+}
+
+// Financial Reports metadata
+model FinancialReport {
+  id               String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String              @db.ObjectId
+  reportType       FinancialReportType
+  title            String
+  description      String?
+  parameters       Json // Report parameters (date range, filters, etc.)
+  fileUrl          String? // Generated report file URL
+  status           ReportStatus        @default(PENDING)
+  generatedBy      String              @db.ObjectId
+  generatedAt      DateTime?
+  scheduledFor     DateTime? // For scheduled reports
+  isRecurring      Boolean             @default(false)
+  recurringPattern String? // DAILY, WEEKLY, MONTHLY, TERMLY
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([schoolId])
+  @@index([reportType])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+// Financial Report Types
+enum FinancialReportType {
+  INCOME_STATEMENT
+  CASH_FLOW
+  BALANCE_SHEET
+  FEE_COLLECTION
+  BUDGET_VARIANCE
+  PAYMENT_ANALYSIS
+  OUTSTANDING_FEES
+  EXPENSE_SUMMARY
+}
+
+// Report Status
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  SCHEDULED
 }
 
 // ============================================
@@ -1450,6 +2092,7 @@ model Message {
   studentId    String         @db.ObjectId
   guardianId   String         @db.ObjectId
   templateType String
+  messageType  MessageType    @default(AUTOMATED)
   channel      MessageChannel
   content      String
   shortUrl     String?
@@ -1472,6 +2115,14 @@ model Message {
   @@index([studentId])
   @@index([guardianId])
   @@index([status])
+  @@index([templateType])
+  @@index([messageType])
+  @@index([createdAt])
+  @@index([schoolId, templateType])
+  @@index([schoolId, messageType])
+  @@index([schoolId, createdAt])
+  @@index([schoolId, templateType, createdAt])
+  @@index([schoolId, messageType, createdAt])
 }
 
 model MessageTemplate {
@@ -1492,6 +2143,78 @@ model MessageTemplate {
 }
 
 // ============================================
+// SMS TEMPLATE SYSTEM
+// ============================================
+
+model CustomSMSTemplate {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  templateKey   String // SMSTemplateKey enum
+  customContent String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String   @db.ObjectId
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, templateKey])
+  @@index([schoolId])
+}
+
+model SMSAutomationRule {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String   @db.ObjectId
+  templateKey       String // SMSTemplateKey enum
+  isEnabled         Boolean  @default(false)
+  triggerConditions Json // Flexible conditions object
+  restrictions      Json // Limits and restrictions
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, templateKey])
+  @@index([schoolId])
+}
+
+model SMSCreditProtection {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String   @unique @db.ObjectId
+  enableProtection   Boolean  @default(true)
+  minimumBalance     Int      @default(100)
+  emergencyReserve   Int      @default(50)
+  blockOnZeroBalance Boolean  @default(true)
+  dailyLimits        Json // Daily limits per template type
+  termLimits         Json // Term limits per template type
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model SMSAuditLog {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String   @db.ObjectId
+  templateKey    String // SMSTemplateKey enum
+  sentBy         String   @db.ObjectId
+  sentByRole     String
+  recipientCount Int
+  totalCost      Float
+  timestamp      DateTime @default(now())
+  metadata       Json // Additional data like content, recipients, etc.
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, timestamp])
+  @@index([schoolId, templateKey])
+}
+
+// ============================================
 // SECURE LINKS
 // ============================================
 
@@ -1504,6 +2227,8 @@ model SecureLink {
   expiresAt    DateTime
   accessedAt   DateTime?
   accessIp     String?
+  currentViews Int       @default(0)
+  lastAccessAt DateTime?
   createdAt    DateTime  @default(now())
 
   // Relations
@@ -1682,7 +2407,7 @@ model ShortUrl {
   schoolId    String?   @db.ObjectId
   studentId   String?   @db.ObjectId
   messageId   String?   @db.ObjectId
-  channel     String? // SMS, WHATSAPP, EMAIL - for tracking source
+  channel     String? // SMS, EMAIL - for tracking source
   clickCount  Int       @default(0)
   lastClickAt DateTime?
   expiresAt   DateTime?
@@ -1877,6 +2602,40 @@ model OTPVerification {
   @@index([expiresAt])
 }
 
+// Teacher SMS Permission Code - Used to authorize teachers to send SMS messages
+// Requirement: Codes expire every 5 hours and must be provided by admin
+model TeacherSmsPermissionCode {
+  id          String               @id @default(auto()) @map("_id") @db.ObjectId
+  code        String               @unique // 6-digit permission code
+  schoolId    String               @db.ObjectId // School context
+  createdById String               @db.ObjectId // Admin who created the code
+  teacherId   String?              @db.ObjectId // Specific teacher this code is for (optional, if null applies to all teachers)
+  purpose     String? // Purpose of this permission (optional)
+  status      PermissionCodeStatus @default(ACTIVE)
+  expiresAt   DateTime // Expires after 5 hours
+  usedAt      DateTime? // When the code was first used
+  usedBy      String?              @db.ObjectId // Teacher who used the code
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  createdBy Staff    @relation("PermissionCodeCreated", fields: [createdById], references: [id])
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+
+  @@index([schoolId])
+  @@index([createdById])
+  @@index([teacherId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum PermissionCodeStatus {
+  ACTIVE
+  EXPIRED
+  USED
+  REVOKED
+}
+
 // ============================================
 // CRITICAL MESSAGE OVERRIDE
 // ============================================
@@ -1965,7 +2724,7 @@ model DirectMessage {
   status              DirectMessageStatus         @default(SENT)
   readAt              DateTime?
   notificationSent    Boolean                     @default(false) // Whether notification was sent
-  notificationChannel String? // SMS, WHATSAPP, EMAIL, IN_APP
+  notificationChannel String? // SMS, EMAIL
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
 
@@ -2009,7 +2768,7 @@ model StudentReport {
   content                String
   requiresAcknowledgment Boolean             @default(false)
   status                 StudentReportStatus @default(PENDING)
-  notificationChannel    String? // SMS, WHATSAPP, EMAIL
+  notificationChannel    String? // SMS, EMAIL
   notificationSentAt     DateTime?
   viewedAt               DateTime?
   acknowledgedAt         DateTime?
@@ -2283,6 +3042,389 @@ model CommunicationLog {
   @@index([createdAt])
 }
 
+// ============================================
+// TIMETABLE SYSTEM MODELS - COMPREHENSIVE ARCHITECTURE
+// ============================================
+
+// School Time Structure - Foundation of all timetables
+model SchoolTimeStructure {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
+
+  // Time configuration
+  startTime      String // "08:00"
+  endTime        String // "15:30"
+  periodsPerDay  Int // 8
+  periodDuration Int // 40 minutes
+
+  // Break configuration
+  shortBreakStart    Int // Period after which short break occurs (e.g., 3)
+  shortBreakDuration Int // 20 minutes
+  lunchBreakStart    Int // Period after which lunch occurs (e.g., 5)
+  lunchBreakDuration Int // 60 minutes
+
+  // Status
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, isActive])
+  @@index([schoolId])
+  @@index([isActive])
+  @@map("school_time_structures")
+}
+
+// Subject Period Requirements - New curriculum compliance
+model SubjectPeriodRequirement {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String @db.ObjectId
+  subjectId String @db.ObjectId
+  classId   String @db.ObjectId
+
+  // Period requirements
+  periodsPerWeek      Int // Required periods per week
+  doublePeriodAllowed Boolean @default(false)
+  practicalPeriods    Int     @default(0) // Lab/practical periods
+  theoryPeriods       Int     @default(0) // Calculated: periodsPerWeek - practicalPeriods
+
+  // New curriculum specific
+  isCompetencyBased     Boolean @default(false)
+  requiresProjectBlocks Boolean @default(false)
+  cannotBeSplit         Boolean @default(false) // Some subjects need consecutive periods
+
+  // Preferences
+  preferMorningSlots   Boolean @default(false)
+  preferAfternoonSlots Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, subjectId, classId])
+  @@index([schoolId])
+  @@index([subjectId])
+  @@index([classId])
+  @@map("subject_period_requirements")
+}
+
+// Teacher Constraints - Prevents burnout and clashes
+model TeacherConstraint {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String @db.ObjectId
+  teacherId String @db.ObjectId
+
+  // Workload limits
+  maxPeriodsPerDay  Int @default(6)
+  maxPeriodsPerWeek Int @default(25)
+
+  // Availability constraints
+  unavailableDays    Json @default("[]") // [1, 6] for Monday, Saturday
+  unavailablePeriods Json @default("[]") // [{"day": 1, "periods": [1,2]}]
+
+  // Teaching preferences
+  preferredSubjects       Json    @default("[]") // Subject IDs
+  canTeachMultipleClasses Boolean @default(true)
+
+  // Special constraints
+  requiresLab            Boolean @default(false)
+  cannotTeachConsecutive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher Staff  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, teacherId])
+  @@index([schoolId])
+  @@index([teacherId])
+  @@map("teacher_constraints")
+}
+
+// Room - Physical spaces with constraints
+model Room {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String  @db.ObjectId
+  name     String // "Physics Lab", "S1 Blue Classroom"
+  code     String? // "PL1", "S1B"
+  capacity Int     @default(40)
+  roomType String  @default("CLASSROOM") // CLASSROOM, LAB, HALL, LIBRARY
+
+  // Equipment and features
+  hasProjector Boolean @default(false)
+  hasComputers Boolean @default(false)
+  hasLab       Boolean @default(false)
+
+  // Availability
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  roomConstraints RoomConstraint[]
+  timetableSlots  TimetableSlot[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([roomType])
+  @@index([isActive])
+}
+
+// Room Constraints - Lab requirements, capacity, etc.
+model RoomConstraint {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
+  roomId   String @db.ObjectId
+
+  // Room details
+  roomName String
+  roomType RoomType
+  capacity Int
+
+  // Subject restrictions
+  allowedSubjects  Json @default("[]") // Subject IDs that can use this room
+  requiredSubjects Json @default("[]") // Subject IDs that MUST use this room
+
+  // Availability
+  unavailableDays    Json @default("[]") // Days when room is not available
+  unavailablePeriods Json @default("[]") // Specific periods when unavailable
+
+  // Equipment
+  hasProjector Boolean @default(false)
+  hasLab       Boolean @default(false)
+  hasComputers Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  @@unique([schoolId, roomId])
+  @@index([schoolId])
+  @@index([roomType])
+  @@map("room_constraints")
+}
+
+enum RoomType {
+  CLASSROOM
+  LABORATORY
+  COMPUTER_LAB
+  LIBRARY
+  HALL
+  SPORTS_FACILITY
+}
+
+// Timetable Status Enum
+enum TimetableStatus {
+  DRAFT
+  REVIEWED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Generation Status Enum
+enum GenerationStatus {
+  IDLE
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// Conflict Severity Enum
+enum ConflictSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// Constraint Type Enum
+enum ConstraintType {
+  TEACHER_CLASH
+  ROOM_CLASH
+  CLASS_CLASH
+  SUBJECT_PERIODS
+  TEACHER_OVERLOAD
+  CONSTRAINT_VIOLATION
+}
+
+// Timetable Draft - Versioned timetables with approval workflow
+model TimetableDraft {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
+  termId   String @db.ObjectId
+
+  // Basic info
+  name String // "Term 1 2024 - Draft 1"
+
+  // Version control
+  version Int             @default(1)
+  status  TimetableStatus @default(DRAFT)
+
+  // Generation metadata
+  generatedBy         String           @db.ObjectId // User ID
+  generatedAt         DateTime         @default(now())
+  generationAlgorithm String? // Algorithm used (e.g., "Genetic Algorithm")
+  generationTime      Int? // Milliseconds taken
+  generationStatus    GenerationStatus @default(IDLE)
+  generationStarted   DateTime?
+  generationEnded     DateTime?
+  generationLog       Json? // Detailed generation logs
+
+  // Quality metrics
+  qualityScore             Float? // 0-100 quality score
+  totalSlots               Int    @default(0)
+  filledSlots              Int    @default(0)
+  conflictCount            Int    @default(0)
+  hardConstraintViolations Int    @default(0)
+  softConstraintViolations Int    @default(0)
+
+  // Approval workflow
+  reviewedBy  String?   @db.ObjectId // User ID
+  reviewedAt  DateTime?
+  reviewNotes String?
+
+  approvedBy    String?   @db.ObjectId // User ID (DoS)
+  approvedAt    DateTime?
+  approvalNotes String?
+
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school    School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  term      Term                @relation(fields: [termId], references: [id], onDelete: Cascade)
+  slots     TimetableSlot[]
+  conflicts TimetableConflict[]
+  approval  TimetableApproval?
+
+  @@unique([schoolId, termId, version])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([status])
+  @@index([generationStatus])
+  @@index([generatedAt])
+  @@map("timetable_drafts")
+}
+
+// Timetable Slot - Individual time slots in a timetable
+model TimetableSlot {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  timetableId  String  @db.ObjectId
+  classId      String  @db.ObjectId
+  subjectId    String  @db.ObjectId
+  teacherId    String  @db.ObjectId
+  dayOfWeek    Int // 1-7 (Monday-Sunday)
+  period       Int // Period number
+  roomId       String? @db.ObjectId // Room identifier
+  roomName     String? // Room name for display
+  duration     Int     @default(40) // Duration in minutes
+  isDoubleSlot Boolean @default(false)
+  notes        String?
+
+  // Conflict tracking
+  hasConflict  Boolean @default(false)
+  conflictType String? // TEACHER_CLASH, ROOM_CLASH, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  timetable TimetableDraft @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  class     Class          @relation(fields: [classId], references: [id])
+  subject   Subject        @relation(fields: [subjectId], references: [id])
+  teacher   Staff          @relation(fields: [teacherId], references: [id])
+  room      Room?          @relation(fields: [roomId], references: [id])
+
+  @@unique([timetableId, dayOfWeek, period, classId])
+  @@index([timetableId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([dayOfWeek])
+  @@index([period])
+  @@index([hasConflict])
+  @@map("timetable_slots")
+}
+
+// Timetable Conflict - Conflicts detected in timetables
+model TimetableConflict {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  timetableId   String           @db.ObjectId
+  conflictType  ConstraintType // TEACHER_CLASH, ROOM_CLASH, CLASS_CLASH, etc.
+  severity      ConflictSeverity // INFO, WARNING, CRITICAL
+  title         String
+  description   String
+  affectedSlots Json // Array of slot IDs involved in conflict
+  suggestedFix  Json? // Suggested resolution
+  isResolved    Boolean          @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?          @db.ObjectId
+  dismissedAt   DateTime?
+  dismissedBy   String?          @db.ObjectId
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  timetable TimetableDraft @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+
+  @@index([timetableId])
+  @@index([conflictType])
+  @@index([severity])
+  @@index([isResolved])
+  @@index([createdAt])
+  @@map("timetable_conflicts")
+}
+
+// Timetable Approval - Tracks approval workflow for timetables
+model TimetableApproval {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
+  draftId  String @unique @db.ObjectId
+
+  // Submission
+  submittedBy String   @db.ObjectId // DoS user ID
+  submittedAt DateTime @default(now())
+
+  // Review
+  reviewedBy   String?   @db.ObjectId // DoS user ID
+  reviewedAt   DateTime?
+  reviewStatus String? // APPROVE, REJECT, REQUEST_CHANGES
+  reviewNotes  String?
+
+  // Publication
+  publishedBy      String?   @db.ObjectId // DoS user ID
+  publishedAt      DateTime?
+  teachersNotified Boolean   @default(false)
+  studentsNotified Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  draft TimetableDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([submittedAt])
+  @@index([publishedAt])
+  @@map("timetable_approvals")
+}
+
 // Enhanced Announcement - Requirements 6.1, 6.2, 6.3, 6.4, 6.5
 model EnhancedAnnouncement {
   id             String           @id @default(auto()) @map("_id") @db.ObjectId
@@ -2394,6 +3536,9 @@ model SupportRequest {
   resolution String? // Resolution notes
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
   @@index([status])
@@ -2552,23 +3697,25 @@ model HubTemplateAssignment {
 
 // School Messaging Config - Requirements 2.7, 2.8, 4.1-4.7
 model SchoolMessagingConfig {
-  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId             String    @unique @db.ObjectId
-  isPaused             Boolean   @default(false)
-  pausedAt             DateTime?
-  pausedBy             String?   @db.ObjectId
-  pauseReason          String?
-  smsLimitDaily        Int?
-  smsLimitMonthly      Int?
-  whatsappLimitDaily   Int?
-  whatsappLimitMonthly Int?
-  emailLimitDaily      Int?
-  emailLimitMonthly    Int?
-  smsCredits           Int       @default(0)
-  whatsappCredits      Int       @default(0)
-  emailCredits         Int       @default(0)
-  emergencyOverride    Boolean   @default(false)
-  updatedAt            DateTime  @updatedAt
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String    @unique @db.ObjectId
+  isPaused          Boolean   @default(false)
+  pausedAt          DateTime?
+  pausedBy          String?   @db.ObjectId
+  pauseReason       String?
+  smsLimitDaily     Int?
+  smsLimitMonthly   Int?
+  // WhatsApp removed - SMS and Email only
+  // whatsappLimitDaily   Int?
+  // whatsappLimitMonthly Int?
+  emailLimitDaily   Int?
+  emailLimitMonthly Int?
+  smsCredits        Int       @default(0)
+  // WhatsApp removed - SMS and Email only  
+  // whatsappCredits      Int       @default(0)
+  emailCredits      Int       @default(0)
+  emergencyOverride Boolean   @default(false)
+  updatedAt         DateTime  @updatedAt
 
   @@index([isPaused])
   @@index([emergencyOverride])
@@ -2726,8 +3873,9 @@ model Teacher {
 
   // Communication Channels - Requirements 5.1-5.2
   inAppMessagingEnabled Boolean @default(true)
-  smsEnabled            Boolean @default(false) // Disabled by default per Requirement 5.2
-  whatsappEnabled       Boolean @default(false) // Disabled by default per Requirement 5.2
+  smsEnabled            Boolean @default(true) // SMS is primary communication
+  // WhatsApp removed - SMS and Email only
+  // whatsappEnabled       Boolean @default(false)
   emailEnabled          Boolean @default(true)
 
   // Academic Assignments - Requirements 3.1-3.5
@@ -2759,6 +3907,7 @@ model Teacher {
   examinationRoles   TeacherExaminationRoleAssignment[]
   performanceMetrics TeacherPerformanceMetric[]
   assignments        Assignment[]
+  permissionCodes    TeacherSmsPermissionCode[]
 
   @@unique([schoolId, email])
   @@unique([schoolId, nationalId])
@@ -2840,6 +3989,77 @@ model TeacherDraft {
 }
 
 // Teacher Performance Metric - Requirements 6.1-6.7
+// Curriculum Subject - Links classes to subjects with additional properties
+model CurriculumSubject {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String    @db.ObjectId
+  classId        String    @db.ObjectId
+  subjectId      String    @db.ObjectId
+  isCore         Boolean   @default(false)
+  caWeight       Float     @default(40) // Continuous Assessment weight percentage
+  examWeight     Float     @default(60) // Exam weight percentage
+  minPassMark    Float     @default(50) // Minimum pass mark
+  periodsPerWeek Int       @default(4) // Periods allocated per week
+  dosApproved    Boolean   @default(false) // Approved by Director of Studies
+  dosApprovedBy  String?   @db.ObjectId // Who approved it
+  dosApprovedAt  DateTime? // When it was approved
+  isActive       Boolean   @default(true) // Whether this relationship is active
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  // Opposite relation fields
+  assessmentPlans AssessmentPlan[]
+
+  @@unique([classId, subjectId])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([isActive])
+  @@index([dosApproved])
+}
+
+// DoS Curriculum Subject - Enhanced version for Director of Studies module
+model DoSCurriculumSubject {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String    @db.ObjectId
+  classId        String    @db.ObjectId
+  subjectId      String    @db.ObjectId
+  isCore         Boolean   @default(false)
+  caWeight       Float     @default(40)
+  examWeight     Float     @default(60)
+  minPassMark    Float     @default(50)
+  periodsPerWeek Int       @default(4)
+  dosApproved    Boolean   @default(false)
+  dosApprovedBy  String?   @db.ObjectId
+  dosApprovedAt  DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class   @relation("DoSCurriculumSubjects", fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation("DoSCurriculumSubjects", fields: [subjectId], references: [id], onDelete: Cascade)
+
+  // Opposite relation fields
+  assessmentPlans  DoSAssessmentPlan[]
+  exams            DoSExam[]
+  finalScores      DoSFinalScore[]
+  timetableEntries DoSTimetableEntry[]
+
+  @@unique([classId, subjectId])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([isActive])
+  @@index([dosApproved])
+}
+
 model TeacherPerformanceMetric {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   teacherId   String   @db.ObjectId
@@ -2868,12 +4088,13 @@ model TeacherPerformanceMetric {
   totalSessionMinutes Int       @default(0)
 
   // Message Logs - Requirement 6.5
-  messagesSent       Int       @default(0)
-  messagesBySms      Int       @default(0)
-  messagesByWhatsapp Int       @default(0)
-  messagesByEmail    Int       @default(0)
-  messagesByInApp    Int       @default(0)
-  lastMessageAt      DateTime?
+  messagesSent    Int       @default(0)
+  messagesBySms   Int       @default(0)
+  // WhatsApp removed - SMS and Email only
+  // messagesByWhatsapp Int       @default(0)
+  messagesByEmail Int       @default(0)
+  messagesByInApp Int       @default(0)
+  lastMessageAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3122,4 +4343,1072 @@ model TriggerExecutionLog {
   @@index([schoolId])
   @@index([studentId])
   @@index([executedAt])
+}
+
+// ============================================
+// DoS (DIRECTOR OF STUDIES) MODULE - COMPLETE CURRICULUM ARCHITECTURE
+// Requirements: Academic Integrity, Curriculum Compliance, Fair Reporting
+// ============================================
+
+// DoS Assessment Types - Continuous Assessment (20%)
+enum DoSAssessmentType {
+  TEST
+  ASSIGNMENT
+  PROJECT
+  PRACTICAL
+  QUIZ
+  PRESENTATION
+}
+
+// DoS Exam Types - End-of-Term/Year Exams (80%)
+enum DoSExamType {
+  MID_TERM
+  END_TERM
+  END_YEAR
+  MOCK
+  PLACEMENT
+}
+
+// DoS Grade Descriptors - Academic Performance Levels
+enum DoSGradeDescriptor {
+  DISTINCTION
+  CREDIT
+  PASS
+  FAIL
+}
+
+// DoS Promotion Status - Academic Progression
+enum DoSPromotionStatus {
+  PROMOTED
+  REPEAT
+  RETAKE
+  PENDING
+}
+
+// DoS Approval Status - Workflow Control
+enum DoSApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  LOCKED
+}
+
+// DoS Report Card Status - Publication Control
+enum DoSReportCardStatus {
+  DRAFT
+  APPROVED
+  PUBLISHED
+  LOCKED
+}
+
+// DoS Timetable Status - Schedule Management
+enum DoSTimetableStatus {
+  DRAFT
+  APPROVED
+  ACTIVE
+  ARCHIVED
+}
+
+// 2. ASSESSMENT PLAN - DoS framework for continuous assessment (20%)
+model DoSAssessmentPlan {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  curriculumSubjectId String            @db.ObjectId
+  termId              String            @db.ObjectId
+  assessmentType      DoSAssessmentType
+  assessmentName      String
+  maxScore            Int
+  weightPercentage    Float // Within the 20% CA allocation
+  dueDate             DateTime
+  instructions        String?
+  evidenceRequired    Boolean           @default(false)
+  isLocked            Boolean           @default(false)
+  dosApproved         Boolean           @default(false)
+  dosApprovedBy       String?           @db.ObjectId
+  dosApprovedAt       DateTime?
+  createdBy           String            @db.ObjectId
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  // Relations
+  curriculumSubject DoSCurriculumSubject      @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
+  term              Term                      @relation("DoSAssessmentPlans", fields: [termId], references: [id])
+  assessments       DoSContinuousAssessment[]
+
+  @@index([curriculumSubjectId])
+  @@index([termId])
+  @@index([assessmentType])
+  @@index([dosApproved])
+  @@index([isLocked])
+  @@index([dueDate])
+}
+
+// 3. CONTINUOUS ASSESSMENT - Individual CA records (20% stream)
+model DoSContinuousAssessment {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  assessmentPlanId String    @db.ObjectId
+  studentId        String    @db.ObjectId
+  score            Float?
+  maxScore         Int
+  percentage       Float? // Calculated percentage
+  evidenceUrl      String? // Link to uploaded evidence
+  teacherRemarks   String?
+  submittedAt      DateTime?
+  teacherId        String    @db.ObjectId
+  isLocked         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  assessmentPlan DoSAssessmentPlan @relation(fields: [assessmentPlanId], references: [id], onDelete: Cascade)
+  student        Student           @relation(fields: [studentId], references: [id])
+  teacher        Staff             @relation(fields: [teacherId], references: [id])
+
+  @@unique([assessmentPlanId, studentId])
+  @@index([assessmentPlanId])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([isLocked])
+}
+
+// 4. DoS EXAM - Exam management (80% stream)
+model DoSExam {
+  id                  String      @id @default(auto()) @map("_id") @db.ObjectId
+  curriculumSubjectId String      @db.ObjectId
+  termId              String      @db.ObjectId
+  examType            DoSExamType
+  examName            String
+  maxScore            Int
+  examDate            DateTime
+  durationMinutes     Int?
+  instructions        String?
+  isLocked            Boolean     @default(false)
+  dosApproved         Boolean     @default(false)
+  dosApprovedBy       String?     @db.ObjectId
+  dosApprovedAt       DateTime?
+  moderationApplied   Boolean     @default(false)
+  moderationFactor    Float?
+  createdBy           String      @db.ObjectId
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  // Relations
+  curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
+  term              Term                 @relation(fields: [termId], references: [id])
+  examResults       DoSExamResult[]
+
+  @@index([curriculumSubjectId])
+  @@index([termId])
+  @@index([examType])
+  @@index([dosApproved])
+  @@index([isLocked])
+  @@index([examDate])
+}
+
+// 5. DoS EXAM RESULT - Individual exam scores (80% stream)
+model DoSExamResult {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId     String   @db.ObjectId
+  studentId  String   @db.ObjectId
+  score      Float?
+  maxScore   Int
+  percentage Float? // Calculated percentage
+  isAbsent   Boolean  @default(false)
+  enteredBy  String   @db.ObjectId
+  enteredAt  DateTime
+  isLocked   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  exam    DoSExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id])
+  staff   Staff   @relation(fields: [enteredBy], references: [id])
+
+  @@unique([examId, studentId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([enteredBy])
+  @@index([isLocked])
+}
+
+// 6. FINAL SCORE - Merged CA (20%) + Exam (80%) results (THE HEART)
+model DoSFinalScore {
+  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
+  curriculumSubjectId String              @db.ObjectId
+  studentId           String              @db.ObjectId
+  termId              String              @db.ObjectId
+  caScore             Float? // Continuous Assessment score (scaled to 20%)
+  examScore           Float? // Exam score (scaled to 80%)
+  finalScore          Float? // Total score (out of 100)
+  grade               String?
+  gradeDescriptor     DoSGradeDescriptor?
+  teacherRemarks      String?
+  dosApproved         Boolean             @default(false)
+  dosApprovedBy       String?             @db.ObjectId
+  dosApprovedAt       DateTime?
+  isLocked            Boolean             @default(false)
+  calculatedAt        DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  // Relations
+  curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
+  student           Student              @relation(fields: [studentId], references: [id])
+  term              Term                 @relation(fields: [termId], references: [id])
+
+  @@unique([curriculumSubjectId, studentId, termId])
+  @@index([curriculumSubjectId])
+  @@index([studentId])
+  @@index([termId])
+  @@index([dosApproved])
+  @@index([isLocked])
+}
+
+// 7. DoS REPORT CARD - Generated academic reports (VERY IMPORTANT)
+// New Curriculum Report Card Template - Customizable by DoS
+model ReportCardTemplate {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  schoolId String @db.ObjectId
+
+  // Layout Configuration
+  pageSize    String @default("A4") // A4, Letter
+  orientation String @default("portrait") // portrait, landscape
+  margins     Json // {top, bottom, left, right}
+  colors      Json // {primary, secondary, accent, text}
+  fonts       Json // {header, body, sizes}
+
+  // Field Configuration (Customizable by DoS)
+  headerFields          Json // Array of enabled header fields
+  studentInfoFields     Json // Array of student info fields to show
+  subjectTableColumns   Json // Array of subject table columns
+  showCompetencyDetails Boolean @default(true)
+  showSubjectSummary    Boolean @default(true)
+  showSkillsSection     Boolean @default(true)
+  skillsFields          Json // Array of skills to assess
+  showAttendanceSection Boolean @default(true)
+  attendanceFormat      String  @default("detailed") // detailed, summary
+  remarksFields         Json // Array of remarks sections
+  showPromotionDecision Boolean @default(true)
+  promotionFormat       String  @default("detailed") // detailed, simple
+  showDosSignature      Boolean @default(true)
+  showSchoolStamp       Boolean @default(true)
+  showWatermark         Boolean @default(true)
+  footerFields          Json // Array of footer elements
+
+  // Competency Level Definitions (Customizable)
+  competencyLevels Json // Level definitions with colors and ranges
+
+  // Custom Labels (Multilingual Support)
+  customLabels Json // Custom text/labels
+
+  // Template Status
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String   @db.ObjectId
+
+  // Relations
+  school      School                    @relation(fields: [schoolId], references: [id])
+  reportCards NewCurriculumReportCard[]
+
+  @@index([schoolId])
+  @@index([isDefault])
+  @@index([isActive])
+}
+
+// New Curriculum Report Card - Enhanced Structure
+model NewCurriculumReportCard {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  studentId  String  @db.ObjectId
+  termId     String  @db.ObjectId
+  schoolId   String  @db.ObjectId
+  templateId String? @db.ObjectId
+
+  // Student Information (Snapshot)
+  studentName     String
+  admissionNumber String
+  className       String
+  streamName      String?
+  houseName       String?
+  studentPhoto    String? // Base64 or URL
+
+  // Term Information (Snapshot)
+  termName      String
+  academicYear  String
+  termStartDate DateTime
+  termEndDate   DateTime
+
+  // Subject Competency Assessment
+  subjectAssessments Json // Array of subject assessments with CA/Exam breakdown
+
+  // Skills & Values Assessment (Mandatory)
+  skillsAndValues Json // Communication, Collaboration, Critical Thinking, Responsibility
+
+  // Attendance Summary
+  attendanceData Json // {totalDays, presentDays, absentDays, percentage}
+
+  // Remarks Section
+  subjectTeacherRemarks String?
+  classTeacherRemarks   String?
+  dosAcademicRemarks    String // Mandatory
+
+  // Promotion & Transition Decision (Critical)
+  promotionStatus        String // PROMOTED, PROMOTED_ON_CONDITION, RETAKE_REQUIRED, REPEAT_ADVISED
+  promotionJustification String?
+  promotionConditions    Json? // Array of conditions if applicable
+
+  // Overall Summary
+  overallLevel  String // Emerging, Developing, Proficient, Advanced
+  position      Int?
+  totalStudents Int?
+  overallGrade  String?
+
+  // DoS Authority & Validation
+  dosName       String
+  dosSignature  String? // Base64 or URL
+  schoolStamp   String? // Base64 or URL
+  reportVersion String  @default("1.0")
+
+  // Status & Control
+  status        DoSReportCardStatus @default(DRAFT)
+  dosApproved   Boolean             @default(false)
+  dosApprovedBy String?             @db.ObjectId
+  dosApprovedAt DateTime?
+  isLocked      Boolean             @default(false)
+
+  // Publication
+  pdfUrl      String? // Generated PDF URL
+  watermarked Boolean   @default(true)
+  publishedAt DateTime?
+  publishedBy String?   @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student  Student             @relation(fields: [studentId], references: [id])
+  term     Term                @relation(fields: [termId], references: [id])
+  school   School              @relation(fields: [schoolId], references: [id])
+  template ReportCardTemplate? @relation(fields: [templateId], references: [id])
+
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([status])
+  @@index([dosApproved])
+  @@index([publishedAt])
+}
+
+// Legacy DoS Report Card (for backward compatibility)
+model DoSReportCard {
+  id                      String              @id @default(auto()) @map("_id") @db.ObjectId
+  studentId               String              @db.ObjectId
+  termId                  String              @db.ObjectId
+  schoolId                String              @db.ObjectId
+  // Snapshot data for immutability
+  studentName             String
+  admissionNumber         String
+  className               String
+  streamName              String?
+  termName                String
+  academicYear            String
+  // Academic summary
+  totalMarks              Float
+  averageScore            Float
+  position                Int?
+  totalStudents           Int?
+  overallGrade            String?
+  // Comments and remarks
+  classTeacherRemarks     String?
+  dosAcademicComment      String?
+  headTeacherRemarks      String?
+  // Promotion and attendance
+  promotionRecommendation DoSPromotionStatus?
+  attendanceSummary       Json? // Attendance statistics
+  // DoS control
+  status                  DoSReportCardStatus @default(DRAFT)
+  dosApproved             Boolean             @default(false)
+  dosApprovedBy           String?             @db.ObjectId
+  dosApprovedAt           DateTime?
+  isLocked                Boolean             @default(false)
+  // Publication
+  pdfUrl                  String? // Generated PDF URL
+  watermarked             Boolean             @default(true)
+  publishedAt             DateTime?
+  publishedBy             String?             @db.ObjectId
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+  term    Term    @relation(fields: [termId], references: [id])
+
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([status])
+  @@index([dosApproved])
+  @@index([publishedAt])
+}
+
+// 8. DoS TIMETABLE - Schedule management
+model DoSTimetable {
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String             @db.ObjectId
+  classId       String             @db.ObjectId
+  termId        String             @db.ObjectId
+  timetableName String
+  weekCount     Int                @default(1)
+  status        DoSTimetableStatus @default(DRAFT)
+  dosApproved   Boolean            @default(false)
+  dosApprovedBy String?            @db.ObjectId
+  dosApprovedAt DateTime?
+  isLocked      Boolean            @default(false)
+  createdBy     String             @db.ObjectId
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relations
+  school  School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class               @relation(fields: [classId], references: [id])
+  term    Term                @relation(fields: [termId], references: [id])
+  entries DoSTimetableEntry[]
+
+  @@unique([schoolId, classId, termId])
+  @@index([schoolId])
+  @@index([classId])
+  @@index([termId])
+  @@index([status])
+  @@index([dosApproved])
+}
+
+// 9. DoS TIMETABLE ENTRY - Individual timetable slots
+model DoSTimetableEntry {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  timetableId         String   @db.ObjectId
+  curriculumSubjectId String   @db.ObjectId
+  teacherId           String   @db.ObjectId
+  dayOfWeek           Int // 1-7 (Monday-Sunday)
+  period              Int // Period number
+  room                String?
+  isDoubleLesson      Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now())
+
+  // Relations
+  timetable         DoSTimetable         @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id])
+  teacher           Staff                @relation(fields: [teacherId], references: [id])
+
+  @@unique([timetableId, dayOfWeek, period])
+  @@unique([teacherId, dayOfWeek, period, timetableId])
+  @@index([timetableId])
+  @@index([curriculumSubjectId])
+  @@index([teacherId])
+}
+
+// 10. PROMOTION DECISION - Academic progression records
+model DoSPromotionDecision {
+  id                   String              @id @default(auto()) @map("_id") @db.ObjectId
+  studentId            String              @db.ObjectId
+  termId               String              @db.ObjectId
+  schoolId             String              @db.ObjectId
+  currentClassId       String              @db.ObjectId
+  // System calculations
+  systemRecommendation DoSPromotionStatus
+  coreSubjectsPassed   Int
+  totalSubjectsPassed  Int
+  totalSubjects        Int
+  minimumPassRequired  Int
+  averageScore         Float
+  // DoS decision
+  dosDecision          DoSPromotionStatus?
+  dosOverrideReason    String?
+  dosJustification     String?
+  // Approval workflow
+  dosApproved          Boolean             @default(false)
+  dosApprovedBy        String?             @db.ObjectId
+  dosApprovedAt        DateTime?
+  isLocked             Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  // Relations
+  student      Student @relation(fields: [studentId], references: [id])
+  term         Term    @relation(fields: [termId], references: [id])
+  currentClass Class   @relation(fields: [currentClassId], references: [id])
+
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([systemRecommendation])
+  @@index([dosDecision])
+  @@index([dosApproved])
+}
+
+// 11. DoS AUDIT LOG - Track all DoS actions (IMMUTABLE)
+model DoSAuditLog {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  userId        String   @db.ObjectId
+  userRole      Role
+  action        String // APPROVE_CURRICULUM, LOCK_ASSESSMENT, GENERATE_REPORTS, etc.
+  resourceType  String // DoSCurriculumSubject, DoSAssessmentPlan, DoSExam, etc.
+  resourceId    String   @db.ObjectId
+  resourceName  String? // Human-readable resource identifier
+  previousValue Json?
+  newValue      Json?
+  reason        String?
+  ipAddress     String?
+  userAgent     String?
+  timestamp     DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([userId])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+// 12. DoS APPROVAL - Track approvals of subject results
+model DosApproval {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  classId      String    @db.ObjectId
+  subjectId    String    @db.ObjectId
+  caApproved   Boolean   @default(false)
+  examApproved Boolean   @default(false)
+  locked       Boolean   @default(false)
+  lockedBy     String    @db.ObjectId
+  lockedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([locked])
+}
+
+// 12. DoS ANALYTICS - Continuous assessment and exam performance monitoring
+model DoSAnalytics {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId               String   @db.ObjectId
+  termId                 String   @db.ObjectId
+  classId                String?  @db.ObjectId
+  subjectId              String?  @db.ObjectId
+  // Assessment completion tracking
+  totalAssessmentPlans   Int      @default(0)
+  completedAssessments   Int      @default(0)
+  pendingAssessments     Int      @default(0)
+  overDueAssessments     Int      @default(0)
+  // Exam completion tracking
+  totalExams             Int      @default(0)
+  completedExams         Int      @default(0)
+  pendingExams           Int      @default(0)
+  // Teacher performance
+  teachersUnderAssessing Int      @default(0)
+  teachersOverAssessing  Int      @default(0)
+  // Academic performance
+  averageCAScore         Float?
+  averageExamScore       Float?
+  averageFinalScore      Float?
+  passRate               Float?
+  // DoS workflow
+  pendingApprovals       Int      @default(0)
+  lockedRecords          Int      @default(0)
+  generatedReports       Int      @default(0)
+  calculatedAt           DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([schoolId, termId, classId, subjectId])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([calculatedAt])
+}
+
+// ============================================
+// SUPER ADMIN SCHOOLS CONTROL CENTER
+// Requirements: 4.1-4.8, 5.1-5.7, 9.1-9.6
+// ============================================
+
+// School Health Metrics - REMOVED (Not needed for core school operations)
+// Schools care about "who hasn't paid" not "health scores"
+// model SchoolHealthMetrics {
+//   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+//   schoolId               String    @unique @db.ObjectId
+//   healthScore            Int // 0-100
+//   activityScore          Int // 0-30
+//   dataCompletenessScore  Int // 0-20
+//   smsEngagementScore     Int // 0-20
+//   paymentDisciplineScore Int // 0-20
+//   growthScore            Int // 0-10
+//   lastAdminLogin         DateTime?
+//   studentCount           Int
+//   teacherCount           Int
+//   classCount             Int
+//   smsBalance             Int
+//   smsSentThisMonth       Int
+//   lastPaymentDate        DateTime?
+//   lastPaymentAmount      Float
+//   nextBillingDate        DateTime?
+//   mrr                    Float // Monthly Recurring Revenue
+//   totalRevenue           Float
+//   calculatedAt           DateTime  @default(now())
+//   updatedAt              DateTime  @updatedAt
+//   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+//   @@index([healthScore])
+//   @@index([calculatedAt])
+// }
+
+// School Alert - Requirements 5.1-5.7
+model SchoolAlert {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String        @db.ObjectId
+  type               AlertType
+  severity           AlertSeverity
+  title              String
+  message            String
+  conditionStartedAt DateTime
+  daysSinceCondition Int
+  isActive           Boolean       @default(true)
+  acknowledgedAt     DateTime?
+  acknowledgedBy     String?       @db.ObjectId
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([type])
+  @@index([severity])
+  @@index([isActive])
+  @@index([conditionStartedAt])
+}
+
+// Super Admin Audit Log - Requirements 9.1-9.6 (Immutable)
+model SuperAdminAuditLog {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  timestamp        DateTime   @default(now())
+  adminId          String     @db.ObjectId
+  adminEmail       String
+  actionType       ActionType
+  targetSchoolId   String     @db.ObjectId
+  targetSchoolName String
+  reason           String
+  result           String // 'success' | 'failure'
+  errorMessage     String?
+  ipAddress        String
+  userAgent        String
+  metadata         Json       @default("{}")
+
+  @@index([adminId])
+  @@index([actionType])
+  @@index([targetSchoolId])
+  @@index([timestamp])
+}
+
+// Assessment Planning - 20% CA structure
+model AssessmentPlan {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  curriculumSubjectId String    @db.ObjectId
+  termId              String    @db.ObjectId
+  teacherId           String    @db.ObjectId
+  totalWeight         Float     @default(20.0) // Must equal 20%
+  isLocked            Boolean   @default(false)
+  dosApproved         Boolean   @default(false)
+  dosApprovedBy       String?   @db.ObjectId
+  dosApprovedAt       DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  curriculumSubject CurriculumSubject      @relation(fields: [curriculumSubjectId], references: [id])
+  term              Term                   @relation(fields: [termId], references: [id])
+  teacher           Staff                  @relation(fields: [teacherId], references: [id])
+  assessments       ContinuousAssessment[]
+
+  @@unique([curriculumSubjectId, termId])
+  @@index([curriculumSubjectId])
+  @@index([termId])
+  @@index([teacherId])
+  @@index([dosApproved])
+}
+
+// Individual Continuous Assessments
+model ContinuousAssessment {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  assessmentPlanId String         @db.ObjectId
+  name             String
+  type             AssessmentType
+  maxScore         Float
+  weight           Float // Contribution to 20% CA
+  dueDate          DateTime
+  isCompleted      Boolean        @default(false)
+  evidenceUrl      String? // Upload evidence
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  assessmentPlan AssessmentPlan @relation(fields: [assessmentPlanId], references: [id], onDelete: Cascade)
+  results        CAResult[]
+
+  @@index([assessmentPlanId])
+  @@index([type])
+  @@index([dueDate])
+}
+
+// CA Results per student
+model CAResult {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  continuousAssessmentId String   @db.ObjectId
+  studentId              String   @db.ObjectId
+  score                  Float
+  maxScore               Float
+  percentage             Float // Calculated percentage
+  remarks                String?
+  enteredBy              String   @db.ObjectId
+  enteredAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  continuousAssessment ContinuousAssessment @relation(fields: [continuousAssessmentId], references: [id])
+  student              Student              @relation(fields: [studentId], references: [id])
+  enteredByStaff       Staff                @relation(fields: [enteredBy], references: [id])
+
+  @@unique([continuousAssessmentId, studentId])
+  @@index([continuousAssessmentId])
+  @@index([studentId])
+  @@index([enteredBy])
+}
+
+// ============================================
+// CLASS TEACHER MARKS MANAGEMENT SYSTEM
+// New Curriculum CA and Exam Entry Models
+// ============================================
+
+// CA Entry Types for new curriculum
+enum CAType {
+  ASSIGNMENT
+  TEST
+  PROJECT
+  PRACTICAL
+  OBSERVATION
+}
+
+// Marks Submission Status for new curriculum workflow
+enum MarksSubmissionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// CA Entry Model - Multiple CA entries per subject per term
+model CAEntry {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Relations
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String   @db.ObjectId
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  subjectId   String   @db.ObjectId
+  teacher     Staff    @relation(fields: [teacherId], references: [id])
+  teacherId   String   @db.ObjectId
+  term        Term     @relation(fields: [termId], references: [id])
+  termId      String   @db.ObjectId
+
+  // CA Entry Details
+  name        String   // e.g., "Assignment 1 - Algebra"
+  type        CAType
+  maxScore    Float
+  rawScore    Float
+  date        DateTime
+
+  // Curriculum Integration
+  competencyId      String?
+  competencyComment String?
+
+  // Workflow
+  status      MarksSubmissionStatus @default(DRAFT)
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  approvedBy  String?
+
+  // Audit
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([termId])
+  @@index([type])
+  @@index([status])
+  @@map("ca_entries")
+}
+
+// Exam Entry Model - One exam per student per subject per term
+model ExamEntry {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Relations
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String   @db.ObjectId
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  subjectId   String   @db.ObjectId
+  teacher     Staff    @relation(fields: [teacherId], references: [id])
+  teacherId   String   @db.ObjectId
+  term        Term     @relation(fields: [termId], references: [id])
+  termId      String   @db.ObjectId
+
+  // Exam Details
+  examScore   Float    // Out of 100
+  maxScore    Float    @default(100) // Always 100
+  examDate    DateTime
+
+  // Workflow
+  status      MarksSubmissionStatus @default(DRAFT)
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  approvedBy  String?
+
+  // Audit
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Ensure one exam per student per subject per term
+  @@unique([studentId, subjectId, termId])
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([termId])
+  @@index([status])
+  @@map("exam_entries")
+}
+
+// ============================================
+// END OF SCHEMA
+// ============================================
+
+// Timetable Version History - Complete audit trail
+model TimetableVersion {
+  id       String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String          @db.ObjectId
+  termId   String          @db.ObjectId
+  version  Int
+  status   TimetableStatus
+
+  // Change tracking
+  changedBy      String  @db.ObjectId // User who made changes
+  changeReason   String? // Reason for creating new version
+  changesFrom    String? @db.ObjectId // Previous version ID
+  changesSummary Json? // Summary of what changed
+
+  // Metadata
+  totalSlots    Int    @default(0)
+  conflictCount Int    @default(0)
+  qualityScore  Float? // 0-100 quality score
+
+  // Timestamps
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, termId, version])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("timetable_versions")
+}
+
+// Timetable Conflict Log - Comprehensive conflict tracking
+model TimetableConflictLog {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String  @db.ObjectId
+  timetableId String? @db.ObjectId // Null for system-wide conflicts
+
+  // Conflict details
+  conflictType String // TEACHER_CLASH, ROOM_CLASH, CLASS_CLASH, MISSING_PERIODS, TEACHER_OVERLOAD, CONSTRAINT_VIOLATION
+  severity     String // INFO, WARNING, CRITICAL
+  title        String
+  description  String
+
+  // Affected entities
+  affectedTeachers Json @default("[]") // Teacher IDs
+  affectedClasses  Json @default("[]") // Class IDs
+  affectedSubjects Json @default("[]") // Subject IDs
+  affectedRooms    Json @default("[]") // Room IDs
+  affectedSlots    Json @default("[]") // Slot details
+
+  // Resolution
+  suggestedFixes   Json      @default("[]") // Array of suggested solutions
+  isResolved       Boolean   @default(false)
+  resolvedAt       DateTime?
+  resolvedBy       String?   @db.ObjectId
+  resolutionMethod String? // How it was resolved
+
+  // Dismissal (for non-critical conflicts)
+  isDismissed     Boolean   @default(false)
+  dismissedAt     DateTime?
+  dismissedBy     String?   @db.ObjectId
+  dismissalReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([timetableId])
+  @@index([conflictType])
+  @@index([severity])
+  @@index([isResolved])
+  @@index([isDismissed])
+  @@index([createdAt])
+  @@map("timetable_conflict_logs")
+}
+
+// Timetable Analytics - DoS insights and performance tracking
+model TimetableAnalytics {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String @db.ObjectId
+  termId      String @db.ObjectId
+  timetableId String @db.ObjectId
+
+  // Teacher workload analytics
+  teacherWorkloadStats Json // {teacherId: {periodsPerWeek, maxPeriodsPerDay, utilization}}
+  subjectDistribution  Json // {subjectId: {totalPeriods, classCount, teacherCount}}
+  roomUtilization      Json // {roomId: {utilizationPercent, peakHours}}
+
+  // Quality metrics
+  qualityScore         Float // Overall timetable quality (0-100)
+  constraintViolations Int   @default(0)
+  softConstraintScore  Float // How well soft constraints are met
+
+  // Balance metrics
+  teacherLoadBalance Float // Standard deviation of teacher workloads
+  subjectSpreadScore Float // How evenly subjects are distributed
+
+  // Time distribution
+  morningSlotUsage   Float // Percentage of morning slots used
+  afternoonSlotUsage Float // Percentage of afternoon slots used
+
+  totalSlots Int @default(0) // Added for consistency with usage
+
+  calculatedAt DateTime @default(now())
+
+  @@unique([schoolId, termId, timetableId])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([qualityScore])
+  @@index([calculatedAt])
+  @@map("timetable_analytics")
+}
+
+// Timetable Generation Settings - DoS configuration for generation algorithm
+model TimetableGenerationSettings {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @unique @db.ObjectId
+
+  // Algorithm preferences
+  prioritizeTeacherBalance   Boolean @default(true)
+  prioritizeSubjectSpread    Boolean @default(true)
+  prioritizeRoomOptimization Boolean @default(false)
+
+  // Constraint weights (0-100)
+  hardConstraintWeight  Int @default(100) // Never violate
+  teacherWorkloadWeight Int @default(80)
+  subjectSpreadWeight   Int @default(70)
+  roomPreferenceWeight  Int @default(60)
+  timePreferenceWeight  Int @default(50)
+
+  // Generation limits
+  maxGenerationAttempts Int @default(1000)
+  maxGenerationTimeMs   Int @default(30000) // 30 seconds
+
+  // Quality thresholds
+  minAcceptableQuality Float @default(70.0)
+  targetQualityScore   Float @default(85.0)
+
+  updatedAt DateTime @updatedAt
+  updatedBy String   @db.ObjectId
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("timetable_generation_settings")
+}
+
+// Timetable Publication Log - Track when timetables are published/unpublished
+model TimetablePublicationLog {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String @db.ObjectId
+  timetableId String @db.ObjectId
+
+  action      String // PUBLISHED, UNPUBLISHED, REPUBLISHED
+  performedBy String  @db.ObjectId // DoS user ID
+  reason      String? // Reason for action
+
+  // Notification tracking
+  notificationsSent Boolean @default(false)
+  notificationCount Int     @default(0)
+
+  performedAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([timetableId])
+  @@index([action])
+  @@index([performedAt])
+  @@map("timetable_publication_logs")
+}
+// Marks Audit Log - Complete audit trail for marks approval workflow
+model MarksAuditLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+
+  // Entry details
+  entryType   String   // 'CA' or 'EXAM'
+  entryId     String   @db.ObjectId
+  studentId   String   @db.ObjectId
+  subjectId   String   @db.ObjectId
+  classId     String   @db.ObjectId
+  termId      String   @db.ObjectId
+
+  // Action details
+  action      String   // 'APPROVED', 'REJECTED', 'SUBMITTED', 'MODIFIED'
+  performedBy String   @db.ObjectId // Staff ID who performed the action
+  performedAt DateTime @default(now())
+
+  // Additional context
+  comments    String?  // Approval/rejection comments
+  metadata    Json?    // Additional data (scores, names, etc.)
+
+  @@index([schoolId])
+  @@index([entryType])
+  @@index([entryId])
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([classId])
+  @@index([termId])
+  @@index([action])
+  @@index([performedBy])
+  @@index([performedAt])
+  @@map("marks_audit_logs")
 }

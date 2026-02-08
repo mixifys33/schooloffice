@@ -97,7 +97,7 @@ export function AuditInfo({
 
   if (variant === 'compact') {
     return (
-      <div className={cn('flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400', className)}>
+      <div className={cn('flex items-center gap-1.5 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]', className)}>
         {updatedAt && (
           <>
             <Clock className="h-3 w-3" />
@@ -106,7 +106,7 @@ export function AuditInfo({
         )}
         {updatedBy && (
           <>
-            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span className="text-[var(--text-muted)] dark:text-[var(--text-secondary)]">•</span>
             <span>{updatedBy}</span>
           </>
         )}
@@ -117,12 +117,12 @@ export function AuditInfo({
   if (variant === 'detailed') {
     return (
       <div className={cn(
-        'rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4',
+        'rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50 p-4',
         className
       )}>
         <div className="flex items-center gap-2 mb-3">
-          <History className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <History className="h-4 w-4 text-[var(--text-muted)]" />
+          <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             Audit Information
           </span>
         </div>
@@ -131,14 +131,14 @@ export function AuditInfo({
           {/* Last Updated */}
           {(updatedBy || updatedAt) && (
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30">
+                <Clock className="h-4 w-4 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
                   Last Updated
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                   {updatedBy && <span className="font-medium">{updatedBy}</span>}
                   {updatedBy && updatedAt && ' on '}
                   {updatedAt && formatDateDetailed(updatedAt)}
@@ -150,14 +150,14 @@ export function AuditInfo({
           {/* Created */}
           {showCreated && (createdBy || createdAt) && (
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <User className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30">
+                <User className="h-4 w-4 text-[var(--chart-green)] dark:text-[var(--success)]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
                   Created
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                   {createdBy && <span className="font-medium">{createdBy}</span>}
                   {createdBy && createdAt && ' on '}
                   {createdAt && formatDateDetailed(createdAt)}
@@ -173,7 +173,7 @@ export function AuditInfo({
   // Default variant
   return (
     <div className={cn(
-      'flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400',
+      'flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]',
       className
     )}>
       {/* Last Updated */}
@@ -182,7 +182,7 @@ export function AuditInfo({
           <Clock className="h-4 w-4" />
           <span>
             Last updated
-            {updatedBy && <> by <span className="font-medium text-gray-700 dark:text-gray-300">{updatedBy}</span></>}
+            {updatedBy && <> by <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">{updatedBy}</span></>}
             {updatedAt && <> on {formatDate(updatedAt)}</>}
           </span>
         </div>
@@ -194,7 +194,7 @@ export function AuditInfo({
           <User className="h-4 w-4" />
           <span>
             Created
-            {createdBy && <> by <span className="font-medium text-gray-700 dark:text-gray-300">{createdBy}</span></>}
+            {createdBy && <> by <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">{createdBy}</span></>}
             {createdAt && <> on {formatDate(createdAt)}</>}
           </span>
         </div>
@@ -219,7 +219,7 @@ export function AuditBadge({ updatedAt, className }: AuditBadgeProps) {
 
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-600 dark:text-gray-400',
+      'inline-flex items-center gap-1 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] px-2 py-0.5 text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)]',
       className
     )}>
       <Clock className="h-3 w-3" />
@@ -249,7 +249,7 @@ export function AuditFooter({
 
   return (
     <div className={cn(
-      showSeparator && 'border-t border-gray-200 dark:border-gray-700 pt-4 mt-4',
+      showSeparator && 'border-t border-[var(--border-default)] dark:border-[var(--border-strong)] pt-4 mt-4',
       className
     )}>
       <AuditInfo {...props} />

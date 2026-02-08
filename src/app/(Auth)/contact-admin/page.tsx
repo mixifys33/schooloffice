@@ -126,17 +126,17 @@ export default function ContactAdminPage() {
   if (submitted) {
     return (
       <div className="w-full">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-8">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8">
           <div className="text-center">
-            <div className="mx-auto w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto w-12 h-12 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-full flex items-center justify-center mb-6">
+              <svg className="w-6 h-6 text-[var(--text-primary)] dark:text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2">
               Request Sent
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-6">
               Your school administrator has been notified and will contact you soon.
             </p>
             <Link href="/login">
@@ -158,12 +158,12 @@ export default function ContactAdminPage() {
         </ToastContainer>
       )}
 
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-8">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             Contact School Admin
           </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             Having trouble accessing your account? Let us help.
           </p>
         </div>
@@ -214,34 +214,34 @@ export default function ContactAdminPage() {
           />
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Issue Type <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
+              Issue Type <span className="text-[var(--danger)]">*</span>
             </label>
             <select
               value={formData.issue}
               onChange={(e) => updateField('issue', e.target.value)}
-              className="w-full h-12 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full h-12 px-3 rounded-md border border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:outline-none focus:ring-2 focus:ring-[var(--border-default)]"
             >
               <option value="">Select an issue...</option>
               {ISSUE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            {errors.issue && <p className="text-sm text-red-600 dark:text-red-400">{errors.issue}</p>}
+            {errors.issue && <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">{errors.issue}</p>}
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Describe Your Issue <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
+              Describe Your Issue <span className="text-[var(--danger)]">*</span>
             </label>
             <textarea
               value={formData.message}
               onChange={(e) => updateField('message', e.target.value)}
               placeholder="Please describe your issue in detail..."
               rows={4}
-              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 resize-none"
+              className="w-full px-3 py-2 rounded-md border border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:outline-none focus:ring-2 focus:ring-[var(--border-default)] resize-none"
             />
-            {errors.message && <p className="text-sm text-red-600 dark:text-red-400">{errors.message}</p>}
+            {errors.message && <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">{errors.message}</p>}
           </div>
 
           <Button type="submit" size="touch" className="w-full" disabled={isSubmitting}>
@@ -249,10 +249,10 @@ export default function ContactAdminPage() {
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
+        <div className="mt-6 pt-6 border-t border-[var(--border-default)] dark:border-[var(--border-strong)] text-center">
           <Link 
             href="/login" 
-            className="text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="text-sm text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
           >
             ← Back to Login
           </Link>

@@ -84,9 +84,9 @@ function PermissionNavItemComponent({
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
           'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-          'hover:bg-gray-100 dark:hover:bg-gray-800',
+          'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]',
           'min-h-[44px]', // Touch-friendly height
-          isChildActive && 'bg-gray-100 dark:bg-gray-800',
+          isChildActive && 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]',
           depth > 0 && 'pl-8'
         )}
       >
@@ -118,11 +118,11 @@ function PermissionNavItemComponent({
       href={item.href}
       className={cn(
         'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-        'hover:bg-gray-100 dark:hover:bg-gray-800',
+        'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]',
         'min-h-[44px]', // Touch-friendly height
         isActive
-          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-          : 'text-gray-700 dark:text-gray-300',
+          ? 'bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)] dark:text-[var(--info)]'
+          : 'text-[var(--text-primary)] dark:text-[var(--text-muted)]',
         depth > 0 && 'pl-8'
       )}
     >
@@ -131,7 +131,7 @@ function PermissionNavItemComponent({
         <span>{item.label}</span>
       </span>
       {item.badge && (
-        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+        <span className="rounded-full bg-[var(--info-light)] px-2 py-0.5 text-xs font-medium text-[var(--accent-hover)] dark:bg-[var(--info-dark)] dark:text-[var(--info)]">
           {item.badge}
         </span>
       )}
@@ -169,10 +169,10 @@ function PermissionSidebarContent({
       <div className="flex items-center gap-2 border-b px-4 py-4">
         {brand}
         {brandText && (
-          <span className="text-lg font-bold text-blue-600">{brandText}</span>
+          <span className="text-lg font-bold text-[var(--chart-blue)]">{brandText}</span>
         )}
         {subtitle && (
-          <span className="ml-2 text-sm text-gray-500">{subtitle}</span>
+          <span className="ml-2 text-sm text-[var(--text-muted)]">{subtitle}</span>
         )}
       </div>
 
@@ -248,7 +248,7 @@ export function PermissionSidebar(props: PermissionSidebarProps) {
         className={cn(
           'hidden lg:flex lg:flex-col',
           'fixed inset-y-0 left-0 z-30',
-          'w-64 border-r bg-white dark:bg-gray-900',
+          'w-64 border-r bg-[var(--bg-main)] dark:bg-[var(--text-primary)]',
           props.className
         )}
       >

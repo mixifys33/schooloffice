@@ -589,20 +589,20 @@ INSTRUCTIONS:
       </div>
 
       {uploadProgress && (
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <Card className="border-[var(--info-light)] bg-[var(--info-light)] dark:border-[var(--info-dark)] dark:bg-[var(--info-dark)]">
           <CardContent className="pt-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="font-medium text-blue-800 dark:text-blue-200">Upload Progress</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">{uploadProgress.percentage}%</p>
+                <p className="font-medium text-[var(--info-dark)] dark:text-[var(--info)]">Upload Progress</p>
+                <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)]">{uploadProgress.percentage}%</p>
               </div>
-              <div className="w-full bg-blue-200 rounded-full h-2 dark:bg-blue-800">
+              <div className="w-full bg-[var(--info)] rounded-full h-2 dark:bg-[var(--info-dark)]">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out" 
+                  className="bg-[var(--chart-blue)] h-2 rounded-full transition-all duration-300 ease-out" 
                   style={{ width: `${uploadProgress.percentage}%` }}
                 ></div>
               </div>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+              <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)]">
                 {uploadProgress.currentStudent || `${uploadProgress.processed} of ${uploadProgress.total} students processed`}
               </p>
             </div>
@@ -613,13 +613,13 @@ INSTRUCTIONS:
       {error && <AlertBanner type="danger" message={error} dismissible />}
 
       {result && result.success > 0 && (
-        <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+        <Card className="border-[var(--success-light)] bg-[var(--success-light)] dark:border-[var(--success-dark)] dark:bg-[var(--success-dark)]">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              <CheckCircle className="h-6 w-6 text-[var(--chart-green)]" />
               <div>
-                <p className="font-medium text-green-800 dark:text-green-200">Upload Complete</p>
-                <p className="text-sm text-green-700 dark:text-green-300">
+                <p className="font-medium text-[var(--success-dark)] dark:text-[var(--success)]">Upload Complete</p>
+                <p className="text-sm text-[var(--chart-green)] dark:text-[var(--success)]">
                   {result.success} student{result.success !== 1 ? 's' : ''} created{result.failed > 0 && `, ${result.failed} failed`}
                 </p>
               </div>
@@ -629,13 +629,13 @@ INSTRUCTIONS:
       )}
 
       {result && result.createdClasses && result.createdClasses.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <Card className="border-[var(--info-light)] bg-[var(--info-light)] dark:border-[var(--info-dark)] dark:bg-[var(--info-dark)]">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
+              <AlertCircle className="h-6 w-6 text-[var(--chart-blue)]" />
               <div>
-                <p className="font-medium text-blue-800 dark:text-blue-200">New Classes Created</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="font-medium text-[var(--info-dark)] dark:text-[var(--info)]">New Classes Created</p>
+                <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)]">
                   The following classes were not found and have been automatically created: {result.createdClasses.join(', ')}
                 </p>
               </div>
@@ -645,15 +645,15 @@ INSTRUCTIONS:
       )}
 
       {result && result.errors.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+        <Card className="border-[var(--warning-light)] bg-[var(--warning-light)] dark:border-[var(--warning-dark)] dark:bg-[var(--warning-dark)]">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600" />
-              <CardTitle className="text-lg text-yellow-800 dark:text-yellow-200">Some rows failed</CardTitle>
+              <AlertCircle className="h-5 w-5 text-[var(--chart-yellow)]" />
+              <CardTitle className="text-lg text-[var(--warning-dark)] dark:text-[var(--warning)]">Some rows failed</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+            <ul className="list-disc list-inside space-y-1 text-sm text-[var(--warning)] dark:text-[var(--warning)]">
               {result.errors.slice(0, 10).map((err, i) => <li key={i}>{err}</li>)}
               {result.errors.length > 10 && <li>...and {result.errors.length - 10} more errors</li>}
             </ul>
@@ -685,7 +685,7 @@ INSTRUCTIONS:
             {SUPPORTED_FORMATS.map(format => {
               const Icon = format.icon
               return (
-                <div key={format.value} className={`flex items-center gap-1 p-2 rounded border text-xs cursor-pointer ${downloadFormat === format.value ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-200 dark:border-gray-700'}`}
+                <div key={format.value} className={`flex items-center gap-1 p-2 rounded border text-xs cursor-pointer ${downloadFormat === format.value ? 'border-[var(--accent-primary)] bg-[var(--info-light)] dark:bg-[var(--info-dark)]' : 'border-[var(--border-default)] dark:border-[var(--border-strong)]'}`}
                   onClick={() => setDownloadFormat(format.value)}>
                   <Icon className="h-3 w-3" /><span>{format.ext}</span>
                 </div>
@@ -701,7 +701,7 @@ INSTRUCTIONS:
           <CardDescription>Supported: CSV, JSON, Excel (.xlsx, .xls), ODS</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-300 dark:border-gray-600'}`}
+          <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-[var(--accent-primary)] bg-[var(--info-light)] dark:bg-[var(--info-dark)]' : 'border-[var(--border-default)] dark:border-[var(--border-strong)]'}`}
             onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
             <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground mb-2">Drag and drop your file here, or click to browse</p>
@@ -725,7 +725,7 @@ INSTRUCTIONS:
                   <tr key={col.key} className="border-b last:border-0">
                     <td className="py-2 px-3 font-medium">{col.label}</td>
                     <td className="py-2 px-3 font-mono text-xs">{col.key}</td>
-                    <td className="py-2 px-3">{col.required ? <span className="text-red-600">Yes</span> : <span className="text-muted-foreground">No</span>}</td>
+                    <td className="py-2 px-3">{col.required ? <span className="text-[var(--chart-red)]">Yes</span> : <span className="text-muted-foreground">No</span>}</td>
                     <td className="py-2 px-3 text-muted-foreground">{col.example}</td>
                   </tr>
                 ))}

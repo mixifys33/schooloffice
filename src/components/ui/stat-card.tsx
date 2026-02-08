@@ -34,40 +34,40 @@ export interface StatCardProps {
 
 const colorClasses = {
   blue: {
-    bg: 'bg-blue-50 dark:bg-blue-950',
-    border: 'border-blue-200 dark:border-blue-800',
-    text: 'text-blue-700 dark:text-blue-300',
-    icon: 'text-blue-500 dark:text-blue-400',
+    bg: 'bg-[var(--info-light)] dark:bg-[var(--info-dark)]',
+    border: 'border-[var(--info-light)] dark:border-[var(--info-dark)]',
+    text: 'text-[var(--accent-hover)] dark:text-[var(--info)]',
+    icon: 'text-[var(--accent-primary)] dark:text-[var(--chart-blue)]',
   },
   green: {
-    bg: 'bg-green-50 dark:bg-green-950',
-    border: 'border-green-200 dark:border-green-800',
-    text: 'text-green-700 dark:text-green-300',
-    icon: 'text-green-500 dark:text-green-400',
+    bg: 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]',
+    border: 'border-[var(--success-light)] dark:border-[var(--success-dark)]',
+    text: 'text-[var(--chart-green)] dark:text-[var(--success)]',
+    icon: 'text-[var(--success)] dark:text-[var(--success)]',
   },
   yellow: {
-    bg: 'bg-yellow-50 dark:bg-yellow-950',
-    border: 'border-yellow-200 dark:border-yellow-800',
-    text: 'text-yellow-700 dark:text-yellow-300',
-    icon: 'text-yellow-500 dark:text-yellow-400',
+    bg: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]',
+    border: 'border-[var(--warning-light)] dark:border-[var(--warning-dark)]',
+    text: 'text-[var(--warning)] dark:text-[var(--warning)]',
+    icon: 'text-[var(--warning)] dark:text-[var(--warning)]',
   },
   red: {
-    bg: 'bg-red-50 dark:bg-red-950',
-    border: 'border-red-200 dark:border-red-800',
-    text: 'text-red-700 dark:text-red-300',
-    icon: 'text-red-500 dark:text-red-400',
+    bg: 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]',
+    border: 'border-[var(--danger-light)] dark:border-[var(--danger-dark)]',
+    text: 'text-[var(--chart-red)] dark:text-[var(--danger)]',
+    icon: 'text-[var(--danger)] dark:text-[var(--danger)]',
   },
   purple: {
-    bg: 'bg-purple-50 dark:bg-purple-950',
-    border: 'border-purple-200 dark:border-purple-800',
-    text: 'text-purple-700 dark:text-purple-300',
-    icon: 'text-purple-500 dark:text-purple-400',
+    bg: 'bg-[var(--info-light)] dark:bg-[var(--info-dark)]',
+    border: 'border-[var(--info-light)] dark:border-[var(--info-dark)]',
+    text: 'text-[var(--chart-purple)] dark:text-[var(--chart-purple)]',
+    icon: 'text-[var(--chart-purple)] dark:text-[var(--chart-purple)]',
   },
   gray: {
-    bg: 'bg-gray-50 dark:bg-gray-900',
-    border: 'border-gray-200 dark:border-gray-700',
-    text: 'text-gray-700 dark:text-gray-300',
-    icon: 'text-gray-500 dark:text-gray-400',
+    bg: 'bg-[var(--bg-surface)] dark:bg-[var(--text-primary)]',
+    border: 'border-[var(--border-default)] dark:border-[var(--border-strong)]',
+    text: 'text-[var(--text-primary)] dark:text-[var(--text-muted)]',
+    icon: 'text-[var(--text-muted)] dark:text-[var(--text-muted)]',
   },
 }
 
@@ -114,9 +114,9 @@ export function StatCard({
                 <span
                   className={cn(
                     'text-xs font-medium',
-                    trend.direction === 'up' && 'text-green-600',
-                    trend.direction === 'down' && 'text-red-600',
-                    trend.direction === 'neutral' && 'text-gray-600'
+                    trend.direction === 'up' && 'text-[var(--chart-green)]',
+                    trend.direction === 'down' && 'text-[var(--chart-red)]',
+                    trend.direction === 'neutral' && 'text-[var(--text-secondary)]'
                   )}
                 >
                   {trend.direction === 'up' && '↑'}
@@ -125,7 +125,7 @@ export function StatCard({
                   {' '}{Math.abs(trend.value)}%
                 </span>
                 {trend.label && (
-                  <span className="text-xs text-gray-500">{trend.label}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{trend.label}</span>
                 )}
               </div>
             )}

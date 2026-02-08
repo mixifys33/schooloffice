@@ -7,6 +7,7 @@ import {
   BookOpen,
   MessageSquare,
   User,
+  Settings,
 } from 'lucide-react'
 import {
   DashboardLayout,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { href: '/parent/fees', label: 'Fees', icon: <DollarSign className="h-5 w-5" /> },
   { href: '/parent/academics', label: 'Academics', icon: <BookOpen className="h-5 w-5" /> },
   { href: '/parent/messages', label: 'Messages', icon: <MessageSquare className="h-5 w-5" /> },
+  { href: '/parent/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ]
 
 export default function ParentLayout({ children }: ParentLayoutProps) {
@@ -56,7 +58,7 @@ export default function ParentLayout({ children }: ParentLayoutProps) {
         </div>
       }
       sidebarFooter={
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[var(--text-muted)]">
           <p>Logged in as Parent</p>
         </div>
       }

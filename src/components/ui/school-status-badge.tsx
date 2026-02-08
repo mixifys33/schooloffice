@@ -25,26 +25,26 @@ const statusConfig = {
   ACTIVE: {
     label: 'Active',
     icon: CheckCircle,
-    containerClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    iconClass: 'text-green-600 dark:text-green-400',
+    containerClass: 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)] dark:text-[var(--success)]',
+    iconClass: 'text-[var(--chart-green)] dark:text-[var(--success)]',
   },
   WARNING: {
     label: 'Warning',
     icon: AlertTriangle,
-    containerClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    iconClass: 'text-yellow-600 dark:text-yellow-400',
+    containerClass: 'bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)] dark:text-[var(--warning)]',
+    iconClass: 'text-[var(--chart-yellow)] dark:text-[var(--warning)]',
   },
   SUSPENDED: {
     label: 'Suspended',
     icon: XCircle,
-    containerClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    iconClass: 'text-red-600 dark:text-red-400',
+    containerClass: 'bg-[var(--danger-light)] text-[var(--danger-dark)] dark:bg-[var(--danger-dark)] dark:text-[var(--danger)]',
+    iconClass: 'text-[var(--chart-red)] dark:text-[var(--danger)]',
   },
   PILOT: {
     label: 'Pilot',
     icon: Beaker,
-    containerClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    iconClass: 'text-purple-600 dark:text-purple-400',
+    containerClass: 'bg-[var(--info-light)] text-[var(--info-dark)] dark:bg-[var(--info-dark)] dark:text-[var(--info)]',
+    iconClass: 'text-[var(--chart-purple)] dark:text-[var(--chart-purple)]',
   },
 }
 

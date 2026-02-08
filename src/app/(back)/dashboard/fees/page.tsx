@@ -244,7 +244,7 @@ export default function FeesPage() {
       key: 'balance',
       header: 'Balance',
       render: (value) => (
-        <span className={(value as number) > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
+        <span className={(value as number) > 0 ? 'text-[var(--chart-red)] font-medium' : 'text-[var(--chart-green)]'}>
           {formatCurrency(value as number)}
         </span>
       ),
@@ -360,21 +360,21 @@ export default function FeesPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Paid Students</div>
-          <div className="text-2xl font-bold text-green-600">{summary.paidStudents}</div>
+          <div className="text-2xl font-bold text-[var(--chart-green)]">{summary.paidStudents}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Unpaid Students</div>
-          <div className="text-2xl font-bold text-red-600">{summary.unpaidStudents}</div>
+          <div className="text-2xl font-bold text-[var(--chart-red)]">{summary.unpaidStudents}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Total Collected</div>
           <div className="text-xl font-bold">{formatCurrency(summary.totalCollected)}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Outstanding</div>
-          <div className="text-xl font-bold text-red-600">{formatCurrency(summary.totalOutstanding)}</div>
+          <div className="text-xl font-bold text-[var(--chart-red)]">{formatCurrency(summary.totalOutstanding)}</div>
         </div>
       </div>
 

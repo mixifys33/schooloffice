@@ -47,13 +47,13 @@ interface MessageHistoryProps {
 }
 
 const STATUS_CONFIG: Record<DeliveryStatus, { icon: React.ElementType; color: string; label: string }> = {
-  [DeliveryStatus.QUEUED]: { icon: Clock, color: 'text-gray-500', label: 'Queued' },
-  [DeliveryStatus.SENDING]: { icon: Clock, color: 'text-blue-500', label: 'Sending' },
-  [DeliveryStatus.SENT]: { icon: CheckCircle, color: 'text-blue-500', label: 'Sent' },
-  [DeliveryStatus.DELIVERED]: { icon: CheckCircle, color: 'text-green-500', label: 'Delivered' },
-  [DeliveryStatus.READ]: { icon: CheckCircle, color: 'text-green-600', label: 'Read' },
-  [DeliveryStatus.FAILED]: { icon: XCircle, color: 'text-red-500', label: 'Failed' },
-  [DeliveryStatus.BOUNCED]: { icon: XCircle, color: 'text-orange-500', label: 'Bounced' },
+  [DeliveryStatus.QUEUED]: { icon: Clock, color: 'text-[var(--text-muted)]', label: 'Queued' },
+  [DeliveryStatus.SENDING]: { icon: Clock, color: 'text-[var(--accent-primary)]', label: 'Sending' },
+  [DeliveryStatus.SENT]: { icon: CheckCircle, color: 'text-[var(--accent-primary)]', label: 'Sent' },
+  [DeliveryStatus.DELIVERED]: { icon: CheckCircle, color: 'text-[var(--success)]', label: 'Delivered' },
+  [DeliveryStatus.READ]: { icon: CheckCircle, color: 'text-[var(--chart-green)]', label: 'Read' },
+  [DeliveryStatus.FAILED]: { icon: XCircle, color: 'text-[var(--danger)]', label: 'Failed' },
+  [DeliveryStatus.BOUNCED]: { icon: XCircle, color: 'text-[var(--warning)]', label: 'Bounced' },
 }
 
 const CHANNEL_ICONS: Record<MessageChannel, React.ElementType> = {
@@ -239,7 +239,7 @@ export function MessageHistory({ onRetrySuccess }: MessageHistoryProps) {
 
         {/* Error State */}
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
           </div>
@@ -279,10 +279,10 @@ export function MessageHistory({ onRetrySuccess }: MessageHistoryProps) {
                       <span className="font-medium text-sm truncate">{log.recipientContact}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         log.status === DeliveryStatus.DELIVERED || log.status === DeliveryStatus.READ
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          ? 'bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/30 dark:text-[var(--success)]'
                           : log.status === DeliveryStatus.FAILED || log.status === DeliveryStatus.BOUNCED
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                          ? 'bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30 dark:text-[var(--danger)]'
+                          : 'bg-[var(--bg-surface)] text-[var(--text-primary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
                       }`}>
                         {statusConfig.label}
                       </span>
@@ -325,7 +325,7 @@ export function MessageHistory({ onRetrySuccess }: MessageHistoryProps) {
 
         {/* Detail Modal */}
         {selectedLog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
               <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold">Message Details</h3>
@@ -373,7 +373,7 @@ export function MessageHistory({ onRetrySuccess }: MessageHistoryProps) {
                 {selectedLog.statusReason && (
                   <div>
                     <label className="text-xs text-muted-foreground">Status Reason</label>
-                    <p className="mt-1 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 text-sm">
+                    <p className="mt-1 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)] text-sm">
                       {selectedLog.statusReason}
                     </p>
                   </div>
@@ -390,7 +390,7 @@ export function MessageHistory({ onRetrySuccess }: MessageHistoryProps) {
                           <span className="text-muted-foreground">
                             {new Date(entry.timestamp).toLocaleString()}
                           </span>
-                          {entry.reason && <span className="text-red-500">- {entry.reason}</span>}
+                          {entry.reason && <span className="text-[var(--danger)]">- {entry.reason}</span>}
                         </div>
                       ))}
                     </div>

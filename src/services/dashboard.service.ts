@@ -459,6 +459,33 @@ const SUPPORT_QUICK_ACTIONS: QuickAction[] = [
 
 
 export class DashboardService {
+  
+  /**
+   * Helper method to ensure a value is converted to a safe string
+   * Handles objects, null, undefined, and other edge cases
+   */
+  private ensureString(value: any): string {
+    if (value === null || value === undefined) {
+      return ''
+    }
+    if (typeof value === 'string') {
+      return value.trim()
+    }
+    if (typeof value === 'object') {
+      // If it's an object with a name property, use that
+      if (value.name && typeof value.name === 'string') {
+        return value.name.trim()
+      }
+      // If it's an object with a toString method, use that
+      if (typeof value.toString === 'function') {
+        return String(value).trim()
+      }
+      // Otherwise, return empty string to avoid rendering objects
+      return ''
+    }
+    // For numbers, booleans, etc., convert to string
+    return String(value).trim()
+  }
   // ============================================
   // SCHOOL ADMIN DASHBOARD
   // ============================================
@@ -1700,94 +1727,239 @@ export class DashboardService {
   ): Promise<TeacherClassCard[]> {
     const today = this.normalizeDate(new Date())
 
-    // Get classes and subjects taught by this teacher
-    const timetableEntries = await prisma.timetableEntry.findMany({
-      where: { staffId },
-      include: {
-        class: true,
-        subject: true,
-      },
-      distinct: ['classId', 'subjectId'],
-    })
-
-    // Get current term
-    const currentYear = await prisma.academicYear.findFirst({
-      where: { schoolId, isActive: true },
-      include: {
-        terms: {
-          where: {
-            startDate: { lte: new Date() },
-            endDate: { gte: new Date() },
+    try {
+      // Get classes and subjects taught by this teacher from multiple sources
+      // 1. From StaffSubject table (preferred method)
+      const staffSubjects = await prisma.staffSubject.findMany({
+        where: { staffId },
+        include: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
           },
-          take: 1,
-        },
-      },
-    })
-
-    const currentTerm = currentYear?.terms[0]
-    const termName = currentTerm?.name || 'Current Term'
-
-    const classCards: TeacherClassCard[] = []
-
-    for (const entry of timetableEntries) {
-      // Check if attendance is done for today
-      const attendanceCount = await prisma.attendance.count({
-        where: {
-          classId: entry.classId,
-          date: today,
-          recordedBy: staffId,
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              educationLevel: true,
+              isActive: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          },
         },
       })
 
-      // Check if marks are submitted for current term exams
-      let marksDone = true
-      if (currentTerm) {
-        const openExams = await prisma.exam.findMany({
-          where: {
-            schoolId,
-            termId: currentTerm.id,
-            isOpen: true,
+      // 2. Fallback: From timetable entries
+      const timetableEntries = await prisma.timetableEntry.findMany({
+        where: { staffId },
+        include: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+              level: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
           },
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              educationLevel: true,
+              isActive: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          },
+        },
+        distinct: ['classId', 'subjectId'],
+      })
+
+      // 3. Additional fallback: From Teacher model assignments
+      const staff = await prisma.staff.findUnique({
+        where: { id: staffId },
+        select: { email: true, firstName: true, lastName: true }
+      })
+
+      let teacherAssignments: any[] = []
+      if (staff) {
+        const teacher = await prisma.teacher.findFirst({
+          where: {
+            OR: [
+              { email: staff.email },
+              { 
+                firstName: staff.firstName,
+                lastName: staff.lastName,
+                schoolId: schoolId
+              }
+            ]
+          },
+          select: {
+            assignedClassIds: true,
+            assignedSubjectIds: true
+          }
         })
 
-        for (const exam of openExams) {
-          const students = await prisma.student.findMany({
-            where: { classId: entry.classId, status: StudentStatus.ACTIVE },
-            select: { id: true },
+        if (teacher && teacher.assignedClassIds.length > 0 && teacher.assignedSubjectIds.length > 0) {
+          // Get class and subject details
+          const classes = await prisma.class.findMany({
+            where: { id: { in: teacher.assignedClassIds } },
+            select: { 
+              id: true, 
+              name: true,
+              level: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
           })
 
-          const marksCount = await prisma.mark.count({
-            where: {
-              examId: exam.id,
-              subjectId: entry.subjectId,
-              studentId: { in: students.map((s) => s.id) },
-            },
+          const subjects = await prisma.subject.findMany({
+            where: { id: { in: teacher.assignedSubjectIds } },
+            select: { 
+              id: true, 
+              name: true,
+              code: true,
+              educationLevel: true,
+              isActive: true,
+              schoolId: true,
+              createdAt: true,
+              updatedAt: true
+            }
           })
 
-          if (marksCount < students.length) {
-            marksDone = false
-            break
+          // Create combinations of classes and subjects
+          for (const cls of classes) {
+            for (const subject of subjects) {
+              teacherAssignments.push({
+                classId: cls.id,
+                subjectId: subject.id,
+                class: cls,
+                subject: subject
+              })
+            }
           }
         }
       }
 
-      // Get student count
-      const studentCount = await prisma.student.count({
-        where: { classId: entry.classId, status: StudentStatus.ACTIVE },
+      // Combine all sources and deduplicate
+      const allEntries = [
+        ...staffSubjects.map(ss => ({
+          classId: ss.classId,
+          subjectId: ss.subjectId,
+          class: ss.class,
+          subject: ss.subject
+        })),
+        ...timetableEntries.map(te => ({
+          classId: te.classId,
+          subjectId: te.subjectId,
+          class: te.class,
+          subject: te.subject
+        })),
+        ...teacherAssignments
+      ]
+
+      // Deduplicate by classId-subjectId combination
+      const uniqueEntries = allEntries.filter((entry, index, self) => 
+        index === self.findIndex(e => e.classId === entry.classId && e.subjectId === entry.subjectId)
+      )
+
+      // Get current term
+      const currentYear = await prisma.academicYear.findFirst({
+        where: { schoolId, isActive: true },
+        include: {
+          terms: {
+            where: {
+              startDate: { lte: new Date() },
+              endDate: { gte: new Date() },
+            },
+            take: 1,
+          },
+        },
       })
 
-      classCards.push({
-        classId: entry.classId,
-        className: entry.class.name,
-        subject: entry.subject.name,
-        term: termName,
-        attendanceDone: attendanceCount > 0,
-        marksDone,
-        studentCount,
-      })
+      const currentTerm = currentYear?.terms[0]
+      const termName = currentTerm?.name || 'Current Term'
+
+      const classCards: TeacherClassCard[] = []
+
+      for (const entry of uniqueEntries) {
+        // Check if attendance is done for today
+        const attendanceCount = await prisma.attendance.count({
+          where: {
+            classId: entry.classId,
+            date: today,
+            recordedBy: staffId,
+          },
+        })
+
+        // Check if marks are submitted for current term exams
+        let marksDone = true
+        if (currentTerm) {
+          const openExams = await prisma.exam.findMany({
+            where: {
+              schoolId,
+              termId: currentTerm.id,
+              isOpen: true,
+            },
+          })
+
+          for (const exam of openExams) {
+            const students = await prisma.student.findMany({
+              where: { classId: entry.classId, status: StudentStatus.ACTIVE },
+              select: { id: true },
+            })
+
+            const marksCount = await prisma.mark.count({
+              where: {
+                examId: exam.id,
+                subjectId: entry.subjectId,
+                studentId: { in: students.map((s) => s.id) },
+              },
+            })
+
+            if (marksCount < students.length) {
+              marksDone = false
+              break
+            }
+          }
+        }
+
+        // Get student count
+        const studentCount = await prisma.student.count({
+          where: { classId: entry.classId, status: StudentStatus.ACTIVE },
+        })
+
+        classCards.push({
+          classId: entry.classId,
+          className: entry.class.name,
+          subject: entry.subject.name,
+          term: termName,
+          attendanceDone: attendanceCount > 0,
+          marksDone,
+          studentCount,
+        })
+      }
+
+      return classCards
+    } catch (error) {
+      console.error('Error in getTeacherClassCards:', error)
+      // Return empty array on error to prevent dashboard crash
+      return []
     }
-
-    return classCards
   }
 
 
@@ -1808,39 +1980,250 @@ export class DashboardService {
   ): Promise<ClassTeacherDashboardData> {
     const today = this.normalizeDate(new Date())
 
-    // Get the class this teacher is responsible for
-    const classTeacherResponsibility = await prisma.staffResponsibility.findFirst({
-      where: {
-        staffId,
-        type: 'CLASS_TEACHER_DUTY',
-      },
-    })
-
-    let classId: string | null = null
-    if (classTeacherResponsibility) {
-      const details = classTeacherResponsibility.details as { classId?: string }
-      classId = details.classId || null
-    }
-
-    // Fallback: get from staffClasses
-    if (!classId) {
-      const staffClass = await prisma.staffClass.findFirst({
-        where: { staffId },
-        select: { classId: true },
+    try {
+      console.log(`🔍 [Dashboard Service] Getting class teacher data for staff: ${staffId}, school: ${schoolId}`)
+      
+      // Get staff information first
+      const staff = await prisma.staff.findUnique({
+        where: { id: staffId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          primaryRole: true,
+          secondaryRoles: true,
+          schoolId: true
+        }
       })
-      classId = staffClass?.classId || null
-    }
 
-    if (!classId) {
-      // Return empty dashboard if no class assigned
+      if (!staff) {
+        console.log(`❌ [Dashboard Service] Staff not found: ${staffId}`)
+        throw new Error(`Staff not found: ${staffId}`)
+      }
+
+      console.log(`✅ [Dashboard Service] Staff found: ${staff.firstName} ${staff.lastName} (${staff.id})`)
+      console.log(`🔍 [Dashboard Service] Staff school: ${staff.schoolId}, Session school: ${schoolId}`)
+
+      // Check for school ID mismatch and handle gracefully
+      if (staff.schoolId !== schoolId) {
+        console.log(`⚠️ [Dashboard Service] School ID mismatch detected - using staff's school ID`)
+        schoolId = staff.schoolId // Use staff's actual school ID
+      }
+
+      // Enhanced class finding logic - check multiple sources
+      let classId: string | null = null
+      let classSource = 'none'
+
+      // Step 1: Check StaffResponsibility for CLASS_TEACHER_DUTY
+      console.log(`🔍 [Dashboard Service] Step 1: Checking StaffResponsibility...`)
+      const classTeacherResponsibility = await prisma.staffResponsibility.findFirst({
+        where: {
+          staffId,
+          type: 'CLASS_TEACHER_DUTY',
+        },
+        select: {
+          id: true,
+          details: true
+        }
+      })
+
+      if (classTeacherResponsibility) {
+        const details = classTeacherResponsibility.details as { classId?: string }
+        classId = details.classId || null
+        if (classId) {
+          classSource = 'StaffResponsibility'
+          console.log(`✅ [Dashboard Service] Found class via StaffResponsibility: ${classId}`)
+        }
+      }
+
+      // Step 2: Fallback to StaffClass assignments
+      if (!classId) {
+        console.log(`🔍 [Dashboard Service] Step 2: Checking StaffClass...`)
+        const staffClass = await prisma.staffClass.findFirst({
+          where: { staffId },
+          select: { classId: true },
+        })
+        if (staffClass) {
+          classId = staffClass.classId
+          classSource = 'StaffClass'
+          console.log(`✅ [Dashboard Service] Found class via StaffClass: ${classId}`)
+        }
+      }
+
+      // Step 3: Enhanced Teacher model fallback with better matching
+      if (!classId) {
+        console.log(`🔍 [Dashboard Service] Step 3: Checking Teacher model...`)
+        const teacher = await prisma.teacher.findFirst({
+          where: { 
+            schoolId: staff.schoolId, // Use staff's school ID
+            OR: [
+              ...(staff.email ? [{ email: staff.email }] : []),
+              { firstName: staff.firstName, lastName: staff.lastName }
+            ]
+          },
+          select: { 
+            id: true,
+            classTeacherForIds: true,
+            assignedClassIds: true 
+          }
+        })
+
+        if (teacher) {
+          console.log(`✅ [Dashboard Service] Found Teacher record: ${teacher.id}`)
+          console.log(`🔍 [Dashboard Service] Class teacher for: ${teacher.classTeacherForIds.length} classes`)
+          console.log(`🔍 [Dashboard Service] Assigned to: ${teacher.assignedClassIds.length} classes`)
+          
+          // Prefer class teacher assignment over regular assignment
+          if (teacher.classTeacherForIds.length > 0) {
+            classId = teacher.classTeacherForIds[0]
+            classSource = 'Teacher.classTeacherForIds'
+            console.log(`✅ [Dashboard Service] Found class via Teacher.classTeacherForIds: ${classId}`)
+          } else if (teacher.assignedClassIds.length > 0) {
+            classId = teacher.assignedClassIds[0]
+            classSource = 'Teacher.assignedClassIds'
+            console.log(`✅ [Dashboard Service] Found class via Teacher.assignedClassIds: ${classId}`)
+          }
+        } else {
+          console.log(`❌ [Dashboard Service] No Teacher record found`)
+        }
+      }
+
+      // Step 4: If still no class found, check if staff teaches any subjects (show those classes)
+      if (!classId) {
+        console.log(`🔍 [Dashboard Service] Step 4: Checking StaffSubject assignments...`)
+        const staffSubject = await prisma.staffSubject.findFirst({
+          where: { staffId },
+          select: { classId: true },
+        })
+        if (staffSubject) {
+          classId = staffSubject.classId
+          classSource = 'StaffSubject'
+          console.log(`✅ [Dashboard Service] Found class via StaffSubject: ${classId}`)
+        }
+      }
+
+      if (!classId) {
+        console.log(`❌ [Dashboard Service] No class assignment found for staff: ${staffId}`)
+        // Return informative empty dashboard instead of generic error
+        return {
+          classSnapshot: {
+            classId: '',
+            className: `${staff.firstName} ${staff.lastName} - No Class Assignment`,
+            totalStudents: 0,
+            attendanceToday: { present: 0, absent: 0, late: 0 },
+            feeDefaultersCount: 0,
+            disciplineAlertsCount: 0,
+            streams: []
+          },
+          quickActions: CLASS_TEACHER_QUICK_ACTIONS,
+          alerts: {
+            absentStudents: [],
+            chronicLateness: [],
+            pendingReports: [{
+              id: 'no-class-assignment',
+              title: 'No Class Assignment',
+              description: 'You are not currently assigned to any class. Please contact your school administrator.',
+              priority: 'high' as const,
+              dueDate: new Date().toISOString(),
+              type: 'system' as const
+            }],
+          },
+          feeDefaulters: [],
+        }
+      }
+
+      console.log(`✅ [Dashboard Service] Using class: ${classId} (source: ${classSource})`)
+
+      // Verify class exists and belongs to correct school
+      const classData = await prisma.class.findUnique({
+        where: { id: classId },
+        select: { id: true, name: true, schoolId: true }
+      })
+
+      if (!classData) {
+        console.log(`❌ [Dashboard Service] Class not found: ${classId}`)
+        throw new Error(`Class not found: ${classId}`)
+      }
+
+      if (classData.schoolId !== staff.schoolId) {
+        console.log(`⚠️ [Dashboard Service] Class school mismatch - Class: ${classData.schoolId}, Staff: ${staff.schoolId}`)
+        // Continue anyway but log the issue
+      }
+
+      console.log(`✅ [Dashboard Service] Class verified: ${classData.name} (${classData.id})`)
+
+      const [
+        classSnapshot,
+        absentStudents,
+        chronicLateness,
+        pendingReports,
+        feeDefaulters,
+      ] = await Promise.all([
+        this.getClassSnapshot(classId, today),
+        this.getAbsentStudentAlerts(classId, today),
+        this.getChronicLatenessAlerts(classId),
+        this.getClassPendingReportAlerts(staffId, classId),
+        this.getFeeDefaulters(classId),
+      ])
+
+      console.log(`✅ [Dashboard Service] Successfully retrieved dashboard data for class: ${classData.name}`)
+
+      return {
+        classSnapshot,
+        quickActions: CLASS_TEACHER_QUICK_ACTIONS,
+        alerts: {
+          absentStudents,
+          chronicLateness,
+          pendingReports,
+        },
+        feeDefaulters,
+      }
+    } catch (error) {
+      console.error('❌ [Dashboard Service] Error in getClassTeacherDashboardData:', error)
+      
+      // Get staff info for better error message
+      let staffName = 'Unknown Staff'
+      try {
+        const staff = await prisma.staff.findUnique({
+          where: { id: staffId },
+          select: { firstName: true, lastName: true }
+        })
+        if (staff) {
+          staffName = `${staff.firstName} ${staff.lastName}`
+        }
+      } catch (e) {
+        // Ignore error getting staff name
+      }
+
+      // Return informative error state instead of throwing
       return {
         classSnapshot: {
           classId: '',
-          className: 'No Class Assigned',
+          className: `${staffName} - Error Loading Class Data`,
           totalStudents: 0,
           attendanceToday: { present: 0, absent: 0, late: 0 },
           feeDefaultersCount: 0,
           disciplineAlertsCount: 0,
+          streams: []
+        },
+        quickActions: CLASS_TEACHER_QUICK_ACTIONS,
+        alerts: {
+          absentStudents: [],
+          chronicLateness: [],
+          pendingReports: [{
+            id: 'system-error',
+            title: 'System Error',
+            description: `Unable to load class data. Error: ${error.message}. Please contact technical support.`,
+            priority: 'high' as const,
+            dueDate: new Date().toISOString(),
+            type: 'system' as const
+          }],
+        },
+        feeDefaulters: [],
+      }
+    }
+  }
         },
         quickActions: CLASS_TEACHER_QUICK_ACTIONS,
         alerts: {
@@ -1851,31 +2234,6 @@ export class DashboardService {
         feeDefaulters: [],
       }
     }
-
-    const [
-      classSnapshot,
-      absentStudents,
-      chronicLateness,
-      pendingReports,
-      feeDefaulters,
-    ] = await Promise.all([
-      this.getClassSnapshot(classId, today),
-      this.getAbsentStudentAlerts(classId, today),
-      this.getChronicLatenessAlerts(classId),
-      this.getClassPendingReportAlerts(staffId, classId),
-      this.getFeeDefaulters(classId),
-    ])
-
-    return {
-      classSnapshot,
-      quickActions: CLASS_TEACHER_QUICK_ACTIONS,
-      alerts: {
-        absentStudents,
-        chronicLateness,
-        pendingReports,
-      },
-      feeDefaulters,
-    }
   }
 
   /**
@@ -1885,14 +2243,34 @@ export class DashboardService {
   private async getClassSnapshot(classId: string, date: Date): Promise<ClassSnapshot> {
     const classInfo = await prisma.class.findUnique({
       where: { id: classId },
-      select: { id: true, name: true, schoolId: true },
+      select: { 
+        id: true, 
+        name: true, 
+        level: true,
+        schoolId: true,
+        streams: {
+          select: {
+            id: true,
+            name: true,
+            _count: {
+              select: {
+                students: {
+                  where: {
+                    status: StudentStatus.ACTIVE
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
     })
 
     if (!classInfo) {
       throw new Error(`Class not found: ${classId}`)
     }
 
-    // Get total students
+    // Get total students across all streams in this class
     const totalStudents = await prisma.student.count({
       where: { classId, status: StudentStatus.ACTIVE },
     })
@@ -1939,13 +2317,29 @@ export class DashboardService {
       },
     })
 
+    // Build class name with streams information - ensure all values are strings
+    const safeName = this.ensureString(classInfo.name)
+    let displayName = safeName
+    if (classInfo.streams && classInfo.streams.length > 0) {
+      const streamNames = classInfo.streams
+        .map(s => this.ensureString(s.name))
+        .filter(name => name.length > 0)
+        .join(', ')
+      displayName = streamNames ? `${safeName} (${streamNames})` : safeName
+    }
+
     return {
       classId,
-      className: classInfo.name,
+      className: displayName,
       totalStudents,
       attendanceToday: { present, absent, late },
       feeDefaultersCount: studentsWithBalance,
       disciplineAlertsCount,
+      streams: classInfo.streams ? classInfo.streams.map(stream => ({
+        id: stream.id,
+        name: this.ensureString(stream.name),
+        studentCount: stream._count.students || 0
+      })) : []
     }
   }
 
@@ -1976,8 +2370,8 @@ export class DashboardService {
     return absentRecords.map((record) => ({
       id: `absent-${record.studentId}-${date.toISOString()}`,
       studentId: record.student.id,
-      studentName: `${record.student.firstName} ${record.student.lastName}`,
-      admissionNumber: record.student.admissionNumber,
+      studentName: `${this.ensureString(record.student.firstName)} ${this.ensureString(record.student.lastName)}`.trim(),
+      admissionNumber: this.ensureString(record.student.admissionNumber),
       message: `Absent today`,
       severity: AlertSeverity.WARNING,
       createdAt: date,
@@ -2020,11 +2414,15 @@ export class DashboardService {
       })
 
       if (student) {
+        const firstName = this.ensureString(student.firstName)
+        const lastName = this.ensureString(student.lastName)
+        const fullName = `${firstName} ${lastName}`.trim()
+        
         alerts.push({
           id: `lateness-${student.id}`,
           studentId: student.id,
-          studentName: `${student.firstName} ${student.lastName}`,
-          admissionNumber: student.admissionNumber,
+          studentName: fullName || 'Unknown Student',
+          admissionNumber: this.ensureString(student.admissionNumber),
           message: `${record._count.studentId} late arrivals in the last 30 days`,
           severity: AlertSeverity.WARNING,
           createdAt: new Date(),
@@ -2061,9 +2459,9 @@ export class DashboardService {
       id: `report-${task.id}`,
       reportType: 'Class Report',
       classId,
-      className: classInfo?.name || 'Unknown',
+      className: this.ensureString(classInfo?.name) || 'Unknown Class',
       deadline: task.deadline,
-      message: task.title,
+      message: this.ensureString(task.title) || 'Report pending',
     }))
   }
 
@@ -2100,11 +2498,17 @@ export class DashboardService {
         select: { paymentDate: true },
       })
 
+      // Ensure all fields are properly converted to strings and handle potential null/undefined values
+      const firstName = this.ensureString(account.student.firstName)
+      const lastName = this.ensureString(account.student.lastName)
+      const admissionNumber = this.ensureString(account.student.admissionNumber)
+      const fullName = `${firstName} ${lastName}`.trim()
+      
       defaulters.push({
         studentId: account.student.id,
-        studentName: `${account.student.firstName} ${account.student.lastName}`,
-        admissionNumber: account.student.admissionNumber,
-        outstandingBalance: account.balance,
+        studentName: fullName || 'Unknown Student',
+        admissionNumber: admissionNumber || 'N/A',
+        outstandingBalance: Number(account.balance) || 0,
         lastPaymentDate: lastPayment?.paymentDate,
       })
     }
@@ -3550,7 +3954,7 @@ export class DashboardService {
           select: {
             id: true,
             name: true,
-            stream: {
+            streams: {
               select: {
                 name: true,
               },
@@ -3642,7 +4046,7 @@ export class DashboardService {
         class: {
           id: entry.class.id,
           name: entry.class.name,
-          streamName: entry.class.stream?.name,
+          streamName: entry.class.streams?.[0]?.name,
         },
         room: entry.room ?? undefined,
         attendanceStatus,

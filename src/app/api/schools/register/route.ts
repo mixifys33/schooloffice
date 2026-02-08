@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { schoolRegistrationService, SchoolRegistrationInput } from '@/services/school-registration.service'
+import { formatApiError, SUCCESS_MESSAGES } from '@/lib/error-messages'
 
 /**
  * POST /api/schools/register
@@ -33,8 +34,22 @@ export async function POST(request: NextRequest) {
 
     for (const field of requiredFields) {
       if (body[field] === undefined || body[field] === null || body[field] === '') {
+        const fieldNames: Record<string, string> = {
+          schoolName: 'School Name',
+          schoolType: 'School Type',
+          ownership: 'Ownership Type',
+          country: 'Country',
+          contactEmail: 'Contact Email',
+          schoolCode: 'School Code',
+          adminFullName: 'Administrator Full Name',
+          adminEmail: 'Administrator Email',
+          adminPassword: 'Administrator Password',
+          termsAccepted: 'Terms and Conditions',
+          dataResponsibilityAcknowledged: 'Data Responsibility Agreement',
+        }
+        
         return NextResponse.json(
-          { error: `${field} is required` },
+          { error: `${fieldNames[field] || field} is required` },
           { status: 400 }
         )
       }
@@ -43,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Validate school type
     if (!['PRIMARY', 'SECONDARY', 'BOTH'].includes(body.schoolType)) {
       return NextResponse.json(
-        { error: 'Invalid school type' },
+        { error: 'Please select a valid school type (Primary, Secondary, or Both)' },
         { status: 400 }
       )
     }
@@ -51,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Validate ownership
     if (!['PRIVATE', 'GOVERNMENT'].includes(body.ownership)) {
       return NextResponse.json(
-        { error: 'Invalid ownership type' },
+        { error: 'Please select a valid ownership type (Private or Government)' },
         { status: 400 }
       )
     }
@@ -68,6 +83,7 @@ export async function POST(request: NextRequest) {
       contactEmail: body.contactEmail,
       physicalLocation: body.physicalLocation,
       schoolCode: body.schoolCode,
+      schoolLogo: body.schoolLogo,
       adminFullName: body.adminFullName,
       adminEmail: body.adminEmail,
       adminPhone: body.adminPhone,
@@ -99,14 +115,15 @@ export async function POST(request: NextRequest) {
       success: true,
       schoolId: result.schoolId,
       adminUserId: result.adminUserId,
-      message: 'School registered successfully',
+      message: SUCCESS_MESSAGES.SCHOOL_REGISTERED,
     }, { status: 201 })
 
   } catch (error) {
     console.error('School registration error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred during registration' },
-      { status: 500 }
-    )
+    
+    // Use centralized error formatting
+    const apiError = formatApiError(error)
+    
+    return NextResponse.json(apiError, { status: 500 })
   }
 }

@@ -53,8 +53,8 @@ export function HelpTooltip({
           type="button"
           className={cn(
             'inline-flex items-center justify-center rounded-full',
-            'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            'text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-muted)]',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2',
             'transition-colors',
             iconClassName
           )}
@@ -67,28 +67,28 @@ export function HelpTooltip({
         side={side}
         align={align}
         className={cn(
-          'max-w-xs p-3 bg-white dark:bg-gray-800 border shadow-lg',
+          'max-w-xs p-3 bg-[var(--bg-main)] dark:bg-[var(--border-strong)] border shadow-lg',
           className
         )}
         sideOffset={8}
       >
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100">
+            <h4 className="font-medium text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {title}
             </h4>
             {dismissible && (
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] dark:hover:text-[var(--text-muted)]"
                 aria-label="Dismiss tooltip"
               >
                 <X className="h-3 w-3" />
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             {description}
           </p>
           {learnMoreUrl && (
@@ -96,7 +96,7 @@ export function HelpTooltip({
               href={learnMoreUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              className="inline-flex items-center gap-1 text-xs text-[var(--chart-blue)] hover:text-[var(--accent-hover)] dark:text-[var(--chart-blue)]"
             >
               Learn more
               <ExternalLink className="h-3 w-3" />
@@ -131,9 +131,9 @@ export function FeatureLabel({
 }: FeatureLabelProps) {
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
         {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {required && <span className="text-[var(--danger)] ml-0.5">*</span>}
       </span>
       <HelpTooltip
         title={helpTitle}

@@ -54,12 +54,12 @@ export function ContextHeader({
     return (
       <div className={cn('flex items-center gap-2 text-sm', className)}>
         {!isSuperAdmin && schoolName && (
-          <span className="font-medium text-gray-700 dark:text-gray-300">
+          <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             {schoolName}
           </span>
         )}
-        <span className="text-gray-400">•</span>
-        <span className="text-gray-600 dark:text-gray-400">
+        <span className="text-[var(--text-muted)]">•</span>
+        <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
           {formatRole(activeRole)}
         </span>
       </div>
@@ -69,19 +69,19 @@ export function ContextHeader({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-gray-50 px-4 py-2 text-sm dark:bg-gray-800',
+        'flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-[var(--bg-surface)] px-4 py-2 text-sm dark:bg-[var(--border-strong)]',
         className
       )}
     >
       {/* School Info */}
       {!isSuperAdmin && schoolName && (
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-blue-500" />
-          <span className="font-medium text-gray-700 dark:text-gray-300">
+          <Building2 className="h-4 w-4 text-[var(--accent-primary)]" />
+          <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             {schoolName}
           </span>
           {schoolCode && (
-            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+            <span className="rounded bg-[var(--info-light)] px-1.5 py-0.5 text-xs font-medium text-[var(--accent-hover)] dark:bg-[var(--info-dark)] dark:text-[var(--info)]">
               {schoolCode}
             </span>
           )}
@@ -91,20 +91,20 @@ export function ContextHeader({
       {/* Super Admin Label */}
       {isSuperAdmin && (
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-purple-500" />
-          <span className="font-medium text-purple-700 dark:text-purple-300">
+          <Building2 className="h-4 w-4 text-[var(--chart-purple)]" />
+          <span className="font-medium text-[var(--chart-purple)] dark:text-[var(--chart-purple)]">
             Platform Administration
           </span>
         </div>
       )}
 
       {/* Separator */}
-      {!isSuperAdmin && <span className="hidden text-gray-300 sm:inline">|</span>}
+      {!isSuperAdmin && <span className="hidden text-[var(--text-muted)] sm:inline">|</span>}
 
       {/* Active Role */}
       <div className="flex items-center gap-2">
-        <User className="h-4 w-4 text-green-500" />
-        <span className="text-gray-600 dark:text-gray-400">
+        <User className="h-4 w-4 text-[var(--success)]" />
+        <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
           {formatRole(activeRole)}
         </span>
       </div>
@@ -112,10 +112,13 @@ export function ContextHeader({
       {/* Academic Year */}
       {academicYear && (
         <>
-          <span className="hidden text-gray-300 sm:inline">|</span>
+          <span className="hidden text-[var(--text-muted)] sm:inline">|</span>
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-orange-500" />
-            <span className="text-gray-600 dark:text-gray-400">
+            <Calendar 
+              className="h-4 w-4" 
+              style={{ color: 'var(--accent-primary)' }}
+            />
+            <span style={{ color: 'var(--text-secondary)' }}>
               {academicYear}
             </span>
           </div>
@@ -125,10 +128,10 @@ export function ContextHeader({
       {/* Current Term */}
       {termName && (
         <>
-          <span className="hidden text-gray-300 sm:inline">|</span>
+          <span className="hidden text-[var(--text-muted)] sm:inline">|</span>
           <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-indigo-500" />
-            <span className="text-gray-600 dark:text-gray-400">
+            <BookOpen className="h-4 w-4 text-[var(--info)]" />
+            <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
               {termName}
             </span>
           </div>
@@ -168,7 +171,7 @@ function InlineContextDisplayClient({ className }: { className?: string }) {
   if (status === 'loading') {
     return (
       <div className={cn('flex items-center gap-2 text-sm', className)}>
-        <span className="text-gray-400">Loading...</span>
+        <span className="text-[var(--text-muted)]">Loading...</span>
       </div>
     )
   }
@@ -184,20 +187,20 @@ function InlineContextDisplayClient({ className }: { className?: string }) {
     <div className={cn('flex items-center gap-2 text-sm', className)}>
       {!isSuperAdmin && schoolName ? (
         <>
-          <span className="font-medium text-gray-700 dark:text-gray-300">
+          <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
             {schoolName}
           </span>
-          <span className="text-gray-400">•</span>
+          <span className="text-[var(--text-muted)]">•</span>
         </>
       ) : isSuperAdmin ? (
         <>
-          <span className="font-medium text-purple-600 dark:text-purple-400">
+          <span className="font-medium text-[var(--chart-purple)] dark:text-[var(--chart-purple)]">
             Admin
           </span>
-          <span className="text-gray-400">•</span>
+          <span className="text-[var(--text-muted)]">•</span>
         </>
       ) : null}
-      <span className="text-gray-600 dark:text-gray-400">
+      <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
         {formatRole(activeRole)}
       </span>
     </div>

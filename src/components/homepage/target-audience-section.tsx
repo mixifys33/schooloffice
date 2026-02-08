@@ -18,10 +18,10 @@ export function TargetAudienceSection() {
           </h2>
           <div className="grid gap-8 mt-8 sm:grid-cols-2 max-w-4xl w-full">
             <div
-              className="p-6 rounded-lg bg-green-50 border border-green-200"
+              className="p-6 rounded-lg bg-[var(--success-light)] border border-[var(--success-light)]"
               data-testid="good-fit-column"
             >
-              <h3 className="text-lg font-semibold text-green-900 mb-4">
+              <h3 className="text-lg font-semibold text-[var(--success-dark)] mb-4">
                 Good fit
               </h3>
               <ul className="space-y-3 text-left">
@@ -31,8 +31,8 @@ export function TargetAudienceSection() {
                     className="flex items-start gap-3"
                     data-testid="good-fit-item"
                   >
-                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-green-800">{item}</span>
+                    <Check className="h-5 w-5 text-[var(--chart-green)] mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-[var(--success-dark)]">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -41,7 +41,7 @@ export function TargetAudienceSection() {
               className="p-6 rounded-lg bg-slate-50 border border-slate-200"
               data-testid="not-good-fit-column"
             >
-              <h3 className="text-lg font-semibold text-slate-700 mb-4">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
                 Not a good fit
               </h3>
               <ul className="space-y-3 text-left">
@@ -51,8 +51,8 @@ export function TargetAudienceSection() {
                     className="flex items-start gap-3"
                     data-testid="not-good-fit-item"
                   >
-                    <X className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-slate-600">{item}</span>
+                    <X className="h-5 w-5 text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-[var(--text-secondary)]">{item}</span>
                   </li>
                 ))}
               </ul>

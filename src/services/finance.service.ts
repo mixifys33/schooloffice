@@ -24,7 +24,7 @@ import { prisma } from '@/lib/db'
 import type { PaymentMethod, PaymentRecord, PaymentResult, PaymentFilters, PaginatedPayments } from '@/types/finance'
 import { ReceiptService, type GenerateReceiptInput } from './receipt.service'
 import { FinanceAuditService } from './finance-audit.service'
-import { StudentAccountService } from './student-account.service'
+import { updateBalanceAfterPayment } from './student-account.service'
 
 // Error codes for payment operations
 export const PAYMENT_ERRORS = {

@@ -61,7 +61,7 @@ import {
   CreateAuditLogInput,
   FeatureFlags,
 } from './entities'
-import { Role, MessageChannel } from './enums'
+import { Role } from './enums'
 
 // ============================================
 // SCHOOL SERVICE
@@ -597,7 +597,7 @@ import {
   DeliveryReportParams,
   CommunicationDeliveryReport,
 } from './entities'
-import { MessageChannel, DeliveryStatus } from './enums'
+import { DeliveryStatus } from './enums'
 
 // ============================================
 // IN-APP NOTIFICATION SERVICE - Requirements 4.1-4.5

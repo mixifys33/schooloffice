@@ -33,31 +33,31 @@ const severityConfig: Record<ErrorSeverity, {
 }> = {
   info: {
     icon: Info,
-    bgColor: 'bg-blue-50 dark:bg-blue-950',
-    borderColor: 'border-blue-200 dark:border-blue-800',
-    iconColor: 'text-blue-500',
-    titleColor: 'text-blue-800 dark:text-blue-200',
+    bgColor: 'bg-[var(--info-light)] dark:bg-[var(--info-dark)]',
+    borderColor: 'border-[var(--info-light)] dark:border-[var(--info-dark)]',
+    iconColor: 'text-[var(--accent-primary)]',
+    titleColor: 'text-[var(--info-dark)] dark:text-[var(--info)]',
   },
   warning: {
     icon: AlertTriangle,
-    bgColor: 'bg-yellow-50 dark:bg-yellow-950',
-    borderColor: 'border-yellow-200 dark:border-yellow-800',
-    iconColor: 'text-yellow-500',
-    titleColor: 'text-yellow-800 dark:text-yellow-200',
+    bgColor: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]',
+    borderColor: 'border-[var(--warning-light)] dark:border-[var(--warning-dark)]',
+    iconColor: 'text-[var(--warning)]',
+    titleColor: 'text-[var(--warning-dark)] dark:text-[var(--warning)]',
   },
   error: {
     icon: AlertCircle,
-    bgColor: 'bg-red-50 dark:bg-red-950',
-    borderColor: 'border-red-200 dark:border-red-800',
-    iconColor: 'text-red-500',
-    titleColor: 'text-red-800 dark:text-red-200',
+    bgColor: 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]',
+    borderColor: 'border-[var(--danger-light)] dark:border-[var(--danger-dark)]',
+    iconColor: 'text-[var(--danger)]',
+    titleColor: 'text-[var(--danger-dark)] dark:text-[var(--danger)]',
   },
   critical: {
     icon: XCircle,
-    bgColor: 'bg-red-100 dark:bg-red-900',
-    borderColor: 'border-red-300 dark:border-red-700',
-    iconColor: 'text-red-600',
-    titleColor: 'text-red-900 dark:text-red-100',
+    bgColor: 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]',
+    borderColor: 'border-[var(--danger)] dark:border-[var(--chart-red)]',
+    iconColor: 'text-[var(--chart-red)]',
+    titleColor: 'text-[var(--danger-dark)] dark:text-[var(--danger-light)]',
   },
 }
 
@@ -106,7 +106,7 @@ export function ErrorMessage({
                 {title}
               </h3>
               {code && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                   Error code: {code}
                 </span>
               )}
@@ -142,22 +142,22 @@ export function ErrorMessage({
             </div>
           </div>
           
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             {message}
           </p>
           
           {suggestedActions.length > 0 && showActions && isExpanded && (
             <div className="mt-3">
-              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <p className="text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
                 Suggested actions:
               </p>
               <ul className="space-y-1">
                 {suggestedActions.map((action, index) => (
                   <li
                     key={index}
-                    className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
+                    className="flex items-start gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]"
                   >
-                    <span className="text-gray-400 mt-1">•</span>
+                    <span className="text-[var(--text-muted)] mt-1">•</span>
                     <span>{action}</span>
                   </li>
                 ))}
@@ -185,7 +185,7 @@ export function InlineError({ message, className }: InlineErrorProps) {
     <p
       role="alert"
       className={cn(
-        'flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400 mt-1',
+        'flex items-center gap-1.5 text-sm text-[var(--chart-red)] dark:text-[var(--danger)] mt-1',
         className
       )}
     >
@@ -222,23 +222,23 @@ export function FormValidationSummary({
       role="alert"
       aria-live="polite"
       className={cn(
-        'rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4',
+        'rounded-lg border border-[var(--danger-light)] dark:border-[var(--danger-dark)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] p-4',
         className
       )}
     >
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
+        <AlertCircle className="h-5 w-5 flex-shrink-0 text-[var(--danger)] mt-0.5" />
         <div className="flex-1">
-          <h3 className="font-medium text-sm text-red-800 dark:text-red-200">
+          <h3 className="font-medium text-sm text-[var(--danger-dark)] dark:text-[var(--danger)]">
             {title}
           </h3>
           <ul className="mt-2 space-y-1">
             {errorEntries.map(([field, error]) => (
               <li
                 key={field}
-                className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400"
+                className="flex items-start gap-2 text-sm text-[var(--chart-red)] dark:text-[var(--danger)]"
               >
-                <span className="text-red-400 mt-0.5">•</span>
+                <span className="text-[var(--danger)] mt-0.5">•</span>
                 <span>
                   <strong>{fieldLabels[field] || field}:</strong> {error}
                 </span>

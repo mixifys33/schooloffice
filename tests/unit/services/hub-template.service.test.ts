@@ -165,21 +165,21 @@ describe('Hub Template Management Service - Pure Functions', () => {
     });
 
     it('validates channel types', () => {
-      const validChannels = ['SMS', 'WHATSAPP', 'EMAIL'];
-      const invalidChannels = ['sms', 'whatsapp', 'email', 'INVALID'];
+      const validChannels = ['SMS', 'EMAIL'];
+      const invalidChannels = ['sms', 'email', 'whatsapp', 'WHATSAPP', 'INVALID'];
 
       validChannels.forEach(channel => {
-        expect(['SMS', 'WHATSAPP', 'EMAIL']).toContain(channel);
+        expect(['SMS', 'EMAIL']).toContain(channel);
       });
 
       invalidChannels.forEach(channel => {
-        expect(['SMS', 'WHATSAPP', 'EMAIL']).not.toContain(channel);
+        expect(['SMS', 'EMAIL']).not.toContain(channel);
       });
     });
 
     it('validates content length limits', () => {
       const smsContent = 'a'.repeat(160); // SMS limit
-      const longContent = 'a'.repeat(10000); // Email/WhatsApp can be longer
+      const longContent = 'a'.repeat(10000); // Email can be longer
 
       expect(smsContent.length).toBeLessThanOrEqual(160);
       expect(longContent.length).toBeGreaterThan(160);

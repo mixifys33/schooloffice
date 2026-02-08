@@ -103,9 +103,9 @@ function QuickActionItem({ action, layout }: QuickActionItemProps) {
         href={action.href}
         className={cn(
           'flex flex-col items-center justify-center gap-2 p-4 rounded-lg',
-          'bg-gray-50 dark:bg-gray-800/50',
-          'hover:bg-blue-50 dark:hover:bg-blue-900/20',
-          'border border-transparent hover:border-blue-200 dark:hover:border-blue-800',
+          'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50',
+          'hover:bg-[var(--info-light)] dark:hover:bg-[var(--info-dark)]/20',
+          'border border-transparent hover:border-[var(--info-light)] dark:hover:border-[var(--info-dark)]',
           'transition-all duration-200',
           'group'
         )}
@@ -113,14 +113,14 @@ function QuickActionItem({ action, layout }: QuickActionItemProps) {
         <div
           className={cn(
             'flex items-center justify-center w-10 h-10 rounded-full',
-            'bg-blue-100 dark:bg-blue-900/50',
-            'group-hover:bg-blue-200 dark:group-hover:bg-blue-800',
+            'bg-[var(--info-light)] dark:bg-[var(--info-dark)]/50',
+            'group-hover:bg-[var(--info)] dark:group-hover:bg-[var(--info-dark)]',
             'transition-colors'
           )}
         >
-          <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Icon className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
         </div>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
+        <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] text-center">
           {action.label}
         </span>
       </Link>
@@ -132,7 +132,7 @@ function QuickActionItem({ action, layout }: QuickActionItemProps) {
       href={action.href}
       className={cn(
         'flex items-center gap-3 p-3 rounded-lg',
-        'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+        'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50',
         'transition-colors',
         'group'
       )}
@@ -140,18 +140,18 @@ function QuickActionItem({ action, layout }: QuickActionItemProps) {
       <div
         className={cn(
           'flex items-center justify-center w-9 h-9 rounded-lg',
-          'bg-blue-100 dark:bg-blue-900/50',
-          'group-hover:bg-blue-200 dark:group-hover:bg-blue-800',
+          'bg-[var(--info-light)] dark:bg-[var(--info-dark)]/50',
+          'group-hover:bg-[var(--info)] dark:group-hover:bg-[var(--info-dark)]',
           'transition-colors'
         )}
       >
-        <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <Icon className="h-4 w-4 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
           {action.label}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+        <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] truncate">
           {action.description}
         </p>
       </div>
@@ -185,8 +185,8 @@ export function FloatingActionButton({
         'fixed bottom-20 right-4 z-40 lg:bottom-6',
         'flex items-center justify-center',
         'w-14 h-14 rounded-full shadow-lg',
-        'bg-blue-600 hover:bg-blue-700',
-        'text-white',
+        'bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)]',
+        'text-[var(--white-pure)]',
         'transition-all duration-200',
         'hover:scale-105 active:scale-95',
         className
@@ -246,7 +246,7 @@ export function RecentActivity({
       </CardHeader>
       <CardContent>
         {displayedActivities.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] text-center py-4">
             No recent activity
           </p>
         ) : (
@@ -262,23 +262,23 @@ export function RecentActivity({
                   {...wrapperProps}
                   className={cn(
                     'flex items-start gap-3 p-2 rounded-lg',
-                    activity.href && 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer'
+                    activity.href && 'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 cursor-pointer'
                   )}
                 >
                   {Icon && (
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800">
-                      <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                      <Icon className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                       {activity.title}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] truncate">
                       {activity.description}
                     </p>
                   </div>
-                  <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                  <span className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] whitespace-nowrap">
                     {formatTime(activity.timestamp)}
                   </span>
                 </Wrapper>

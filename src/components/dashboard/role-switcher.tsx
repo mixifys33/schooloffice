@@ -190,8 +190,8 @@ export function DashboardRoleSwitcher({
           aria-label="Select role"
           className={cn(
             'absolute right-0 mt-2 w-56 z-50',
-            'bg-white dark:bg-gray-900',
-            'border border-gray-200 dark:border-gray-700',
+            'bg-[var(--bg-main)] dark:bg-[var(--text-primary)]',
+            'border border-[var(--border-default)] dark:border-[var(--border-strong)]',
             'rounded-lg shadow-lg',
             'py-1'
           )}
@@ -206,9 +206,9 @@ export function DashboardRoleSwitcher({
               className={cn(
                 'w-full px-4 py-2 text-left text-sm',
                 'flex items-center justify-between',
-                'hover:bg-gray-100 dark:hover:bg-gray-800',
+                'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]',
                 'transition-colors',
-                role === currentRole && 'bg-gray-50 dark:bg-gray-800/50',
+                role === currentRole && 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50',
                 isPending && 'opacity-50 cursor-not-allowed'
               )}
             >
@@ -216,7 +216,7 @@ export function DashboardRoleSwitcher({
                 'font-medium',
                 role === currentRole 
                   ? 'text-primary' 
-                  : 'text-gray-700 dark:text-gray-300'
+                  : 'text-[var(--text-primary)] dark:text-[var(--text-muted)]'
               )}>
                 {getRoleDisplayName(role)}
               </span>

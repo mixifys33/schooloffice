@@ -81,18 +81,18 @@ export function SystemHealthDashboard() {
 
   const getStatusColor = (status: 'healthy' | 'degraded' | 'error') => {
     switch (status) {
-      case 'healthy': return 'text-green-500'
-      case 'degraded': return 'text-yellow-500'
-      case 'error': return 'text-red-500'
+      case 'healthy': return 'text-[var(--success)]'
+      case 'degraded': return 'text-[var(--warning)]'
+      case 'error': return 'text-[var(--danger)]'
       default: return 'text-muted-foreground'
     }
   }
 
   const getStatusIcon = (status: 'healthy' | 'degraded' | 'error') => {
     switch (status) {
-      case 'healthy': return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'degraded': return <AlertTriangle className="h-5 w-5 text-yellow-500" />
-      case 'error': return <XCircle className="h-5 w-5 text-red-500" />
+      case 'healthy': return <CheckCircle className="h-5 w-5 text-[var(--success)]" />
+      case 'degraded': return <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
+      case 'error': return <XCircle className="h-5 w-5 text-[var(--danger)]" />
       default: return null
     }
   }
@@ -156,7 +156,7 @@ export function SystemHealthDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-bold ${healthData.smsCreditsLow ? 'text-red-500' : ''}`}>
+              <span className={`text-2xl font-bold ${healthData.smsCreditsLow ? 'text-[var(--danger)]' : ''}`}>
                 {healthData.smsCreditsBalance.toLocaleString()}
               </span>
               <span className="text-sm text-muted-foreground">remaining</span>
@@ -206,7 +206,7 @@ export function SystemHealthDashboard() {
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div 
-                  className={`h-2 rounded-full ${getStoragePercentage() > 80 ? 'bg-red-500' : 'bg-primary'}`}
+                  className={`h-2 rounded-full ${getStoragePercentage() > 80 ? 'bg-[var(--danger)]' : 'bg-primary'}`}
                   style={{ width: `${Math.min(getStoragePercentage(), 100)}%` }}
                 />
               </div>
@@ -257,13 +257,13 @@ export function SystemHealthDashboard() {
                 <div className="flex items-center gap-2">
                   {healthData.backupOverdue ? (
                     <>
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                      <Badge variant="outline" className="text-yellow-600">Overdue</Badge>
+                      <AlertTriangle className="h-4 w-4 text-[var(--warning)]" />
+                      <Badge variant="outline" className="text-[var(--chart-yellow)]">Overdue</Badge>
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <Badge variant="outline" className="text-green-600">Up to date</Badge>
+                      <CheckCircle className="h-4 w-4 text-[var(--success)]" />
+                      <Badge variant="outline" className="text-[var(--chart-green)]">Up to date</Badge>
                     </>
                   )}
                 </div>
@@ -292,15 +292,15 @@ export function SystemHealthDashboard() {
                 <div className="flex items-center gap-2">
                   {healthData.hasWarnings ? (
                     <>
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                      <Badge variant="outline" className="text-yellow-600">
+                      <AlertTriangle className="h-4 w-4 text-[var(--warning)]" />
+                      <Badge variant="outline" className="text-[var(--chart-yellow)]">
                         {healthData.warnings.length} Warning{healthData.warnings.length > 1 ? 's' : ''}
                       </Badge>
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <Badge variant="outline" className="text-green-600">All Systems Normal</Badge>
+                      <CheckCircle className="h-4 w-4 text-[var(--success)]" />
+                      <Badge variant="outline" className="text-[var(--chart-green)]">All Systems Normal</Badge>
                     </>
                   )}
                 </div>

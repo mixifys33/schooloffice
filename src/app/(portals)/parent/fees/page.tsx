@@ -111,13 +111,13 @@ export default function ParentFeesPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
           <SkeletonLoader variant="text" count={2} />
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
           <SkeletonLoader variant="card" count={1} />
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
           <SkeletonLoader variant="table" count={3} />
         </div>
       </div>
@@ -126,12 +126,12 @@ export default function ParentFeesPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-800">Error Loading Fees</h2>
-        <p className="text-red-600 mt-1">{error}</p>
+      <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-[var(--danger-dark)]">Error Loading Fees</h2>
+        <p className="text-[var(--chart-red)] mt-1">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="mt-4 px-4 py-2 bg-[var(--chart-red)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--chart-red)]"
         >
           Retry
         </button>
@@ -142,12 +142,12 @@ export default function ParentFeesPage() {
   if (!feesData || feesData.children.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Fees and Payments</h1>
-          <p className="text-gray-600 mt-1">View fee structures, payments, and balances.</p>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Fees and Payments</h1>
+          <p className="text-[var(--text-secondary)] mt-1">View fee structures, payments, and balances.</p>
         </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-500">No children linked to your account.</p>
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-8 text-center">
+          <p className="text-[var(--text-muted)]">No children linked to your account.</p>
         </div>
       </div>
     )
@@ -158,15 +158,15 @@ export default function ParentFeesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Fees and Payments</h1>
-        <p className="text-gray-600 mt-1">View fee structures, payments, and balances for your children.</p>
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Fees and Payments</h1>
+        <p className="text-[var(--text-secondary)] mt-1">View fee structures, payments, and balances for your children.</p>
       </div>
 
       {/* Child Selector */}
       {feesData.children.length > 1 && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-4">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Select Child</label>
           <div className="flex gap-2 flex-wrap">
             {feesData.children.map((c) => (
               <button
@@ -174,8 +174,8 @@ export default function ParentFeesPage() {
                 onClick={() => setSelectedChildId(c.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   selectedChildId === c.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-[var(--chart-blue)] text-[var(--white-pure)]'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
                 }`}
               >
                 {c.name}
@@ -186,29 +186,29 @@ export default function ParentFeesPage() {
       )}
 
       {/* Balance Summary Card */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="text-sm text-gray-600">{selectedChild.name} - {selectedChild.className}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{selectedChild.name} - {selectedChild.className}</p>
             <p 
               className="text-3xl font-bold mt-1"
-              style={{ color: selectedChild.currentTerm.hasArrears ? '#dc2626' : '#16a34a' }}
+              style={{ color: selectedChild.currentTerm.hasArrears ? 'var(--chart-red)' : '#16a34a' }}
             >
               {formatCurrency(selectedChild.currentTerm.balance)}
             </p>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
               {selectedChild.currentTerm.hasArrears ? 'Outstanding Balance' : 'Fully Paid'}
             </p>
           </div>
           <div className="text-left sm:text-right">
-            <p className="text-sm text-gray-600">Total Fees: {formatCurrency(selectedChild.currentTerm.totalFees)}</p>
-            <p className="text-sm text-gray-600">Total Paid: {formatCurrency(selectedChild.currentTerm.totalPaid)}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Total Fees: {formatCurrency(selectedChild.currentTerm.totalFees)}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Total Paid: {formatCurrency(selectedChild.currentTerm.totalPaid)}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs for Fee Details */}
-      <Tabs defaultValue="structure" className="bg-white rounded-lg shadow-sm">
+      <Tabs defaultValue="structure" className="bg-[var(--bg-main)] rounded-lg shadow-sm">
         <TabsList className="w-full justify-start border-b rounded-none px-4">
           <TabsTrigger value="structure">Fee Structure</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
@@ -217,26 +217,26 @@ export default function ParentFeesPage() {
 
         {/* Fee Structure Tab */}
         <TabsContent value="structure" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {selectedChild.currentTerm.name} Fee Structure
           </h3>
           {selectedChild.currentTerm.feeStructure.length === 0 ? (
-            <p className="text-gray-500 py-8 text-center">No fee structure available for this term.</p>
+            <p className="text-[var(--text-muted)] py-8 text-center">No fee structure available for this term.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Fee Item</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Type</th>
+                  <tr className="border-b border-[var(--border-default)]">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Fee Item</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Amount</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Type</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedChild.currentTerm.feeStructure.map((item, index) => (
-                    <tr key={index} className="border-b border-gray-100">
-                      <td className="py-3 px-4 text-sm text-gray-900">{item.name}</td>
-                      <td className="py-3 px-4 text-sm text-right text-gray-900">{formatCurrency(item.amount)}</td>
+                    <tr key={index} className="border-b border-[var(--border-default)]">
+                      <td className="py-3 px-4 text-sm text-[var(--text-primary)]">{item.name}</td>
+                      <td className="py-3 px-4 text-sm text-right text-[var(--text-primary)]">{formatCurrency(item.amount)}</td>
                       <td className="py-3 px-4 text-center">
                         <Badge variant={item.isOptional ? 'secondary' : 'default'}>
                           {item.isOptional ? 'Optional' : 'Required'}
@@ -244,9 +244,9 @@ export default function ParentFeesPage() {
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-50 font-semibold">
-                    <td className="py-3 px-4 text-sm text-gray-900">Total</td>
-                    <td className="py-3 px-4 text-sm text-right text-gray-900">
+                  <tr className="bg-[var(--bg-surface)] font-semibold">
+                    <td className="py-3 px-4 text-sm text-[var(--text-primary)]">Total</td>
+                    <td className="py-3 px-4 text-sm text-right text-[var(--text-primary)]">
                       {formatCurrency(selectedChild.currentTerm.totalFees)}
                     </td>
                     <td></td>
@@ -259,29 +259,29 @@ export default function ParentFeesPage() {
 
         {/* Payment History Tab */}
         <TabsContent value="payments" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Payment History</h3>
           {selectedChild.currentTerm.payments.length === 0 ? (
-            <p className="text-gray-500 py-8 text-center">No payments recorded yet.</p>
+            <p className="text-[var(--text-muted)] py-8 text-center">No payments recorded yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Receipt #</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Method</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Reference</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
+                  <tr className="border-b border-[var(--border-default)]">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Receipt #</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Method</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Reference</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedChild.currentTerm.payments.map((payment) => (
-                    <tr key={payment.id} className="border-b border-gray-100">
-                      <td className="py-3 px-4 text-sm text-gray-900">{formatDate(payment.date)}</td>
-                      <td className="py-3 px-4 text-sm text-blue-600">{payment.receiptNumber}</td>
-                      <td className="py-3 px-4 text-sm text-gray-900">{getPaymentMethodLabel(payment.method)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-500">{payment.reference}</td>
-                      <td className="py-3 px-4 text-sm text-right font-medium text-gray-900">
+                    <tr key={payment.id} className="border-b border-[var(--border-default)]">
+                      <td className="py-3 px-4 text-sm text-[var(--text-primary)]">{formatDate(payment.date)}</td>
+                      <td className="py-3 px-4 text-sm text-[var(--chart-blue)]">{payment.receiptNumber}</td>
+                      <td className="py-3 px-4 text-sm text-[var(--text-primary)]">{getPaymentMethodLabel(payment.method)}</td>
+                      <td className="py-3 px-4 text-sm text-[var(--text-muted)]">{payment.reference}</td>
+                      <td className="py-3 px-4 text-sm text-right font-medium text-[var(--text-primary)]">
                         {formatCurrency(payment.amount)}
                       </td>
                     </tr>
@@ -294,19 +294,19 @@ export default function ParentFeesPage() {
 
         {/* Previous Terms Tab */}
         <TabsContent value="previous" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Previous Terms</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Previous Terms</h3>
           {selectedChild.previousTerms.length === 0 ? (
-            <p className="text-gray-500 py-8 text-center">No previous term records.</p>
+            <p className="text-[var(--text-muted)] py-8 text-center">No previous term records.</p>
           ) : (
             <div className="space-y-3">
               {selectedChild.previousTerms.map((term, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-[var(--bg-surface)] rounded-lg"
                 >
                   <div>
-                    <p className="font-medium text-gray-900">{term.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-[var(--text-primary)]">{term.name}</p>
+                    <p className="text-sm text-[var(--text-muted)]">
                       Paid: {formatCurrency(term.totalPaid)} / {formatCurrency(term.totalFees)}
                     </p>
                   </div>

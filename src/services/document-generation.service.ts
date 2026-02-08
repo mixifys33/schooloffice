@@ -588,7 +588,7 @@ export class DocumentGenerationService {
     .school-name-card { font-size: 14px; font-weight: bold; display: inline-block; vertical-align: middle; }
     .card-body { display: flex; padding: 15px; }
     .photo-section { width: 90px; margin-right: 15px; }
-    .student-photo { width: 90px; height: 110px; border: 2px solid #333; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
+    .student-photo { width: 90px; height: 110px; border: 2px solid #333; background-color: var(--border-default); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
     .info-section { flex: 1; }
     .info-row { margin: 5px 0; font-size: 11px; }

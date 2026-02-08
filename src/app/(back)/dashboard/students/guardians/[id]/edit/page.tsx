@@ -255,11 +255,11 @@ export default function GuardianEditPage() {
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
                 className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  validationErrors.firstName ? 'border-red-500' : 'border-input'
+                  validationErrors.firstName ? 'border-[var(--danger)]' : 'border-input'
                 } bg-background`}
               />
               {validationErrors.firstName && (
-                <p className="text-xs text-red-500">{validationErrors.firstName}</p>
+                <p className="text-xs text-[var(--danger)]">{validationErrors.firstName}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -269,11 +269,11 @@ export default function GuardianEditPage() {
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
                 className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  validationErrors.lastName ? 'border-red-500' : 'border-input'
+                  validationErrors.lastName ? 'border-[var(--danger)]' : 'border-input'
                 } bg-background`}
               />
               {validationErrors.lastName && (
-                <p className="text-xs text-red-500">{validationErrors.lastName}</p>
+                <p className="text-xs text-[var(--danger)]">{validationErrors.lastName}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -322,12 +322,12 @@ export default function GuardianEditPage() {
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  validationErrors.phone ? 'border-red-500' : 'border-input'
+                  validationErrors.phone ? 'border-[var(--danger)]' : 'border-input'
                 } bg-background`}
                 placeholder="+256 700 000000"
               />
               {validationErrors.phone && (
-                <p className="text-xs text-red-500">{validationErrors.phone}</p>
+                <p className="text-xs text-[var(--danger)]">{validationErrors.phone}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -337,12 +337,12 @@ export default function GuardianEditPage() {
                 value={formData.secondaryPhone}
                 onChange={(e) => handleInputChange('secondaryPhone', e.target.value)}
                 className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  validationErrors.secondaryPhone ? 'border-red-500' : 'border-input'
+                  validationErrors.secondaryPhone ? 'border-[var(--danger)]' : 'border-input'
                 } bg-background`}
                 placeholder="+256 700 000000"
               />
               {validationErrors.secondaryPhone && (
-                <p className="text-xs text-red-500">{validationErrors.secondaryPhone}</p>
+                <p className="text-xs text-[var(--danger)]">{validationErrors.secondaryPhone}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -352,11 +352,11 @@ export default function GuardianEditPage() {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className={`w-full rounded-md border px-3 py-2 text-sm ${
-                  validationErrors.email ? 'border-red-500' : 'border-input'
+                  validationErrors.email ? 'border-[var(--danger)]' : 'border-input'
                 } bg-background`}
               />
               {validationErrors.email && (
-                <p className="text-xs text-red-500">{validationErrors.email}</p>
+                <p className="text-xs text-[var(--danger)]">{validationErrors.email}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -437,7 +437,7 @@ export default function GuardianEditPage() {
                 ))}
               </select>
               {formData.status === GuardianStatus.BLOCKED && (
-                <p className="text-xs text-yellow-600 flex items-center gap-1">
+                <p className="text-xs text-[var(--chart-yellow)] flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
                   Blocked guardians cannot receive non-emergency messages
                 </p>

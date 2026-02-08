@@ -73,7 +73,7 @@ interface ATDeliveryReport {
 // SMS COST CONSTANTS (Uganda)
 // ============================================
 
-const SMS_COST_UGX = 25 // Approximately 25 UGX per SMS
+const SMS_COST_UGX = 45 // UGX 45 per SMS segment (updated for Uganda market)
 
 // ============================================
 // SMS GATEWAY SERVICE
@@ -95,9 +95,18 @@ export class SMSGatewayService {
    * Requirement 18.1: Transmit messages through Africa's Talking
    */
   async sendSMS(request: SMSSendRequest): Promise<SMSSendResult> {
+    console.log(`[SMS GATEWAY DEBUG] Starting sendSMS request:`, {
+      to: request.to,
+      messageLength: request.message.length,
+      messagePreview: request.message.substring(0, 100) + (request.message.length > 100 ? '...' : ''),
+      from: request.from,
+      enqueue: request.enqueue
+    });
+    
     const recipients = Array.isArray(request.to) ? request.to : [request.to]
     
     if (recipients.length === 0) {
+      console.log(`[SMS GATEWAY DEBUG] No recipients provided`);
       return {
         success: false,
         status: MessageStatus.FAILED,
@@ -107,6 +116,8 @@ export class SMSGatewayService {
     }
 
     try {
+      console.log(`[SMS GATEWAY DEBUG] Building request data for ${recipients.length} recipients`);
+      
       // Build request data - only include 'from' if sender ID is configured
       const requestData: Record<string, string> = {
         username: this.config.username,
@@ -119,14 +130,20 @@ export class SMSGatewayService {
       const senderId = request.from || this.config.senderId
       if (senderId && senderId.trim() !== '') {
         requestData.from = senderId
+        console.log(`[SMS GATEWAY DEBUG] Using sender ID: ${senderId}`);
+      } else {
+        console.log(`[SMS GATEWAY DEBUG] No sender ID configured`);
       }
 
+      console.log(`[SMS GATEWAY DEBUG] Making API request to /messaging`);
       const response = await this.makeAPIRequest('/messaging', requestData)
+      console.log(`[SMS GATEWAY DEBUG] API response received`);
 
       const data = response as ATSMSResponse
       const recipient = data.SMSMessageData.Recipients[0]
 
       if (!recipient) {
+        console.log(`[SMS GATEWAY DEBUG] No recipient response from API`);
         return {
           success: false,
           status: MessageStatus.FAILED,
@@ -135,11 +152,15 @@ export class SMSGatewayService {
         }
       }
 
+      console.log(`[SMS GATEWAY DEBUG] Recipient response:`, recipient);
+      
       // Parse cost from response (format: "UGX 25.0000")
       const cost = this.parseCost(recipient.cost)
+      console.log(`[SMS GATEWAY DEBUG] Parsed cost: ${cost}`);
 
       // Map Africa's Talking status to our MessageStatus
       const status = this.mapATStatus(recipient.status)
+      console.log(`[SMS GATEWAY DEBUG] Mapped status: ${status}, Success: ${recipient.statusCode === 101}`);
 
       return {
         success: recipient.statusCode === 101,
@@ -150,6 +171,7 @@ export class SMSGatewayService {
         recipient: recipient.number,
       }
     } catch (error) {
+      console.error(`[SMS GATEWAY DEBUG] Error sending SMS:`, error);
       return {
         success: false,
         status: MessageStatus.FAILED,
@@ -322,7 +344,7 @@ export class SMSGatewayService {
 
   /**
    * Calculate SMS cost estimate
-   * Requirement 23.1: Log cost (approximately 25 UGX per SMS)
+   * Requirement 23.1: Log cost (UGX 45 per SMS for Uganda market)
    */
   estimateCost(messageCount: number): number {
     return messageCount * SMS_COST_UGX
@@ -451,11 +473,22 @@ export class SMSGatewayService {
  * Create SMS Gateway service from environment variables
  */
 export function createSMSGateway(): SMSGatewayService {
+  console.log('[SMS GATEWAY INIT] Loading configuration from environment variables');
+  console.log('[SMS GATEWAY INIT] AFRICASTALKING_API_KEY exists:', !!process.env.AFRICASTALKING_API_KEY);
+  console.log('[SMS GATEWAY INIT] AFRICASTALKING_USERNAME:', process.env.AFRICASTALKING_USERNAME);
+  console.log('[SMS GATEWAY INIT] AFRICASTALKING_SENDER_ID:', process.env.AFRICASTALKING_SENDER_ID);
+  console.log('[SMS GATEWAY INIT] AFRICASTALKING_ENVIRONMENT:', process.env.AFRICASTALKING_ENVIRONMENT);
+  
   const config: SMSConfig = {
     apiKey: process.env.AFRICASTALKING_API_KEY || '',
     username: process.env.AFRICASTALKING_USERNAME || 'sandbox',
     senderId: process.env.AFRICASTALKING_SENDER_ID,
     environment: (process.env.AFRICASTALKING_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
+  }
+
+  // Check if required configuration is missing
+  if (!config.apiKey) {
+    console.warn('[SMS GATEWAY WARN] AFRICASTALKING_API_KEY is not set. SMS sending will fail.');
   }
 
   return new SMSGatewayService(config)

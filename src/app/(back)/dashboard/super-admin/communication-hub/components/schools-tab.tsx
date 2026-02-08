@@ -36,7 +36,7 @@ function SchoolRowActions({ school, onPause, onResume, onManageQuota }: SchoolRo
     <div className="relative">
       <button
         onClick={() => setShowActions(!showActions)}
-        className="text-slate-400 hover:text-slate-200 p-1"
+        className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] p-1"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -52,7 +52,7 @@ function SchoolRowActions({ school, onPause, onResume, onManageQuota }: SchoolRo
                   onResume()
                   setShowActions(false)
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-emerald-400 hover:bg-slate-700"
+                className="w-full text-left px-3 py-2 text-sm text-[var(--success)] hover:bg-slate-700"
               >
                 Resume Messaging
               </button>
@@ -62,7 +62,7 @@ function SchoolRowActions({ school, onPause, onResume, onManageQuota }: SchoolRo
                   onPause()
                   setShowActions(false)
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-amber-400 hover:bg-slate-700"
+                className="w-full text-left px-3 py-2 text-sm text-[var(--warning)] hover:bg-slate-700"
               >
                 Pause Messaging
               </button>
@@ -72,7 +72,7 @@ function SchoolRowActions({ school, onPause, onResume, onManageQuota }: SchoolRo
                 onManageQuota()
                 setShowActions(false)
               }}
-              className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+              className="w-full text-left px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-slate-700"
             >
               Manage Quotas
             </button>
@@ -105,12 +105,12 @@ function PauseConfirmationModal({ school, isOpen, onClose, onConfirm }: PauseCon
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50">
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold text-slate-100 mb-4">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           Pause Messaging for {school.schoolName}
         </h3>
-        <p className="text-slate-400 text-sm mb-4">
+        <p className="text-[var(--text-muted)] text-sm mb-4">
           This will immediately block all outgoing messages for this school. Please provide a reason:
         </p>
         <form onSubmit={handleSubmit}>
@@ -131,7 +131,7 @@ function PauseConfirmationModal({ school, isOpen, onClose, onConfirm }: PauseCon
             </Button>
             <Button
               type="submit"
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-[var(--chart-yellow)] hover:bg-[var(--warning)] text-[var(--white-pure)]"
             >
               Pause Messaging
             </Button>
@@ -198,11 +198,11 @@ export default function SchoolsTab({
   }
 
   const getUsageColor = (sent: number, limit: number | null) => {
-    if (!limit) return 'text-slate-300'
+    if (!limit) return 'text-[var(--text-muted)]'
     const percentage = (sent / limit) * 100
-    if (percentage >= 90) return 'text-red-400'
-    if (percentage >= 75) return 'text-amber-400'
-    return 'text-emerald-400'
+    if (percentage >= 90) return 'text-[var(--danger)]'
+    if (percentage >= 75) return 'text-[var(--warning)]'
+    return 'text-[var(--success)]'
   }
 
   return (
@@ -210,8 +210,8 @@ export default function SchoolsTab({
       {/* Header and Controls */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">School Monitoring</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">School Monitoring</h2>
+          <p className="text-sm text-[var(--text-muted)]">
             Monitor messaging activity and manage quotas for all schools
           </p>
         </div>
@@ -233,7 +233,7 @@ export default function SchoolsTab({
               <thead>
                 <tr className="border-b border-slate-700">
                   <th 
-                    className="text-left py-3 px-4 text-slate-400 font-medium cursor-pointer hover:text-slate-200"
+                    className="text-left py-3 px-4 text-[var(--text-muted)] font-medium cursor-pointer hover:text-[var(--text-secondary)]"
                     onClick={() => handleSort('schoolName')}
                   >
                     School Name
@@ -243,24 +243,24 @@ export default function SchoolsTab({
                       </span>
                     )}
                   </th>
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">Code</th>
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
-                  <th className="text-center py-3 px-4 text-slate-400 font-medium">SMS</th>
-                  <th className="text-center py-3 px-4 text-slate-400 font-medium">WhatsApp</th>
-                  <th className="text-center py-3 px-4 text-slate-400 font-medium">Email</th>
-                  <th className="text-center py-3 px-4 text-slate-400 font-medium">Failures</th>
-                  <th className="text-center py-3 px-4 text-slate-400 font-medium">Last Message</th>
-                  <th className="text-right py-3 px-4 text-slate-400 font-medium">Actions</th>
+                  <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Code</th>
+                  <th className="text-left py-3 px-4 text-[var(--text-muted)] font-medium">Status</th>
+                  <th className="text-center py-3 px-4 text-[var(--text-muted)] font-medium">SMS</th>
+                  <th className="text-center py-3 px-4 text-[var(--text-muted)] font-medium">WhatsApp</th>
+                  <th className="text-center py-3 px-4 text-[var(--text-muted)] font-medium">Email</th>
+                  <th className="text-center py-3 px-4 text-[var(--text-muted)] font-medium">Failures</th>
+                  <th className="text-center py-3 px-4 text-[var(--text-muted)] font-medium">Last Message</th>
+                  <th className="text-right py-3 px-4 text-[var(--text-muted)] font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-300">
+              <tbody className="text-[var(--text-muted)]">
                 {filteredAndSortedSchools.map((school) => (
                   <tr key={school.schoolId} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{school.schoolName}</div>
                         {school.isPaused && (
-                          <div className="text-xs text-amber-400 mt-1">⏸ Messaging Paused</div>
+                          <div className="text-xs text-[var(--warning)] mt-1">⏸ Messaging Paused</div>
                         )}
                       </div>
                     </td>
@@ -268,8 +268,8 @@ export default function SchoolsTab({
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         school.isActive 
-                          ? 'bg-emerald-900/50 text-emerald-400' 
-                          : 'bg-red-900/50 text-red-400'
+                          ? 'bg-[var(--success-dark)]/50 text-[var(--success)]' 
+                          : 'bg-[var(--danger-dark)]/50 text-[var(--danger)]'
                       }`}>
                         {school.isActive ? 'Active' : 'Inactive'}
                       </span>
@@ -278,10 +278,10 @@ export default function SchoolsTab({
                       <div className={getUsageColor(school.sms.sent, school.sms.limit)}>
                         {school.sms.sent.toLocaleString()}
                         {school.sms.limit && (
-                          <span className="text-slate-500">/{school.sms.limit.toLocaleString()}</span>
+                          <span className="text-[var(--text-muted)]">/{school.sms.limit.toLocaleString()}</span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-[var(--text-muted)]">
                         {school.sms.remaining.toLocaleString()} remaining
                       </div>
                     </td>
@@ -289,10 +289,10 @@ export default function SchoolsTab({
                       <div className={getUsageColor(school.whatsapp.sent, school.whatsapp.limit)}>
                         {school.whatsapp.sent.toLocaleString()}
                         {school.whatsapp.limit && (
-                          <span className="text-slate-500">/{school.whatsapp.limit.toLocaleString()}</span>
+                          <span className="text-[var(--text-muted)]">/{school.whatsapp.limit.toLocaleString()}</span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-[var(--text-muted)]">
                         {school.whatsapp.remaining.toLocaleString()} remaining
                       </div>
                     </td>
@@ -300,21 +300,21 @@ export default function SchoolsTab({
                       <div className={getUsageColor(school.email.sent, school.email.limit)}>
                         {school.email.sent.toLocaleString()}
                         {school.email.limit && (
-                          <span className="text-slate-500">/{school.email.limit.toLocaleString()}</span>
+                          <span className="text-[var(--text-muted)]">/{school.email.limit.toLocaleString()}</span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-[var(--text-muted)]">
                         {school.email.remaining.toLocaleString()} remaining
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`font-medium ${
-                        school.failureCount > 0 ? 'text-red-400' : 'text-slate-400'
+                        school.failureCount > 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'
                       }`}>
                         {school.failureCount}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-center text-slate-500 text-xs">
+                    <td className="py-3 px-4 text-center text-[var(--text-muted)] text-xs">
                       {school.lastMessageAt 
                         ? new Date(school.lastMessageAt).toLocaleDateString()
                         : 'Never'
@@ -336,7 +336,7 @@ export default function SchoolsTab({
 
           {filteredAndSortedSchools.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-slate-400">No schools found matching your search.</p>
+              <p className="text-[var(--text-muted)]">No schools found matching your search.</p>
             </div>
           )}
         </CardContent>
@@ -346,34 +346,34 @@ export default function SchoolsTab({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-slate-100">
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">
               {schools.length}
             </div>
-            <p className="text-xs text-slate-400">Total Schools</p>
+            <p className="text-xs text-[var(--text-muted)]">Total Schools</p>
           </CardContent>
         </Card>
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-emerald-400">
+            <div className="text-2xl font-semibold text-[var(--success)]">
               {schools.filter(s => s.isActive).length}
             </div>
-            <p className="text-xs text-slate-400">Active Schools</p>
+            <p className="text-xs text-[var(--text-muted)]">Active Schools</p>
           </CardContent>
         </Card>
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-amber-400">
+            <div className="text-2xl font-semibold text-[var(--warning)]">
               {schools.filter(s => s.isPaused).length}
             </div>
-            <p className="text-xs text-slate-400">Paused Schools</p>
+            <p className="text-xs text-[var(--text-muted)]">Paused Schools</p>
           </CardContent>
         </Card>
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
-            <div className="text-2xl font-semibold text-red-400">
+            <div className="text-2xl font-semibold text-[var(--danger)]">
               {schools.filter(s => s.failureCount > 0).length}
             </div>
-            <p className="text-xs text-slate-400">Schools with Failures</p>
+            <p className="text-xs text-[var(--text-muted)]">Schools with Failures</p>
           </CardContent>
         </Card>
       </div>

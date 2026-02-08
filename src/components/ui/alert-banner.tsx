@@ -12,7 +12,9 @@ import { Button } from './button'
 
 export interface AlertBannerProps {
   /** Alert type determines styling */
-  type: 'warning' | 'danger' | 'info'
+  type: 'warning' | 'danger' | 'info' | 'error' | 'success'
+  /** Alert title (optional) */
+  title?: string
   /** Alert message to display */
   message: string
   /** Optional action button */
@@ -28,22 +30,45 @@ export interface AlertBannerProps {
   className?: string
 }
 
-const alertStyles = {
-  warning: {
-    container: 'bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800',
-    text: 'text-orange-800 dark:text-orange-200',
-    icon: 'text-orange-500 dark:text-orange-400',
-  },
-  danger: {
-    container: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
-    text: 'text-red-800 dark:text-red-200',
-    icon: 'text-red-500 dark:text-red-400',
-  },
-  info: {
-    container: 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800',
-    text: 'text-blue-800 dark:text-blue-200',
-    icon: 'text-blue-500 dark:text-blue-400',
-  },
+const getAlertStyles = (type: AlertBannerProps['type']) => {
+  switch (type) {
+    case 'warning':
+      return {
+        backgroundColor: 'var(--warning-light)',
+        borderColor: 'var(--warning)',
+        color: 'var(--warning-dark)',
+        iconColor: 'var(--warning)',
+      }
+    case 'danger':
+    case 'error':
+      return {
+        backgroundColor: 'var(--danger-light)',
+        borderColor: 'var(--danger)',
+        color: 'var(--danger-dark)',
+        iconColor: 'var(--danger)',
+      }
+    case 'info':
+      return {
+        backgroundColor: 'var(--info-light)',
+        borderColor: 'var(--info)',
+        color: 'var(--info-dark)',
+        iconColor: 'var(--info)',
+      }
+    case 'success':
+      return {
+        backgroundColor: 'var(--success-light)',
+        borderColor: 'var(--success)',
+        color: 'var(--success-dark)',
+        iconColor: 'var(--success)',
+      }
+    default:
+      return {
+        backgroundColor: 'var(--bg-surface)',
+        borderColor: 'var(--border-default)',
+        color: 'var(--text-primary)',
+        iconColor: 'var(--text-muted)',
+      }
+  }
 }
 
 const AlertIcon = ({ type }: { type: AlertBannerProps['type'] }) => {
@@ -52,14 +77,20 @@ const AlertIcon = ({ type }: { type: AlertBannerProps['type'] }) => {
     case 'warning':
       return <AlertTriangle className={iconClass} />
     case 'danger':
+    case 'error':
       return <AlertCircle className={iconClass} />
     case 'info':
+      return <Info className={iconClass} />
+    case 'success':
+      return <AlertCircle className={iconClass} />
+    default:
       return <Info className={iconClass} />
   }
 }
 
 export function AlertBanner({
   type,
+  title,
   message,
   action,
   dismissible = false,
@@ -67,7 +98,7 @@ export function AlertBanner({
   className,
 }: AlertBannerProps) {
   const [isVisible, setIsVisible] = React.useState(true)
-  const styles = alertStyles[type]
+  const styles = getAlertStyles(type)
 
   const handleDismiss = () => {
     setIsVisible(false)
@@ -81,22 +112,36 @@ export function AlertBanner({
       role="alert"
       className={cn(
         'flex items-center gap-3 px-4 py-3 border rounded-lg',
-        styles.container,
         className
       )}
+      style={{
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+        color: styles.color,
+      }}
     >
-      <div className={cn('flex-shrink-0', styles.icon)}>
+      <div 
+        className="flex-shrink-0"
+        style={{ color: styles.iconColor }}
+      >
         <AlertIcon type={type} />
       </div>
-      <p className={cn('flex-1 text-sm font-medium', styles.text)}>
-        {message}
-      </p>
+      <div className="flex-1">
+        {title && (
+          <p className="text-sm font-semibold mb-1">
+            {title}
+          </p>
+        )}
+        <p className="text-sm">
+          {message}
+        </p>
+      </div>
       {action && (
         <Button
           variant="outline"
           size="sm"
           onClick={action.onClick}
-          className={cn('flex-shrink-0', styles.text)}
+          className="flex-shrink-0"
         >
           {action.label}
         </Button>
@@ -105,10 +150,8 @@ export function AlertBanner({
         <button
           type="button"
           onClick={handleDismiss}
-          className={cn(
-            'flex-shrink-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
-            styles.icon
-          )}
+          className="flex-shrink-0 p-1 rounded-md hover:opacity-80 transition-colors"
+          style={{ color: styles.iconColor }}
           aria-label="Dismiss alert"
         >
           <X className="h-4 w-4" />

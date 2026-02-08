@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useTransition, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { FormField, PasswordField } from '@/components/ui/form-field'
 import { Toast, ToastContainer } from '@/components/ui/toast'
-import { ServerErrorBanner } from '@/components/ui/error-banner'
 
 /**
  * School-First Login Page
@@ -30,7 +29,7 @@ interface FormErrors {
 }
 
 interface ServerErrorState {
-  error: unknown
+  error: Error | null
   isRetrying: boolean
 }
 
@@ -40,8 +39,8 @@ interface ToastState {
 }
 
 export default function LoginPage() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const searchParams = useSearchParams()
   
   // Two-step login state
   const [step, setStep] = useState<LoginStep>('school_code')
@@ -56,6 +55,25 @@ export default function LoginPage() {
   })
   const [toast, setToast] = useState<ToastState | null>(null)
   const [serverError, setServerError] = useState<ServerErrorState>({ error: null, isRetrying: false })
+
+  // Handle success messages from URL parameters
+  useEffect(() => {
+    const message = searchParams.get('message')
+    if (message === 'password-updated') {
+      setToast({
+        type: 'success',
+        message: 'Password updated successfully! Please sign in with your new password.'
+      })
+    }
+  }, [searchParams])
+
+  // Auto-dismiss toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   /**
    * Validate school code format (alphanumeric only)
@@ -187,15 +205,19 @@ export default function LoginPage() {
         if (result?.error) {
           // Handle different error types with generic messages
           // Requirements: 2.6, 2.7 - Don't reveal which field was incorrect
-          if (result.code === 'subscription_expired') {
+          const errorCode = result.error || result.code
+          
+          if (errorCode === 'subscription_expired') {
             setErrors({ general: 'Subscription expired. Please contact support.' })
-          } else if (result.code === 'school_suspended') {
+          } else if (errorCode === 'school_suspended') {
             setErrors({ general: 'Account suspended. Please contact support.' })
-          } else if (result.code === 'account_locked') {
+          } else if (errorCode === 'account_locked') {
             setErrors({ general: 'Account temporarily locked. Please try again later.' })
+          } else if (errorCode === 'CredentialsSignin') {
+            setErrors({ general: 'Invalid credentials. Please check your school code, username/email/phone, and password.' })
           } else {
             // Generic error for invalid school code, user not found, or wrong password
-            setErrors({ general: 'Invalid credentials' })
+            setErrors({ general: 'Invalid credentials. Please check your school code, username/email/phone, and password.' })
           }
           return
         }
@@ -203,14 +225,14 @@ export default function LoginPage() {
         if (result?.ok) {
           setToast({ type: 'success', message: 'Login successful! Redirecting...' })
           
+          // Force a hard redirect to ensure session is properly loaded
           setTimeout(() => {
-            router.push('/dashboard')
-            router.refresh()
+            window.location.href = '/dashboard'
           }, 500)
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Login error:', error)
-        setServerError({ error, isRetrying: false })
+        setServerError({ error: error as Error, isRetrying: false })
       }
     })
   }
@@ -241,12 +263,18 @@ export default function LoginPage() {
       })
       
       if (result?.error) {
-        if (result.code === 'subscription_expired') {
+        const errorCode = result.error || result.code
+        
+        if (errorCode === 'subscription_expired') {
           setErrors({ general: 'Subscription expired. Please contact support.' })
-        } else if (result.code === 'school_suspended') {
+        } else if (errorCode === 'school_suspended') {
           setErrors({ general: 'Account suspended. Please contact support.' })
+        } else if (errorCode === 'account_locked') {
+          setErrors({ general: 'Account temporarily locked. Please try again later.' })
+        } else if (errorCode === 'CredentialsSignin') {
+          setErrors({ general: 'Invalid credentials. Please check your school code, username/email/phone, and password.' })
         } else {
-          setErrors({ general: 'Invalid credentials' })
+          setErrors({ general: 'Invalid credentials. Please check your school code, username/email/phone, and password.' })
         }
         setServerError({ error: null, isRetrying: false })
         return
@@ -255,12 +283,11 @@ export default function LoginPage() {
       if (result?.ok) {
         setToast({ type: 'success', message: 'Login successful! Redirecting...' })
         setTimeout(() => {
-          router.push('/dashboard')
-          router.refresh()
+          window.location.href = '/dashboard'
         }, 500)
       }
-    } catch (error) {
-      setServerError({ error, isRetrying: false })
+    } catch (error: unknown) {
+      setServerError({ error: error as Error, isRetrying: false })
     }
   }
 
@@ -269,29 +296,29 @@ export default function LoginPage() {
       {/* Toast notifications */}
       {toast && (
         <ToastContainer position="top-center">
-          <Toast
-            type={toast.type}
-            message={toast.message}
-            onDismiss={() => setToast(null)}
+          <Toast 
+            type={toast.type} 
+            message={toast.message} 
+            onDismiss={() => setToast(null)} 
           />
         </ToastContainer>
       )}
       
       {/* Login Card - Requirements: 9.1, 9.2, 10.1 - Centered card layout with neutral colors, no gradients */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-8">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--bg-main)] rounded-lg shadow-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8">
         {/* Header - Requirements: 10.2 - "Welcome to SchoolOffice" without marketing slogans */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            SchoolOffice Login
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+            Welcome Back
           </h1>
           {step === 'school_code' && (
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
               Enter your school code to continue
             </p>
           )}
           {step === 'credentials' && (
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Sign in to <span className="font-medium text-gray-900 dark:text-white">{schoolCode.toUpperCase()}</span>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+              Sign in to <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{schoolCode.toUpperCase()}</span>
             </p>
           )}
         </div>
@@ -300,9 +327,9 @@ export default function LoginPage() {
         {errors.general && (
           <div 
             role="alert"
-            className="mb-6 p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-md"
+            className="mb-6 p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50 border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-md"
           >
-            <p className="text-sm text-red-700 dark:text-red-400 text-center">
+            <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] text-center">
               {errors.general}
             </p>
           </div>
@@ -310,13 +337,19 @@ export default function LoginPage() {
         
         {/* Server Error Banner */}
         {serverError.error && (
-          <div className="mb-6">
-            <ServerErrorBanner
-              error={serverError.error}
-              onRetry={handleRetry}
-              isRetrying={serverError.isRetrying}
-              onDismiss={() => setServerError({ error: null, isRetrying: false })}
-            />
+          <div className="mb-6 p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50 border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-md">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">
+                Connection error. Please try again.
+              </p>
+              <button
+                onClick={handleRetry}
+                disabled={serverError.isRetrying}
+                className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] hover:text-[var(--danger-dark)] dark:hover:text-[var(--danger)] underline"
+              >
+                {serverError.isRetrying ? 'Retrying...' : 'Retry'}
+              </button>
+            </div>
           </div>
         )}
         
@@ -339,11 +372,10 @@ export default function LoginPage() {
               error={touched.schoolCode ? errors.schoolCode : undefined}
               required
               touchFriendly
-              autoFocus
             />
             
             {/* Requirements: 10.4 - Display example school codes */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 -mt-4">
+            <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] -mt-4">
               Example: STMARYS, GREENHILL, KASENYI
             </p>
             
@@ -364,7 +396,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleBackToSchoolCode}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="flex items-center text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-secondary)] transition-colors"
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -389,7 +421,6 @@ export default function LoginPage() {
               error={touched.identifier ? errors.identifier : undefined}
               required
               touchFriendly
-              autoFocus
             />
             
             {/* Password Field */}
@@ -448,32 +479,44 @@ export default function LoginPage() {
         )}
         
         {/* Footer - Requirements: 10.5 - "Forgot password?" and "Having trouble?" links */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 space-y-3 text-center">
+        <div className="mt-8 pt-6 border-t border-[var(--border-default)] dark:border-[var(--border-strong)] space-y-3 text-center">
           {step === 'credentials' && (
             <p className="text-sm">
               <a 
                 href="/forgot-password" 
-                className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors"
               >
                 Forgot password?
               </a>
             </p>
           )}
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          
+          {/* Register Link */}
+          <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+            Don&apos;t have a school account?{' '}
+            <a 
+              href="/register"
+              className="text-[var(--chart-blue)] dark:text-[var(--chart-blue)] hover:text-[var(--accent-hover)] dark:hover:text-[var(--chart-blue)] transition-colors font-medium"
+            >
+              Register your school
+            </a>
+          </p>
+          
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Having trouble?{' '}
             <a 
               href="/contact-admin"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+              className="text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors cursor-pointer"
             >
               Contact school admin.
             </a>
           </p>
           
           {/* Super Admin Login Link */}
-          <p className="text-sm text-gray-500 dark:text-gray-400 pt-2">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] pt-2">
             <a 
               href="/admin/login"
-              className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors font-medium"
+              className="text-[var(--chart-purple)] dark:text-[var(--chart-purple)] hover:text-[var(--chart-purple)] dark:hover:text-[var(--chart-purple)] transition-colors font-medium"
             >
               Super Admin Login →
             </a>

@@ -52,20 +52,20 @@ const days: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday
 
 function getSubjectColor(subject: string): string {
   const colors: Record<string, string> = {
-    Mathematics: 'bg-blue-100 border-blue-300 text-blue-800',
-    English: 'bg-green-100 border-green-300 text-green-800',
-    Science: 'bg-purple-100 border-purple-300 text-purple-800',
-    'Social Studies': 'bg-yellow-100 border-yellow-300 text-yellow-800',
-    Kiswahili: 'bg-orange-100 border-orange-300 text-orange-800',
-    'Religious Education': 'bg-pink-100 border-pink-300 text-pink-800',
-    'Creative Arts': 'bg-indigo-100 border-indigo-300 text-indigo-800',
-    'Physical Education': 'bg-red-100 border-red-300 text-red-800',
-    Agriculture: 'bg-emerald-100 border-emerald-300 text-emerald-800',
-    Library: 'bg-gray-100 border-gray-300 text-gray-800',
-    Assembly: 'bg-cyan-100 border-cyan-300 text-cyan-800',
-    Games: 'bg-rose-100 border-rose-300 text-rose-800',
+    Mathematics: 'bg-[var(--info-light)] border-[var(--info)] text-[var(--info-dark)]',
+    English: 'bg-[var(--success-light)] border-[var(--success)] text-[var(--success-dark)]',
+    Science: 'bg-[var(--info-light)] border-[var(--info)] text-[var(--info-dark)]',
+    'Social Studies': 'bg-[var(--warning-light)] border-[var(--warning)] text-[var(--warning-dark)]',
+    Kiswahili: 'bg-[var(--warning-light)] border-[var(--warning)] text-[var(--warning-dark)]',
+    'Religious Education': 'bg-pink-100 border-pink-300 text-[var(--info-dark)]',
+    'Creative Arts': 'bg-indigo-100 border-indigo-300 text-[var(--info-dark)]',
+    'Physical Education': 'bg-[var(--danger-light)] border-[var(--danger)] text-[var(--danger-dark)]',
+    Agriculture: 'bg-[var(--success-light)] border-emerald-300 text-[var(--success-dark)]',
+    Library: 'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]',
+    Assembly: 'bg-cyan-100 border-cyan-300 text-[var(--info-dark)]',
+    Games: 'bg-rose-100 border-rose-300 text-[var(--danger-dark)]',
   }
-  return colors[subject] || 'bg-gray-100 border-gray-300 text-gray-800'
+  return colors[subject] || 'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]'
 }
 
 function getCurrentDay(): DayOfWeek {
@@ -136,11 +136,11 @@ export default function StudentTimetablePage() {
   if (!data) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Timetable</h1>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">My Timetable</h1>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-          <p className="text-gray-500">No timetable data available.</p>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-8 text-center">
+          <p className="text-[var(--text-muted)]">No timetable data available.</p>
         </div>
       </div>
     )
@@ -160,23 +160,23 @@ export default function StudentTimetablePage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Timetable</h1>
-        <p className="text-gray-600 mt-1">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">My Timetable</h1>
+        <p className="text-[var(--text-secondary)] mt-1">
           {student.className} {student.streamName && `(${student.streamName})`} • {currentTerm}
         </p>
       </div>
 
       {/* View Mode Toggle */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-4">
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('day')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 viewMode === 'day'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[var(--chart-blue)] text-[var(--white-pure)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
               }`}
             >
               Day View
@@ -185,8 +185,8 @@ export default function StudentTimetablePage() {
               onClick={() => setViewMode('week')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 viewMode === 'week'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[var(--chart-blue)] text-[var(--white-pure)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
               }`}
             >
               Week View
@@ -200,8 +200,8 @@ export default function StudentTimetablePage() {
                   onClick={() => setSelectedDay(day)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                     selectedDay === day
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-[var(--chart-blue)] text-[var(--white-pure)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
                   }`}
                 >
                   {day.slice(0, 3)}
@@ -215,10 +215,10 @@ export default function StudentTimetablePage() {
 
       {/* Day View */}
       {viewMode === 'day' && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{selectedDay}&apos;s Schedule</h2>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">{selectedDay}&apos;s Schedule</h2>
           {schedule[selectedDay].length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No classes scheduled for {selectedDay}.</p>
+            <p className="text-[var(--text-muted)] text-center py-8">No classes scheduled for {selectedDay}.</p>
           ) : (
             <div className="space-y-3">
               {periods.map((period) => {
@@ -229,15 +229,15 @@ export default function StudentTimetablePage() {
                   <React.Fragment key={period.number}>
                     <div
                       className={`flex items-center gap-4 p-4 rounded-lg border ${
-                        lesson ? getSubjectColor(lesson.subject) : 'bg-gray-50 border-gray-200'
+                        lesson ? getSubjectColor(lesson.subject) : 'bg-[var(--bg-surface)] border-[var(--border-default)]'
                       }`}
                     >
                       <div className="w-16 text-center">
                         <div className="text-lg font-bold">P{period.number}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-[var(--text-muted)]">
                           {period.startTime}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-[var(--text-muted)]">
                           {period.endTime}
                         </div>
                       </div>
@@ -249,17 +249,17 @@ export default function StudentTimetablePage() {
                           </p>
                         </div>
                       ) : (
-                        <div className="flex-1 text-gray-500">No class scheduled</div>
+                        <div className="flex-1 text-[var(--text-muted)]">No class scheduled</div>
                       )}
                     </div>
                     {breakAfter && (
-                      <div className="flex items-center gap-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-4 p-3 bg-[var(--warning-light)] border border-amber-200 rounded-lg">
                         <div className="w-16 text-center">
-                          <div className="text-sm font-medium text-amber-700">☕</div>
+                          <div className="text-sm font-medium text-[var(--warning-dark)]">☕</div>
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-amber-800">{breakAfter.name}</p>
-                          <p className="text-sm text-amber-600">
+                          <p className="font-medium text-[var(--warning-dark)]">{breakAfter.name}</p>
+                          <p className="text-sm text-[var(--chart-yellow)]">
                             {breakAfter.startTime} - {breakAfter.endTime}
                           </p>
                         </div>
@@ -275,19 +275,19 @@ export default function StudentTimetablePage() {
 
       {/* Week View */}
       {viewMode === 'week' && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="py-3 px-4 text-left text-sm font-medium text-gray-500 w-20">
+                <tr className="bg-[var(--bg-surface)] border-b border-[var(--border-default)]">
+                  <th className="py-3 px-4 text-left text-sm font-medium text-[var(--text-muted)] w-20">
                     Period
                   </th>
                   {days.map((day) => (
                     <th
                       key={day}
                       className={`py-3 px-4 text-left text-sm font-medium ${
-                        day === getCurrentDay() ? 'text-blue-600 bg-blue-50' : 'text-gray-500'
+                        day === getCurrentDay() ? 'text-[var(--chart-blue)] bg-[var(--info-light)]' : 'text-[var(--text-muted)]'
                       }`}
                     >
                       {day}
@@ -300,10 +300,10 @@ export default function StudentTimetablePage() {
                   const breakAfter = breaks.find((b) => b.startTime === period.endTime)
                   return (
                     <React.Fragment key={period.number}>
-                      <tr className="border-b border-gray-100">
+                      <tr className="border-b border-[var(--border-default)]">
                         <td className="py-2 px-4">
-                          <div className="text-sm font-medium text-gray-900">P{period.number}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-sm font-medium text-[var(--text-primary)]">P{period.number}</div>
+                          <div className="text-xs text-[var(--text-muted)]">
                             {period.startTime}-{period.endTime}
                           </div>
                         </td>
@@ -312,7 +312,7 @@ export default function StudentTimetablePage() {
                           return (
                             <td
                               key={day}
-                              className={`py-2 px-2 ${day === getCurrentDay() ? 'bg-blue-50/50' : ''}`}
+                              className={`py-2 px-2 ${day === getCurrentDay() ? 'bg-[var(--info-light)]/50' : ''}`}
                             >
                               {lesson && (
                                 <div
@@ -329,9 +329,9 @@ export default function StudentTimetablePage() {
                         })}
                       </tr>
                       {breakAfter && (
-                        <tr className="bg-amber-50 border-b border-amber-200">
+                        <tr className="bg-[var(--warning-light)] border-b border-amber-200">
                           <td colSpan={6} className="py-2 px-4 text-center">
-                            <span className="text-sm font-medium text-amber-700">
+                            <span className="text-sm font-medium text-[var(--warning-dark)]">
                               ☕ {breakAfter.name} ({breakAfter.startTime} - {breakAfter.endTime})
                             </span>
                           </td>
@@ -348,8 +348,8 @@ export default function StudentTimetablePage() {
 
       {/* Legend */}
       {uniqueSubjects.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Subject Colors</h3>
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+          <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Subject Colors</h3>
           <div className="flex flex-wrap gap-2">
             {uniqueSubjects.map((subject) => (
               <span

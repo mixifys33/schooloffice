@@ -80,7 +80,7 @@ function ClassSelector({
 }) {
   return (
     <div className="flex flex-col">
-      <label htmlFor="class-select" className="text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor="class-select" className="text-sm font-medium text-[var(--text-primary)] mb-1">
         Select Class
       </label>
       <select
@@ -88,7 +88,7 @@ function ClassSelector({
         value={selectedClassId}
         onChange={(e) => onSelect(e.target.value)}
         disabled={loading}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+        className="px-3 py-2 border border-[var(--border-default)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] disabled:bg-[var(--bg-surface)]"
       >
         <option value="">-- Select a class --</option>
         {classes.map((cls) => (
@@ -113,7 +113,7 @@ function DatePicker({
 }) {
   return (
     <div className="flex flex-col">
-      <label htmlFor="date-picker" className="text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor="date-picker" className="text-sm font-medium text-[var(--text-primary)] mb-1">
         Date
       </label>
       <input
@@ -123,7 +123,7 @@ function DatePicker({
         onChange={(e) => onDateChange(e.target.value)}
         disabled={loading}
         max={new Date().toISOString().split('T')[0]}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+        className="px-3 py-2 border border-[var(--border-default)] rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] disabled:bg-[var(--bg-surface)]"
       />
     </div>
   )
@@ -144,18 +144,18 @@ function StatusButton({
   const statusConfig = {
     [AttendanceStatus.PRESENT]: {
       label: 'Present',
-      selectedClass: 'bg-green-600 text-white border-green-600',
-      unselectedClass: 'bg-white text-green-600 border-green-300 hover:bg-green-50',
+      selectedClass: 'bg-[var(--chart-green)] text-[var(--white-pure)] border-[var(--chart-green)]',
+      unselectedClass: 'bg-[var(--bg-main)] text-[var(--chart-green)] border-[var(--success)] hover:bg-[var(--success-light)]',
     },
     [AttendanceStatus.ABSENT]: {
       label: 'Absent',
-      selectedClass: 'bg-red-600 text-white border-red-600',
-      unselectedClass: 'bg-white text-red-600 border-red-300 hover:bg-red-50',
+      selectedClass: 'bg-[var(--chart-red)] text-[var(--white-pure)] border-[var(--chart-red)]',
+      unselectedClass: 'bg-[var(--bg-main)] text-[var(--chart-red)] border-[var(--danger)] hover:bg-[var(--danger-light)]',
     },
     [AttendanceStatus.LATE]: {
       label: 'Late',
-      selectedClass: 'bg-yellow-500 text-white border-yellow-500',
-      unselectedClass: 'bg-white text-yellow-600 border-yellow-300 hover:bg-yellow-50',
+      selectedClass: 'bg-[var(--warning)] text-[var(--white-pure)] border-[var(--warning)]',
+      unselectedClass: 'bg-[var(--bg-main)] text-[var(--chart-yellow)] border-[var(--warning)] hover:bg-[var(--warning-light)]',
     },
   }
 
@@ -178,9 +178,9 @@ function StatusButton({
 // Payment Status Badge
 function PaymentBadge({ status }: { status: 'PAID' | 'NOT_PAID' | 'PARTIAL' }) {
   const config = {
-    PAID: { label: 'Paid', className: 'bg-green-100 text-green-800' },
-    NOT_PAID: { label: 'Unpaid', className: 'bg-red-100 text-red-800' },
-    PARTIAL: { label: 'Partial', className: 'bg-yellow-100 text-yellow-800' },
+    PAID: { label: 'Paid', className: 'bg-[var(--success-light)] text-[var(--success-dark)]' },
+    NOT_PAID: { label: 'Unpaid', className: 'bg-[var(--danger-light)] text-[var(--danger-dark)]' },
+    PARTIAL: { label: 'Partial', className: 'bg-[var(--warning-light)] text-[var(--warning-dark)]' },
   }
 
   const { label, className } = config[status]
@@ -207,14 +207,14 @@ function StudentAttendanceRow({
   saving: boolean
 }) {
   return (
-    <tr className="border-b hover:bg-gray-50">
+    <tr className="border-b hover:bg-[var(--bg-surface)]">
       <td className="px-4 py-3">
         <div className="flex flex-col">
-          <span className="font-medium text-gray-900">{student.name}</span>
-          <span className="text-sm text-gray-500">{student.admissionNumber}</span>
+          <span className="font-medium text-[var(--text-primary)]">{student.name}</span>
+          <span className="text-sm text-[var(--text-muted)]">{student.admissionNumber}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600">
+      <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">
         {student.streamName || '-'}
       </td>
       <td className="px-4 py-3">
@@ -238,7 +238,7 @@ function StudentAttendanceRow({
       <td className="px-4 py-3">
         <button
           onClick={() => onViewHistory(student.id)}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          className="text-[var(--chart-blue)] hover:text-[var(--info-dark)] text-sm font-medium"
         >
           View History
         </button>
@@ -258,15 +258,15 @@ function AttendanceHistoryModal({
   if (!history) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
         <div className="px-6 py-4 border-b flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
             Attendance History - {history.studentName}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -277,42 +277,42 @@ function AttendanceHistoryModal({
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-3 rounded-lg text-center">
-              <p className="text-2xl font-bold text-blue-700">{history.summary.totalDays}</p>
-              <p className="text-sm text-blue-600">Total Days</p>
+            <div className="bg-[var(--info-light)] p-3 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[var(--accent-hover)]">{history.summary.totalDays}</p>
+              <p className="text-sm text-[var(--chart-blue)]">Total Days</p>
             </div>
-            <div className="bg-green-50 p-3 rounded-lg text-center">
-              <p className="text-2xl font-bold text-green-700">{history.summary.presentDays}</p>
-              <p className="text-sm text-green-600">Present</p>
+            <div className="bg-[var(--success-light)] p-3 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[var(--chart-green)]">{history.summary.presentDays}</p>
+              <p className="text-sm text-[var(--chart-green)]">Present</p>
             </div>
-            <div className="bg-red-50 p-3 rounded-lg text-center">
-              <p className="text-2xl font-bold text-red-700">{history.summary.absentDays}</p>
-              <p className="text-sm text-red-600">Absent</p>
+            <div className="bg-[var(--danger-light)] p-3 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[var(--chart-red)]">{history.summary.absentDays}</p>
+              <p className="text-sm text-[var(--chart-red)]">Absent</p>
             </div>
-            <div className="bg-yellow-50 p-3 rounded-lg text-center">
-              <p className="text-2xl font-bold text-yellow-700">{history.summary.attendancePercentage}%</p>
-              <p className="text-sm text-yellow-600">Attendance</p>
+            <div className="bg-[var(--warning-light)] p-3 rounded-lg text-center">
+              <p className="text-2xl font-bold text-[var(--warning)]">{history.summary.attendancePercentage}%</p>
+              <p className="text-sm text-[var(--chart-yellow)]">Attendance</p>
             </div>
           </div>
 
           {/* Absence Patterns (Requirement 5.6) */}
           {history.patterns.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">Absence Patterns</h4>
+              <h4 className="font-medium text-[var(--text-primary)] mb-2">Absence Patterns</h4>
               <div className="space-y-2">
                 {history.patterns.map((pattern, idx) => (
                   <div
                     key={idx}
                     className={`p-3 rounded-lg border ${
                       pattern.type === 'CONSECUTIVE'
-                        ? 'bg-red-50 border-red-200'
+                        ? 'bg-[var(--danger-light)] border-[var(--danger-light)]'
                         : pattern.type === 'WEEKLY'
-                        ? 'bg-orange-50 border-orange-200'
-                        : 'bg-yellow-50 border-yellow-200'
+                        ? 'bg-[var(--warning-light)] border-[var(--warning-light)]'
+                        : 'bg-[var(--warning-light)] border-[var(--warning-light)]'
                     }`}
                   >
                     <p className="font-medium text-sm">{pattern.description}</p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
                       Dates: {pattern.dates.join(', ')}
                     </p>
                   </div>
@@ -323,15 +323,15 @@ function AttendanceHistoryModal({
 
           {/* Recent Records */}
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">Recent Records</h4>
+            <h4 className="font-medium text-[var(--text-primary)] mb-2">Recent Records</h4>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[var(--bg-surface)]">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Period</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Remarks</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">Period</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -343,16 +343,16 @@ function AttendanceHistoryModal({
                         <span
                           className={`px-2 py-0.5 text-xs font-medium rounded ${
                             record.status === AttendanceStatus.PRESENT
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-[var(--success-light)] text-[var(--success-dark)]'
                               : record.status === AttendanceStatus.ABSENT
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-[var(--danger-light)] text-[var(--danger-dark)]'
+                              : 'bg-[var(--warning-light)] text-[var(--warning-dark)]'
                           }`}
                         >
                           {record.status}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-600">
+                      <td className="px-4 py-2 text-sm text-[var(--text-secondary)]">
                         {record.remarks || '-'}
                       </td>
                     </tr>
@@ -363,10 +363,10 @@ function AttendanceHistoryModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t bg-gray-50">
+        <div className="px-6 py-4 border-t bg-[var(--bg-surface)]">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            className="px-4 py-2 bg-[var(--text-secondary)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--border-strong)]"
           >
             Close
           </button>
@@ -380,7 +380,7 @@ function AttendanceHistoryModal({
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--chart-blue)]"></div>
     </div>
   )
 }
@@ -401,13 +401,13 @@ function Toast({
   }, [onClose])
 
   const bgColor = {
-    success: 'bg-green-500',
-    error: 'bg-red-500',
-    warning: 'bg-yellow-500',
+    success: 'bg-[var(--success)]',
+    error: 'bg-[var(--danger)]',
+    warning: 'bg-[var(--warning)]',
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 ${bgColor[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`}>
+    <div className={`fixed bottom-4 right-4 ${bgColor[type]} text-[var(--white-pure)] px-6 py-3 rounded-lg shadow-lg z-50`}>
       {message}
     </div>
   )
@@ -588,12 +588,12 @@ export default function AttendanceMarkingPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
-        <p className="text-gray-600">Record daily attendance for students</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Mark Attendance</h1>
+        <p className="text-[var(--text-secondary)]">Record daily attendance for students</p>
       </div>
 
       {/* Class Selector and Date Picker (Requirement 5.1) */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <ClassSelector
             classes={classes}
@@ -610,7 +610,7 @@ export default function AttendanceMarkingPage() {
             <button
               onClick={fetchStudents}
               disabled={!selectedClassId || loadingStudents}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loadingStudents ? 'Loading...' : 'Load Students'}
             </button>
@@ -620,20 +620,20 @@ export default function AttendanceMarkingPage() {
 
       {/* Quick Actions */}
       {students.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-4 mb-6">
           <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-sm font-medium text-gray-700">Quick Actions:</span>
+            <span className="text-sm font-medium text-[var(--text-primary)]">Quick Actions:</span>
             <button
               onClick={() => handleMarkAll(AttendanceStatus.PRESENT)}
               disabled={saving}
-              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+              className="px-3 py-1 text-sm bg-[var(--success-light)] text-[var(--chart-green)] rounded hover:bg-[var(--success)] disabled:opacity-50"
             >
               Mark All Present
             </button>
             <button
               onClick={() => handleMarkAll(AttendanceStatus.ABSENT)}
               disabled={saving}
-              className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+              className="px-3 py-1 text-sm bg-[var(--danger-light)] text-[var(--chart-red)] rounded hover:bg-[var(--danger)] disabled:opacity-50"
             >
               Mark All Absent
             </button>
@@ -641,7 +641,7 @@ export default function AttendanceMarkingPage() {
             <button
               onClick={handleSaveAttendance}
               disabled={saving || attendanceRecords.size === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {saving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -653,34 +653,34 @@ export default function AttendanceMarkingPage() {
       )}
 
       {/* Students Table (Requirement 5.2) */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border overflow-hidden">
         {loadingStudents ? (
           <LoadingSpinner />
         ) : !selectedClassId ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-[var(--text-muted)]">
             Please select a class to view students
           </div>
         ) : students.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-[var(--text-muted)]">
             No students found in this class
           </div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-[var(--bg-surface)]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Student
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Stream
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Payment
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Attendance Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   History
                 </th>
               </tr>
@@ -703,33 +703,33 @@ export default function AttendanceMarkingPage() {
 
       {/* Summary */}
       {students.length > 0 && (
-        <div className="mt-4 bg-gray-50 rounded-lg p-4">
+        <div className="mt-4 bg-[var(--bg-surface)] rounded-lg p-4">
           <div className="flex flex-wrap gap-6 text-sm">
             <div>
-              <span className="text-gray-600">Total Students:</span>{' '}
+              <span className="text-[var(--text-secondary)]">Total Students:</span>{' '}
               <span className="font-medium">{students.length}</span>
             </div>
             <div>
-              <span className="text-gray-600">Present:</span>{' '}
-              <span className="font-medium text-green-600">
+              <span className="text-[var(--text-secondary)]">Present:</span>{' '}
+              <span className="font-medium text-[var(--chart-green)]">
                 {Array.from(attendanceRecords.values()).filter(s => s === AttendanceStatus.PRESENT).length}
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Absent:</span>{' '}
-              <span className="font-medium text-red-600">
+              <span className="text-[var(--text-secondary)]">Absent:</span>{' '}
+              <span className="font-medium text-[var(--chart-red)]">
                 {Array.from(attendanceRecords.values()).filter(s => s === AttendanceStatus.ABSENT).length}
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Late:</span>{' '}
-              <span className="font-medium text-yellow-600">
+              <span className="text-[var(--text-secondary)]">Late:</span>{' '}
+              <span className="font-medium text-[var(--chart-yellow)]">
                 {Array.from(attendanceRecords.values()).filter(s => s === AttendanceStatus.LATE).length}
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Not Marked:</span>{' '}
-              <span className="font-medium text-gray-600">
+              <span className="text-[var(--text-secondary)]">Not Marked:</span>{' '}
+              <span className="font-medium text-[var(--text-secondary)]">
                 {students.length - attendanceRecords.size}
               </span>
             </div>

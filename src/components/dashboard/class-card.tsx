@@ -42,13 +42,13 @@ function StatusIndicator({ done, label }: StatusIndicatorProps) {
   return (
     <div className="flex items-center gap-1.5">
       {done ? (
-        <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" aria-hidden="true" />
+        <CheckCircle className="h-4 w-4 text-[var(--success)] dark:text-[var(--success)]" aria-hidden="true" />
       ) : (
         <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       )}
       <span className={cn(
         'text-xs',
-        done ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'
+        done ? 'text-[var(--chart-green)] dark:text-[var(--success)]' : 'text-muted-foreground'
       )}>
         {label}
       </span>

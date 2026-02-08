@@ -6,12 +6,7 @@ import { ImageKitUpload } from '@/components/ui/imagekit-upload'
 import { TeacherIdentityData } from '@/types/teacher'
 import { Gender } from '@/types/enums'
 import { cn } from '@/lib/utils'
-import { 
-  cardStyles, 
-  typography, 
-  spacing, 
-  teacherColors 
-} from '@/lib/teacher-ui-standards'
+import { createThemeStyle, getThemeClasses } from '@/lib/theme-utils'
 
 /**
  * Teacher Identity Step Component
@@ -65,7 +60,7 @@ export function TeacherIdentityStep({
   }
 
   return (
-    <div className={spacing.section}>
+    <div className="space-y-6">
       {/* Name Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
@@ -149,8 +144,16 @@ export function TeacherIdentityStep({
       </div>
 
       {/* Photo Upload with ImageKit */}
-      <div className={cn(cardStyles.base, cardStyles.normal)}>
-        <h3 className={cn(typography.sectionTitle, 'mb-3')}>Profile Photo</h3>
+      <div 
+        className="p-4 border rounded-lg"
+        style={createThemeStyle.card()}
+      >
+        <h3 
+          className="text-lg font-medium mb-3"
+          style={createThemeStyle.text('primary')}
+        >
+          Profile Photo
+        </h3>
         <ImageKitUpload
           uploadType="teacher_photo"
           entityId={teacherId || 'new'}
@@ -162,8 +165,14 @@ export function TeacherIdentityStep({
           maxSizeMB={5}
         />
         {/* Fallback URL input for manual entry */}
-        <details className={cn('mt-3', typography.caption)}>
-          <summary className={cn('cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors')}>
+        <details 
+          className="mt-3 text-sm" 
+          style={createThemeStyle.text('secondary')}
+        >
+          <summary 
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            style={createThemeStyle.text('primary')}
+          >
             Or enter photo URL manually
           </summary>
           <div className="mt-2">

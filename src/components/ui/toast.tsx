@@ -22,30 +22,51 @@ export interface ToastProps {
   onDismiss?: () => void
 }
 
+const getToastStyles = (type: ToastType) => {
+  switch (type) {
+    case 'success':
+      return {
+        backgroundColor: 'var(--success-light)',
+        borderColor: 'var(--success)',
+        textColor: 'var(--success-dark)',
+        iconColor: 'var(--success)',
+      }
+    case 'error':
+      return {
+        backgroundColor: 'var(--danger-light)',
+        borderColor: 'var(--danger)',
+        textColor: 'var(--danger-dark)',
+        iconColor: 'var(--danger)',
+      }
+    case 'warning':
+      return {
+        backgroundColor: 'var(--warning-light)',
+        borderColor: 'var(--warning)',
+        textColor: 'var(--warning-dark)',
+        iconColor: 'var(--warning)',
+      }
+    case 'info':
+      return {
+        backgroundColor: 'var(--info-light)',
+        borderColor: 'var(--info)',
+        textColor: 'var(--info-dark)',
+        iconColor: 'var(--info)',
+      }
+  }
+}
+
 const toastConfig = {
   success: {
     icon: CheckCircle,
-    containerClass: 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800',
-    textClass: 'text-green-800 dark:text-green-200',
-    iconClass: 'text-green-500 dark:text-green-400',
   },
   error: {
     icon: XCircle,
-    containerClass: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
-    textClass: 'text-red-800 dark:text-red-200',
-    iconClass: 'text-red-500 dark:text-red-400',
   },
   warning: {
     icon: AlertTriangle,
-    containerClass: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800',
-    textClass: 'text-yellow-800 dark:text-yellow-200',
-    iconClass: 'text-yellow-500 dark:text-yellow-400',
   },
   info: {
     icon: Info,
-    containerClass: 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800',
-    textClass: 'text-blue-800 dark:text-blue-200',
-    iconClass: 'text-blue-500 dark:text-blue-400',
   },
 }
 
@@ -57,6 +78,7 @@ export function Toast({
 }: ToastProps) {
   const [isVisible, setIsVisible] = React.useState(true)
   const config = toastConfig[type]
+  const styles = getToastStyles(type)
   const Icon = config.icon
 
   React.useEffect(() => {
@@ -75,12 +97,21 @@ export function Toast({
       role="alert"
       className={cn(
         'flex items-center gap-3 px-4 py-3 border rounded-lg shadow-lg',
-        'animate-in slide-in-from-top-2 fade-in duration-200',
-        config.containerClass
+        'animate-in slide-in-from-top-2 fade-in duration-200'
       )}
+      style={{
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+      }}
     >
-      <Icon className={cn('h-5 w-5 flex-shrink-0', config.iconClass)} />
-      <p className={cn('flex-1 text-sm font-medium', config.textClass)}>
+      <Icon 
+        className="h-5 w-5 flex-shrink-0" 
+        style={{ color: styles.iconColor }}
+      />
+      <p 
+        className="flex-1 text-sm font-medium"
+        style={{ color: styles.textColor }}
+      >
         {message}
       </p>
       <button
@@ -89,10 +120,8 @@ export function Toast({
           setIsVisible(false)
           onDismiss?.()
         }}
-        className={cn(
-          'flex-shrink-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
-          config.iconClass
-        )}
+        className="flex-shrink-0 p-1 rounded-md hover:opacity-80 transition-colors"
+        style={{ color: styles.iconColor }}
         aria-label="Dismiss notification"
       >
         <X className="h-4 w-4" />

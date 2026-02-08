@@ -36,10 +36,10 @@ interface StatsCardProps {
 
 function StatsCard({ title, channel, stats, variant = 'default' }: StatsCardProps) {
   const variantClasses = {
-    default: 'bg-slate-800 border-slate-700 text-slate-100',
-    success: 'bg-slate-800 border-emerald-700 text-emerald-400',
-    warning: 'bg-slate-800 border-amber-700 text-amber-400',
-    danger: 'bg-slate-800 border-red-700 text-red-400',
+    default: 'bg-slate-800 border-slate-700 text-[var(--text-primary)]',
+    success: 'bg-slate-800 border-emerald-700 text-[var(--success)]',
+    warning: 'bg-slate-800 border-amber-700 text-[var(--warning)]',
+    danger: 'bg-slate-800 border-[var(--chart-red)] text-[var(--danger)]',
   }
 
   const getChannelIcon = (channel: MessageChannel) => {
@@ -68,29 +68,29 @@ function StatsCard({ title, channel, stats, variant = 'default' }: StatsCardProp
   return (
     <div className={`p-4 rounded-lg border ${variantClasses[variant]}`}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium text-slate-400">{title}</p>
+        <p className="text-sm font-medium text-[var(--text-muted)]">{title}</p>
         {getChannelIcon(channel)}
       </div>
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span className="text-xs text-slate-500">Today</span>
+          <span className="text-xs text-[var(--text-muted)]">Today</span>
           <span className="text-lg font-semibold">{stats.sentToday.toLocaleString()}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-xs text-slate-500">This Month</span>
+          <span className="text-xs text-[var(--text-muted)]">This Month</span>
           <span className="text-lg font-semibold">{stats.sentThisMonth.toLocaleString()}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-xs text-slate-500">Failed Today</span>
-          <span className={`text-sm font-medium ${stats.failedToday > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+          <span className="text-xs text-[var(--text-muted)]">Failed Today</span>
+          <span className={`text-sm font-medium ${stats.failedToday > 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
             {stats.failedToday.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-xs text-slate-500">Delivery Rate</span>
+          <span className="text-xs text-[var(--text-muted)]">Delivery Rate</span>
           <span className={`text-sm font-medium ${
-            stats.deliveryRate >= 95 ? 'text-emerald-400' : 
-            stats.deliveryRate >= 85 ? 'text-amber-400' : 'text-red-400'
+            stats.deliveryRate >= 95 ? 'text-[var(--success)]' : 
+            stats.deliveryRate >= 85 ? 'text-[var(--warning)]' : 'text-[var(--danger)]'
           }`}>
             {stats.deliveryRate.toFixed(1)}%
           </span>
@@ -110,13 +110,13 @@ function AlertCard({ alert, onAcknowledge, onDismiss }: AlertCardProps) {
   const getSeverityColor = (severity: HubAlertSeverity) => {
     switch (severity) {
       case HubAlertSeverity.CRITICAL:
-        return 'border-red-700 bg-red-950/50 text-red-400'
+        return 'border-[var(--chart-red)] bg-[var(--danger-dark)]/50 text-[var(--danger)]'
       case HubAlertSeverity.WARNING:
-        return 'border-amber-700 bg-amber-950/50 text-amber-400'
+        return 'border-amber-700 bg-[var(--warning-dark)]/50 text-[var(--warning)]'
       case HubAlertSeverity.INFO:
-        return 'border-blue-700 bg-blue-950/50 text-blue-400'
+        return 'border-[var(--accent-hover)] bg-[var(--info-dark)]/50 text-[var(--chart-blue)]'
       default:
-        return 'border-slate-700 bg-slate-800 text-slate-400'
+        return 'border-slate-700 bg-slate-800 text-[var(--text-muted)]'
     }
   }
 
@@ -150,11 +150,11 @@ function AlertCard({ alert, onAcknowledge, onDismiss }: AlertCardProps) {
           {getSeverityIcon(alert.severity)}
           <div className="flex-1">
             <h4 className="text-sm font-medium">{alert.title}</h4>
-            <p className="text-xs text-slate-400 mt-1">{alert.message}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">{alert.message}</p>
             {alert.schoolName && (
-              <p className="text-xs text-slate-500 mt-1">School: {alert.schoolName}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">School: {alert.schoolName}</p>
             )}
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {new Date(alert.createdAt).toLocaleString()}
             </p>
           </div>
@@ -162,13 +162,13 @@ function AlertCard({ alert, onAcknowledge, onDismiss }: AlertCardProps) {
         <div className="flex space-x-1">
           <button
             onClick={() => onAcknowledge(alert.id)}
-            className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+            className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[var(--text-muted)]"
           >
             Ack
           </button>
           <button
             onClick={() => onDismiss(alert.id)}
-            className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+            className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[var(--text-muted)]"
           >
             Dismiss
           </button>
@@ -220,28 +220,28 @@ function DashboardTab({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">Queue Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-[var(--text-muted)]">Queue Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold text-slate-100">
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">
               {overview.pendingInQueue.toLocaleString()}
             </div>
-            <p className="text-xs text-slate-500 mt-1">Messages pending</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Messages pending</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">Delivery Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-[var(--text-muted)]">Delivery Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-semibold ${
-              overview.deliveryFailureRate < 5 ? 'text-emerald-400' : 
-              overview.deliveryFailureRate < 15 ? 'text-amber-400' : 'text-red-400'
+              overview.deliveryFailureRate < 5 ? 'text-[var(--success)]' : 
+              overview.deliveryFailureRate < 15 ? 'text-[var(--warning)]' : 'text-[var(--danger)]'
             }`}>
               {(100 - overview.deliveryFailureRate).toFixed(1)}%
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {overview.deliveryFailureRate.toFixed(1)}% failure rate
             </p>
           </CardContent>
@@ -249,16 +249,16 @@ function DashboardTab({
 
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-400">Bounce Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-[var(--text-muted)]">Bounce Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-semibold ${
-              overview.bounceRate < 2 ? 'text-emerald-400' : 
-              overview.bounceRate < 5 ? 'text-amber-400' : 'text-red-400'
+              overview.bounceRate < 2 ? 'text-[var(--success)]' : 
+              overview.bounceRate < 5 ? 'text-[var(--warning)]' : 'text-[var(--danger)]'
             }`}>
               {overview.bounceRate.toFixed(1)}%
             </div>
-            <p className="text-xs text-slate-500 mt-1">Email bounces</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Email bounces</p>
           </CardContent>
         </Card>
       </div>
@@ -267,12 +267,12 @@ function DashboardTab({
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium text-slate-200">
+            <CardTitle className="text-base font-medium text-[var(--text-secondary)]">
               Active Alerts ({overview.alerts.length})
             </CardTitle>
             <button
               onClick={onRefresh}
-              className="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+              className="text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[var(--text-muted)]"
             >
               Refresh
             </button>
@@ -281,13 +281,13 @@ function DashboardTab({
         <CardContent>
           {overview.alerts.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-emerald-400 mb-2">
+              <div className="text-[var(--success)] mb-2">
                 <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <p className="text-slate-400 text-sm">No active alerts</p>
-              <p className="text-slate-500 text-xs mt-1">All systems operating normally</p>
+              <p className="text-[var(--text-muted)] text-sm">No active alerts</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1">All systems operating normally</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -312,7 +312,7 @@ function DashboardTab({
 
       {/* Last Updated */}
       <div className="text-center">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[var(--text-muted)]">
           Last updated: {new Date(overview.lastUpdated).toLocaleString()}
         </p>
       </div>
@@ -457,8 +457,8 @@ export default function CommunicationHubPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-100">Communication Hub</h1>
-          <p className="text-slate-400 text-sm">Monitor and manage all messaging operations</p>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Communication Hub</h1>
+          <p className="text-[var(--text-muted)] text-sm">Monitor and manage all messaging operations</p>
         </div>
 
         {/* Skeleton for stats cards */}
@@ -485,14 +485,14 @@ export default function CommunicationHubPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-100">Communication Hub</h1>
-          <p className="text-slate-400 text-sm">Monitor and manage all messaging operations</p>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Communication Hub</h1>
+          <p className="text-[var(--text-muted)] text-sm">Monitor and manage all messaging operations</p>
         </div>
-        <div className="bg-red-950/50 border border-red-800 rounded-lg p-4">
-          <p className="text-red-400">{error}</p>
+        <div className="bg-[var(--danger-dark)]/50 border border-[var(--danger-dark)] rounded-lg p-4">
+          <p className="text-[var(--danger)]">{error}</p>
           <button
             onClick={fetchOverview}
-            className="mt-2 text-sm text-red-400 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--danger)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -508,8 +508,8 @@ export default function CommunicationHubPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto bg-slate-900 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Communication Hub</h1>
-        <p className="text-slate-400 text-sm">Monitor and manage all messaging operations</p>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Communication Hub</h1>
+        <p className="text-[var(--text-muted)] text-sm">Monitor and manage all messaging operations</p>
       </div>
 
       {/* Tabbed Interface - Requirements 10.2 */}
@@ -558,10 +558,10 @@ export default function CommunicationHubPage() {
         <TabsContent value="queues" className="mt-6">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-slate-200">Queue Monitor</CardTitle>
+              <CardTitle className="text-[var(--text-secondary)]">Queue Monitor</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-400">Queue monitoring interface will be implemented here.</p>
+              <p className="text-[var(--text-muted)]">Queue monitoring interface will be implemented here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -569,10 +569,10 @@ export default function CommunicationHubPage() {
         <TabsContent value="alerts" className="mt-6">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-slate-200">Alert Management</CardTitle>
+              <CardTitle className="text-[var(--text-secondary)]">Alert Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-400">Alert management interface will be implemented here.</p>
+              <p className="text-[var(--text-muted)]">Alert management interface will be implemented here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -580,10 +580,10 @@ export default function CommunicationHubPage() {
         <TabsContent value="templates" className="mt-6">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-slate-200">Template Management</CardTitle>
+              <CardTitle className="text-[var(--text-secondary)]">Template Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-400">Template management interface will be implemented here.</p>
+              <p className="text-[var(--text-muted)]">Template management interface will be implemented here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -591,10 +591,10 @@ export default function CommunicationHubPage() {
         <TabsContent value="reports" className="mt-6">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-slate-200">Reports & Analytics</CardTitle>
+              <CardTitle className="text-[var(--text-secondary)]">Reports & Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-400">Reports and analytics interface will be implemented here.</p>
+              <p className="text-[var(--text-muted)]">Reports and analytics interface will be implemented here.</p>
             </CardContent>
           </Card>
         </TabsContent>

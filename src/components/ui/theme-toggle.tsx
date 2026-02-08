@@ -28,9 +28,11 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
   }, [])
 
   const themes = [
+    { value: 'system' as const, label: 'System', icon: Monitor },
     { value: 'light' as const, label: 'Light', icon: Sun },
     { value: 'dark' as const, label: 'Dark', icon: Moon },
-    { value: 'system' as const, label: 'System', icon: Monitor },
+    { value: 'paper' as const, label: 'Paper', icon: Sun },
+    { value: 'contrast' as const, label: 'High Contrast', icon: Sun },
   ]
 
   const currentIcon = resolvedTheme === 'dark' ? Moon : Sun
@@ -52,7 +54,13 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 z-50">
+        <div 
+          className="absolute right-0 top-full mt-2 w-40 rounded-md border py-1 shadow-lg z-50"
+          style={{
+            backgroundColor: 'var(--bg-elevated)',
+            borderColor: 'var(--border-default)',
+          }}
+        >
           {themes.map(({ value, label, icon: Icon }) => (
             <button
               key={value}
@@ -62,9 +70,13 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
               }}
               className={cn(
                 'flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors',
-                'hover:bg-gray-100 dark:hover:bg-gray-700',
-                theme === value && 'bg-gray-100 dark:bg-gray-700 font-medium'
+                'hover:opacity-80',
+                theme === value && 'font-medium'
               )}
+              style={{
+                color: 'var(--text-primary)',
+                backgroundColor: theme === value ? 'var(--bg-surface)' : 'transparent',
+              }}
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -83,9 +95,10 @@ export function ThemeToggleSimple({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
 
   const cycleTheme = () => {
-    if (theme === 'light') setTheme('dark')
-    else if (theme === 'dark') setTheme('system')
-    else setTheme('light')
+    const themeOrder = ['system', 'light', 'dark', 'paper', 'contrast'] as const
+    const currentIndex = themeOrder.indexOf(theme)
+    const nextIndex = (currentIndex + 1) % themeOrder.length
+    setTheme(themeOrder[nextIndex])
   }
 
   return (

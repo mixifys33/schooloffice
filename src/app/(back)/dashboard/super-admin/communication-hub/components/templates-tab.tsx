@@ -27,12 +27,12 @@ interface TemplatesTabProps {
 
 function ChannelBadge({ channel }: { channel: MessageChannel }) {
   const colors: Record<MessageChannel, string> = {
-    [MessageChannel.SMS]: 'bg-blue-900/50 text-blue-400',
-    [MessageChannel.WHATSAPP]: 'bg-green-900/50 text-green-400',
-    [MessageChannel.EMAIL]: 'bg-purple-900/50 text-purple-400'
+    [MessageChannel.SMS]: 'bg-[var(--info-dark)]/50 text-[var(--chart-blue)]',
+    [MessageChannel.WHATSAPP]: 'bg-[var(--success-dark)]/50 text-[var(--success)]',
+    [MessageChannel.EMAIL]: 'bg-[var(--info-dark)]/50 text-[var(--chart-purple)]'
   }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[channel] || 'bg-slate-900/50 text-slate-400'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[channel] || 'bg-slate-900/50 text-[var(--text-muted)]'}`}>
       {channel}
     </span>
   )
@@ -44,8 +44,8 @@ function VariableHighlighter({ content }: { content: string }) {
     <div className="font-mono text-sm whitespace-pre-wrap">
       {parts.map((part, i) => 
         part.match(/^\{\{[^}]+\}\}$/) 
-          ? <span key={i} className="bg-blue-900/50 text-blue-300 px-1 rounded">{part}</span>
-          : <span key={i} className="text-slate-300">{part}</span>
+          ? <span key={i} className="bg-[var(--info-dark)]/50 text-[var(--info)] px-1 rounded">{part}</span>
+          : <span key={i} className="text-[var(--text-muted)]">{part}</span>
       )}
     </div>
   )
@@ -94,19 +94,19 @@ function TemplateEditor({
   return (
     <Card className="bg-slate-800 border-slate-700">
       <CardHeader>
-        <CardTitle className="text-slate-200">
+        <CardTitle className="text-[var(--text-secondary)]">
           {isNew ? 'Create New Template' : `Edit: ${template?.name}`}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Name</label>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Name</label>
             <Input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="bg-slate-700 border-slate-600" />
           </div>
           <div>
-            <label className="text-sm text-slate-400 block mb-1">Channel</label>
-            <select value={formData.channel} onChange={(e) => setFormData(p => ({ ...p, channel: e.target.value as MessageChannel }))} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300" disabled={!isNew}>
+            <label className="text-sm text-[var(--text-muted)] block mb-1">Channel</label>
+            <select value={formData.channel} onChange={(e) => setFormData(p => ({ ...p, channel: e.target.value as MessageChannel }))} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)]" disabled={!isNew}>
               <option value={MessageChannel.SMS}>SMS</option>
               <option value={MessageChannel.WHATSAPP}>WhatsApp</option>
               <option value={MessageChannel.EMAIL}>Email</option>
@@ -114,31 +114,31 @@ function TemplateEditor({
           </div>
         </div>
         <div>
-          <label className="text-sm text-slate-400 block mb-1">Content</label>
-          <textarea value={formData.content} onChange={(e) => setFormData(p => ({ ...p, content: e.target.value }))} rows={6} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300 font-mono text-sm" placeholder="Dear {{name}}, your payment of {{amount}} is due." />
+          <label className="text-sm text-[var(--text-muted)] block mb-1">Content</label>
+          <textarea value={formData.content} onChange={(e) => setFormData(p => ({ ...p, content: e.target.value }))} rows={6} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)] font-mono text-sm" placeholder="Dear {{name}}, your payment of {{amount}} is due." />
         </div>
         {variables.length > 0 && (
           <div className="border border-slate-700 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-slate-200 mb-3">Preview</h4>
+            <h4 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Preview</h4>
             <div className="grid grid-cols-2 gap-3 mb-3">
               {variables.map(v => (
                 <Input key={v} placeholder={v} value={previewData[v] || ''} onChange={(e) => setPreviewData(p => ({ ...p, [v]: e.target.value }))} className="bg-slate-700 border-slate-600 text-sm" />
               ))}
             </div>
             <Button onClick={handlePreview} variant="outline" size="sm" className="bg-slate-700 border-slate-600">Preview</Button>
-            {showPreview && <div className="mt-3 p-3 bg-slate-900/50 rounded text-sm text-slate-200">{previewContent}</div>}
+            {showPreview && <div className="mt-3 p-3 bg-slate-900/50 rounded text-sm text-[var(--text-secondary)]">{previewContent}</div>}
           </div>
         )}
         <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
           <div>
-            <p className="text-sm text-slate-200">Mandatory</p>
-            <p className="text-xs text-slate-400">Schools must use this template</p>
+            <p className="text-sm text-[var(--text-secondary)]">Mandatory</p>
+            <p className="text-xs text-[var(--text-muted)]">Schools must use this template</p>
           </div>
           <input type="checkbox" checked={formData.isMandatory} onChange={(e) => setFormData(p => ({ ...p, isMandatory: e.target.checked }))} className="w-5 h-5" />
         </div>
         <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !formData.name || !formData.content} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={handleSave} disabled={saving || !formData.name || !formData.content} className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)] text-[var(--white-pure)]">
             {saving ? 'Saving...' : isNew ? 'Create' : 'Save'}
           </Button>
         </div>
@@ -168,8 +168,8 @@ function VersionHistory({ templateId, onRevert }: { templateId: string; onRevert
         <div key={v.id} className="border border-slate-700 rounded-lg p-3 bg-slate-800/50">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-sm font-medium text-slate-200">v{v.version}</span>
-              <span className="text-xs text-slate-500 ml-2">{new Date(v.createdAt).toLocaleString()}</span>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">v{v.version}</span>
+              <span className="text-xs text-[var(--text-muted)] ml-2">{new Date(v.createdAt).toLocaleString()}</span>
             </div>
             <div className="flex space-x-2">
               <Button size="sm" variant="outline" onClick={() => setExpanded(expanded === v.id ? null : v.id)} className="bg-slate-700 border-slate-600 text-xs">
@@ -181,7 +181,7 @@ function VersionHistory({ templateId, onRevert }: { templateId: string; onRevert
           {expanded === v.id && <div className="mt-3 p-3 bg-slate-900/50 rounded"><VariableHighlighter content={v.content} /></div>}
         </div>
       ))}
-      {versions.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No version history</p>}
+      {versions.length === 0 && <p className="text-[var(--text-muted)] text-sm text-center py-4">No version history</p>}
     </div>
   )
 }
@@ -226,11 +226,11 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Template Management</h2>
-          <p className="text-sm text-slate-400">Create and manage message templates</p>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Template Management</h2>
+          <p className="text-sm text-[var(--text-muted)]">Create and manage message templates</p>
         </div>
         {view === 'list' && (
-          <Button onClick={() => setView('create')} className="bg-blue-600 hover:bg-blue-700 text-white">New Template</Button>
+          <Button onClick={() => setView('create')} className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)] text-[var(--white-pure)]">New Template</Button>
         )}
       </div>
 
@@ -242,7 +242,7 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
                 <div className="md:col-span-2">
                   <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-slate-700 border-slate-600" />
                 </div>
-                <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value as MessageChannel | '')} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-300">
+                <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value as MessageChannel | '')} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-[var(--text-muted)]">
                   <option value="">All Channels</option>
                   <option value={MessageChannel.SMS}>SMS</option>
                   <option value={MessageChannel.WHATSAPP}>WhatsApp</option>
@@ -258,18 +258,18 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-sm font-medium text-slate-100">{t.name}</h3>
+                      <h3 className="text-sm font-medium text-[var(--text-primary)]">{t.name}</h3>
                       <div className="flex items-center space-x-2 mt-1">
                         <ChannelBadge channel={t.channel} />
-                        {t.isMandatory && <span className="text-xs text-amber-400">Mandatory</span>}
-                        <span className="text-xs text-slate-500">v{t.version}</span>
+                        {t.isMandatory && <span className="text-xs text-[var(--warning)]">Mandatory</span>}
+                        <span className="text-xs text-[var(--text-muted)]">v{t.version}</span>
                       </div>
                     </div>
                     <div className="flex space-x-1">
-                      <button onClick={() => { setSelected(t); setView('edit') }} className="p-1 text-slate-400 hover:text-slate-200" title="Edit">
+                      <button onClick={() => { setSelected(t); setView('edit') }} className="p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)]" title="Edit">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
-                      <button onClick={() => { setSelected(t); setView('versions') }} className="p-1 text-slate-400 hover:text-slate-200" title="History">
+                      <button onClick={() => { setSelected(t); setView('versions') }} className="p-1 text-[var(--text-muted)] hover:text-[var(--text-secondary)]" title="History">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       </button>
                     </div>
@@ -277,7 +277,7 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
                   <div className="bg-slate-900/50 rounded p-2 mb-3">
                     <VariableHighlighter content={t.content.substring(0, 100) + (t.content.length > 100 ? '...' : '')} />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex justify-between text-xs text-[var(--text-muted)]">
                     <span>{t.variables.length} variable(s)</span>
                     <span>{t.assignedSchools.length} school(s)</span>
                   </div>
@@ -289,7 +289,7 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
           {filtered.length === 0 && (
             <Card className="bg-slate-800 border-slate-700">
               <CardContent className="py-12 text-center">
-                <p className="text-slate-400">No templates found</p>
+                <p className="text-[var(--text-muted)]">No templates found</p>
               </CardContent>
             </Card>
           )}
@@ -302,7 +302,7 @@ export default function TemplatesTab({ templates, onCreateTemplate, onUpdateTemp
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-slate-200">Version History: {selected.name}</CardTitle>
+              <CardTitle className="text-[var(--text-secondary)]">Version History: {selected.name}</CardTitle>
               <Button variant="outline" onClick={() => { setView('list'); setSelected(null) }}>Back</Button>
             </div>
           </CardHeader>

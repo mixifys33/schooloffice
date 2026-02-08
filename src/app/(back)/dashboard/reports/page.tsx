@@ -143,10 +143,20 @@ export default function ReportsPage() {
       if (classId) params.set('classId', classId)
       if (termId) params.set('termId', termId)
 
-      const response = await fetch(`/api/reports?${params}`)
+      // Add timeout to prevent hanging
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
+      const response = await fetch(`/api/reports?${params}`, {
+        signal: controller.signal,
+        credentials: 'include' // Include cookies/session
+      })
+
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch results data')
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch results`)
       }
 
       const data: ReportsResponse = await response.json()
@@ -156,7 +166,21 @@ export default function ReportsPage() {
       setError(null)
     } catch (err) {
       console.error('Error fetching results:', err)
-      setError('Unable to load results data. Please try again.')
+      let errorMessage = 'Unable to load results data. Please try again.'
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timed out. The server may be experiencing high load.'
+        } else {
+          errorMessage = err.message
+        }
+      }
+      
+      setError(errorMessage)
+      // Set empty state on error
+      setResults([])
+      setPagination({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
+      setSummary({ totalStudents: 0, publishedReports: 0, unpublishedReports: 0, paidStudents: 0, unpaidStudents: 0 })
     } finally {
       setLoading(false)
       setSearchLoading(false)
@@ -167,6 +191,10 @@ export default function ReportsPage() {
   useEffect(() => {
     if (selectedTermId) {
       fetchResults(1, searchQuery, selectedClassId, selectedTermId)
+    } else {
+      // If no term is selected, still try to fetch with empty termId
+      // The API will handle finding the most recent term
+      fetchResults(1, searchQuery, selectedClassId, '')
     }
   }, [selectedTermId, selectedClassId, fetchResults, searchQuery])
 
@@ -306,11 +334,11 @@ export default function ReportsPage() {
       hideOnMobile: true,
       render: (value) => (
         <span className={`font-medium ${
-          value === 'A' ? 'text-green-600' :
-          value === 'B' ? 'text-blue-600' :
-          value === 'C' ? 'text-yellow-600' :
-          value === 'D' ? 'text-orange-600' :
-          'text-red-600'
+          value === 'A' ? 'text-[var(--chart-green)]' :
+          value === 'B' ? 'text-[var(--chart-blue)]' :
+          value === 'C' ? 'text-[var(--chart-yellow)]' :
+          value === 'D' ? 'text-[var(--chart-yellow)]' :
+          'text-[var(--chart-red)]'
         }`}>
           {value || '-'}
         </span>
@@ -407,21 +435,21 @@ export default function ReportsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Total Students</div>
           <div className="text-2xl font-bold">{summary.totalStudents}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Published Reports</div>
-          <div className="text-2xl font-bold text-green-600">{summary.publishedReports}</div>
+          <div className="text-2xl font-bold text-[var(--chart-green)]">{summary.publishedReports}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Paid Students</div>
-          <div className="text-2xl font-bold text-green-600">{summary.paidStudents}</div>
+          <div className="text-2xl font-bold text-[var(--chart-green)]">{summary.paidStudents}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border p-4">
           <div className="text-sm text-muted-foreground">Unpaid (Cannot Send)</div>
-          <div className="text-2xl font-bold text-red-600">{summary.unpaidStudents}</div>
+          <div className="text-2xl font-bold text-[var(--chart-red)]">{summary.unpaidStudents}</div>
         </div>
       </div>
 
@@ -466,9 +494,9 @@ export default function ReportsPage() {
             <ChevronDown className="h-4 w-4" />
           </Button>
           {showClassDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-10 mt-1 w-full bg-[var(--bg-main)] dark:bg-[var(--border-strong)] border rounded-md shadow-lg max-h-60 overflow-auto">
               <button
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="w-full px-4 py-2 text-left hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
                 onClick={() => handleClassChange('')}
               >
                 All Classes
@@ -476,7 +504,7 @@ export default function ReportsPage() {
               {classes.map((cls) => (
                 <button
                   key={cls.id}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full px-4 py-2 text-left hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
                   onClick={() => handleClassChange(cls.id)}
                 >
                   {cls.name}
@@ -500,11 +528,11 @@ export default function ReportsPage() {
             <ChevronDown className="h-4 w-4" />
           </Button>
           {showTermDropdown && (
-            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-10 mt-1 w-full bg-[var(--bg-main)] dark:bg-[var(--border-strong)] border rounded-md shadow-lg max-h-60 overflow-auto">
               {terms.map((term) => (
                 <button
                   key={term.id}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full px-4 py-2 text-left hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
                   onClick={() => handleTermChange(term.id)}
                 >
                   {term.name} - {term.academicYear}

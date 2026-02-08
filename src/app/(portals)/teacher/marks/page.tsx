@@ -17,13 +17,16 @@ import { Button } from '@/components/ui/button'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 
 /**
- * Marks Entry Page for Teacher Portal
+ * Assessment & Marks Entry Page for Teacher Portal
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ * ENHANCED: Support for CA entries, multiple assessment types, and proper grading logic
  * - Display only students in assigned class
  * - Allow draft saves while term is active and results unpublished
  * - Implement final submission with administration notification
  * - Show read-only mode after results publication
  * - Display lock message when attempting edit after publication
+ * - Support multiple CA entries per subject
+ * - Proper CA (20%) and Exam (80%) calculation
  */
 
 interface StudentMark {
@@ -360,23 +363,23 @@ export default function MarksEntryPage() {
       {/* Back Navigation */}
       <Link
         href="/teacher"
-        className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Dashboard
       </Link>
 
       {/* Page Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div className="p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg">
+            <BookOpen className="h-6 w-6 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
               Enter Marks
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
               Record student marks for your assigned classes and subjects
             </p>
           </div>
@@ -384,17 +387,17 @@ export default function MarksEntryPage() {
       </div>
 
       {/* Selection Controls */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
         <div className="grid gap-4 sm:grid-cols-3">
           {/* Class Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
               Class
             </label>
             <select
               value={selectedClassId}
               onChange={(e) => handleClassChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
             >
               <option value="">Select a class</option>
               {uniqueClasses.map((cls) => (
@@ -407,14 +410,14 @@ export default function MarksEntryPage() {
 
           {/* Subject Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
               Subject
             </label>
             <select
               value={selectedSubjectId}
               onChange={(e) => handleSubjectChange(e.target.value)}
               disabled={!selectedClassId}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select a subject</option>
               {subjectsForClass.map((subject) => (
@@ -427,14 +430,14 @@ export default function MarksEntryPage() {
 
           {/* Exam Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
               Exam
             </label>
             <select
               value={selectedExamId}
               onChange={(e) => setSelectedExamId(e.target.value)}
               disabled={!selectedSubjectId}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select an exam</option>
               {exams.map((exam) => (
@@ -449,8 +452,8 @@ export default function MarksEntryPage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)] border border-[var(--success-light)] dark:border-[var(--success-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-green)] dark:text-[var(--success)]">
             <CheckCircle className="h-5 w-5" />
             <span>{successMessage}</span>
           </div>
@@ -459,8 +462,8 @@ export default function MarksEntryPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
           </div>
@@ -477,11 +480,11 @@ export default function MarksEntryPage() {
 
       {/* Marks Entry Table */}
       {marksData && !loading && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
           {/* Lock/Status Banner */}
           {marksData.lockMessage && (
-            <div className="bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800 p-4">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] border-b border-amber-200 dark:border-amber-800 p-4">
+              <div className="flex items-center gap-2 text-[var(--warning-dark)] dark:text-[var(--warning)]">
                 <Lock className="h-5 w-5" />
                 <span>{marksData.lockMessage}</span>
               </div>
@@ -490,8 +493,8 @@ export default function MarksEntryPage() {
 
           {/* Submitted Status */}
           {marksData.submittedAt && !marksData.isPublished && (
-            <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 p-4">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+            <div className="bg-[var(--info-light)] dark:bg-[var(--info-dark)] border-b border-[var(--info-light)] dark:border-[var(--info-dark)] p-4">
+              <div className="flex items-center gap-2 text-[var(--accent-hover)] dark:text-[var(--info)]">
                 <CheckCircle className="h-5 w-5" />
                 <span>
                   Marks submitted on {new Date(marksData.submittedAt).toLocaleDateString('en-UG', {
@@ -508,8 +511,8 @@ export default function MarksEntryPage() {
 
           {/* Info Banner */}
           {marksData.canEdit && (
-            <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
+            <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] border-b border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
+              <div className="flex items-center gap-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)] text-sm">
                 <Info className="h-4 w-4" />
                 <span>
                   Enter marks out of {marksData.maxScore}. Save as draft to continue later, or submit final marks when complete.
@@ -519,13 +522,13 @@ export default function MarksEntryPage() {
           )}
 
           {/* Table Header */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h2 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                   {marksData.class.name} - {marksData.subject.name}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                   {marksData.exam.name} • {marksData.students.length} students
                 </p>
               </div>
@@ -560,40 +563,40 @@ export default function MarksEntryPage() {
           {/* Marks Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+              <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     #
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     Student
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     Admission No.
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     Score (/{marksData.maxScore})
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     Grade
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {marksData.students.map((student, index) => (
-                  <tr key={student.studentId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  <tr key={student.studentId} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
+                    <td className="px-4 py-3 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                       {index + 1}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                         {student.studentName}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                       {student.admissionNumber}
                     </td>
                     <td className="px-4 py-3">
@@ -605,29 +608,29 @@ export default function MarksEntryPage() {
                           step="0.5"
                           value={getMarkValue(student)}
                           onChange={(e) => handleMarkChange(student.studentId, e.target.value)}
-                          className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-20 px-2 py-1 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
                           placeholder="-"
                         />
                       ) : (
-                        <span className="text-gray-900 dark:text-white">
+                        <span className="text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                           {student.score !== null ? student.score : '-'}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                       {student.grade || '-'}
                     </td>
                     <td className="px-4 py-3">
                       {student.isDraft ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] text-[var(--warning-dark)] dark:text-[var(--warning)]">
                           Draft
                         </span>
                       ) : student.score !== null ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--success-light)] dark:bg-[var(--success-dark)] text-[var(--chart-green)] dark:text-[var(--success)]">
                           Saved
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                           Pending
                         </span>
                       )}
@@ -641,8 +644,8 @@ export default function MarksEntryPage() {
           {/* Empty State */}
           {marksData.students.length === 0 && (
             <div className="p-8 text-center">
-              <BookOpen className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">No students found in this class</p>
+              <BookOpen className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+              <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No students found in this class</p>
             </div>
           )}
         </div>
@@ -650,12 +653,12 @@ export default function MarksEntryPage() {
 
       {/* No Selection State */}
       {!selectedExamId && !loading && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
-          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8 text-center">
+          <BookOpen className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2">
             Select Class, Subject, and Exam
           </h3>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Choose a class, subject, and exam from the dropdowns above to start entering marks.
           </p>
         </div>

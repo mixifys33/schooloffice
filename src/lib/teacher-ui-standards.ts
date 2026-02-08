@@ -15,41 +15,41 @@ export const teacherColors = {
   primary: {
     bg: 'bg-slate-700 dark:bg-slate-600',
     bgHover: 'hover:bg-slate-800 dark:hover:bg-slate-500',
-    text: 'text-white',
+    text: 'text-[var(--white-pure)]',
     border: 'border-slate-700 dark:border-slate-600',
   },
   // Secondary/outline colors
   secondary: {
     bg: 'bg-slate-100 dark:bg-slate-800',
     bgHover: 'hover:bg-slate-200 dark:hover:bg-slate-700',
-    text: 'text-slate-700 dark:text-slate-300',
+    text: 'text-[var(--text-primary)] dark:text-[var(--text-muted)]',
     border: 'border-slate-300 dark:border-slate-600',
   },
   // Status colors (muted versions)
   success: {
-    bg: 'bg-emerald-50 dark:bg-emerald-950/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
+    bg: 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30',
+    text: 'text-[var(--success-dark)] dark:text-[var(--success)]',
     border: 'border-emerald-200 dark:border-emerald-800',
   },
   warning: {
-    bg: 'bg-amber-50 dark:bg-amber-950/30',
-    text: 'text-amber-700 dark:text-amber-400',
+    bg: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30',
+    text: 'text-[var(--warning-dark)] dark:text-[var(--warning)]',
     border: 'border-amber-200 dark:border-amber-800',
   },
   error: {
     bg: 'bg-rose-50 dark:bg-rose-950/30',
-    text: 'text-rose-700 dark:text-rose-400',
+    text: 'text-[var(--chart-red)] dark:text-[var(--danger)]',
     border: 'border-rose-200 dark:border-rose-800',
   },
   info: {
     bg: 'bg-sky-50 dark:bg-sky-950/30',
-    text: 'text-sky-700 dark:text-sky-400',
+    text: 'text-[var(--accent-hover)] dark:text-[var(--info)]',
     border: 'border-sky-200 dark:border-sky-800',
   },
   // Neutral/disabled colors
   disabled: {
     bg: 'bg-slate-100 dark:bg-slate-800',
-    text: 'text-slate-400 dark:text-slate-500',
+    text: 'text-[var(--text-muted)] dark:text-[var(--text-muted)]',
     border: 'border-slate-200 dark:border-slate-700',
   },
 } as const
@@ -60,15 +60,15 @@ export const teacherColors = {
  */
 export const buttonStates = {
   enabled: {
-    primary: 'bg-slate-700 dark:bg-slate-600 text-white hover:bg-slate-800 dark:hover:bg-slate-500 cursor-pointer',
-    secondary: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer',
-    outline: 'bg-transparent text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer',
+    primary: 'bg-slate-700 dark:bg-slate-600 text-[var(--white-pure)] hover:bg-slate-800 dark:hover:bg-slate-500 cursor-pointer',
+    secondary: 'bg-[var(--bg-main)] dark:bg-slate-800 text-[var(--text-primary)] dark:text-[var(--text-muted)] border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer',
+    outline: 'bg-transparent text-[var(--text-primary)] dark:text-[var(--text-muted)] border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer',
   },
   disabled: {
     // Requirement 12.2: Clear visual distinction for disabled state
-    primary: 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-60',
-    secondary: 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-60',
-    outline: 'bg-transparent text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-60',
+    primary: 'bg-slate-300 dark:bg-slate-700 text-[var(--text-muted)] dark:text-[var(--text-muted)] cursor-not-allowed opacity-60',
+    secondary: 'bg-slate-100 dark:bg-slate-800 text-[var(--text-muted)] dark:text-[var(--text-muted)] border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-60',
+    outline: 'bg-transparent text-[var(--text-muted)] dark:text-[var(--text-muted)] border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-60',
   },
   // Requirement 12.3: Hidden state for non-permitted actions
   hidden: 'hidden',
@@ -79,7 +79,7 @@ export const buttonStates = {
  * Requirement 12.1: Dense but clean layout
  */
 export const cardStyles = {
-  base: 'bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800',
+  base: 'bg-[var(--bg-main)] dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800',
   compact: 'p-4', // Dense padding
   normal: 'p-5',
   header: 'pb-3 border-b border-slate-100 dark:border-slate-800',
@@ -91,11 +91,11 @@ export const cardStyles = {
  * Requirement 12.2: Clear visual distinction for states
  */
 export const statusBadgeStyles = {
-  done: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  pending: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
-  locked: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
-  active: 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800',
-  error: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800',
+  done: 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 text-[var(--success-dark)] dark:text-[var(--success)] border-emerald-200 dark:border-emerald-800',
+  pending: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 text-[var(--warning-dark)] dark:text-[var(--warning)] border-amber-200 dark:border-amber-800',
+  locked: 'bg-slate-100 dark:bg-slate-800 text-[var(--text-muted)] dark:text-[var(--text-muted)] border-slate-200 dark:border-slate-700',
+  active: 'bg-sky-100 dark:bg-sky-900/30 text-[var(--accent-hover)] dark:text-[var(--info)] border-sky-200 dark:border-sky-800',
+  error: 'bg-rose-100 dark:bg-rose-900/30 text-[var(--chart-red)] dark:text-[var(--danger)] border-rose-200 dark:border-rose-800',
 } as const
 
 /**
@@ -185,6 +185,7 @@ export const transitions = {
  * Requirement 12.1: Dense but clean layout
  */
 export const spacing = {
+  page: 'p-4 sm:p-6', // Page-level padding
   section: 'space-y-4', // Reduced from space-y-6
   card: 'space-y-3',
   form: 'space-y-3',
@@ -196,12 +197,15 @@ export const spacing = {
  * Typography for clean, readable text
  */
 export const typography = {
-  pageTitle: 'text-lg font-semibold text-slate-900 dark:text-white',
-  sectionTitle: 'text-base font-medium text-slate-900 dark:text-white',
-  label: 'text-sm font-medium text-slate-700 dark:text-slate-300',
-  body: 'text-sm text-slate-600 dark:text-slate-400',
-  caption: 'text-xs text-slate-500 dark:text-slate-400',
-  error: 'text-sm text-rose-600 dark:text-rose-400',
+  pageTitle: 'text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]',
+  subtitle: 'text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]',
+  sectionTitle: 'text-base font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]',
+  h2: 'text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]',
+  h3: 'text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]',
+  label: 'text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]',
+  body: 'text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]',
+  caption: 'text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]',
+  error: 'text-sm text-[var(--chart-red)] dark:text-[var(--danger)]',
 } as const
 
 /**

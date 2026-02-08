@@ -95,9 +95,9 @@ export default function StudentFeesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Fees Status</h1>
-        <p className="text-gray-600 mt-1">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm p-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">My Fees Status</h1>
+        <p className="text-[var(--text-secondary)] mt-1">
           {student.className} {student.streamName && `(${student.streamName})`} • {student.admissionNumber}
         </p>
       </div>
@@ -106,35 +106,35 @@ export default function StudentFeesPage() {
       <div
         className={`rounded-lg shadow-sm p-6 ${
           currentTerm.hasArrears
-            ? 'bg-red-50 border border-red-200'
-            : 'bg-green-50 border border-green-200'
+            ? 'bg-[var(--danger-light)] border border-[var(--danger-light)]'
+            : 'bg-[var(--success-light)] border border-[var(--success-light)]'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="text-sm text-gray-600">{currentTerm.name}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{currentTerm.name}</p>
             <p
               className="text-4xl font-bold mt-1"
-              style={{ color: currentTerm.hasArrears ? '#dc2626' : '#16a34a' }}
+              style={{ color: currentTerm.hasArrears ? 'var(--chart-red)' : '#16a34a' }}
             >
               {formatCurrency(currentTerm.balance)}
             </p>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
               {currentTerm.hasArrears ? 'Outstanding Balance' : 'Fully Paid'}
             </p>
             {currentTerm.hasArrears && currentTerm.dueDate && (
-              <p className="text-sm text-red-600 mt-2">
+              <p className="text-sm text-[var(--chart-red)] mt-2">
                 ⚠️ Due by: {formatDate(currentTerm.dueDate)}
               </p>
             )}
           </div>
           <div className="text-right">
             <div className="space-y-1">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[var(--text-secondary)]">
                 Total Fees: <span className="font-semibold">{formatCurrency(currentTerm.totalFees)}</span>
               </p>
-              <p className="text-sm text-gray-600">
-                Total Paid: <span className="font-semibold text-green-600">{formatCurrency(currentTerm.totalPaid)}</span>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Total Paid: <span className="font-semibold text-[var(--chart-green)]">{formatCurrency(currentTerm.totalPaid)}</span>
               </p>
             </div>
           </div>
@@ -142,14 +142,14 @@ export default function StudentFeesPage() {
 
         {/* Payment Progress Bar */}
         <div className="mt-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-1">
             <span>Payment Progress</span>
             <span>{paymentPercentage.toFixed(0)}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-[var(--bg-surface)] rounded-full h-3">
             <div
               className={`h-3 rounded-full transition-all ${
-                paymentPercentage >= 100 ? 'bg-green-500' : 'bg-blue-500'
+                paymentPercentage >= 100 ? 'bg-[var(--success)]' : 'bg-[var(--accent-primary)]'
               }`}
               style={{ width: `${Math.min(paymentPercentage, 100)}%` }}
             />
@@ -158,7 +158,7 @@ export default function StudentFeesPage() {
       </div>
 
       {/* Tabs for Fee Structure and Payments */}
-      <Tabs defaultValue="structure" className="bg-white rounded-lg shadow-sm">
+      <Tabs defaultValue="structure" className="bg-[var(--bg-main)] rounded-lg shadow-sm">
         <TabsList className="w-full justify-start border-b rounded-none px-4">
           <TabsTrigger value="structure">Fee Structure</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
@@ -167,23 +167,23 @@ export default function StudentFeesPage() {
 
         {/* Fee Structure Tab */}
         <TabsContent value="structure" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             {currentTerm.name} Fee Structure
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Fee Item</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Type</th>
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Fee Item</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Amount</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-[var(--text-muted)]">Type</th>
                 </tr>
               </thead>
               <tbody>
                 {currentTerm.feeStructure.map((item, index) => (
-                  <tr key={index} className="border-b border-gray-100">
-                    <td className="py-3 px-4 text-sm text-gray-900">{item.name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-900 text-right">
+                  <tr key={index} className="border-b border-[var(--border-default)]">
+                    <td className="py-3 px-4 text-sm text-[var(--text-primary)]">{item.name}</td>
+                    <td className="py-3 px-4 text-sm text-[var(--text-primary)] text-right">
                       {formatCurrency(item.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -193,9 +193,9 @@ export default function StudentFeesPage() {
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="py-3 px-4 text-sm text-gray-900">Total</td>
-                  <td className="py-3 px-4 text-sm text-gray-900 text-right">
+                <tr className="bg-[var(--bg-surface)] font-semibold">
+                  <td className="py-3 px-4 text-sm text-[var(--text-primary)]">Total</td>
+                  <td className="py-3 px-4 text-sm text-[var(--text-primary)] text-right">
                     {formatCurrency(currentTerm.totalFees)}
                   </td>
                   <td></td>
@@ -207,11 +207,11 @@ export default function StudentFeesPage() {
 
         {/* Payment History Tab */}
         <TabsContent value="payments" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Payment History</h3>
           {currentTerm.payments.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No payments recorded yet.</p>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-[var(--text-muted)]">No payments recorded yet.</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
                 Contact your parent/guardian to make a payment.
               </p>
             </div>
@@ -220,32 +220,32 @@ export default function StudentFeesPage() {
               {currentTerm.payments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  className="flex items-center justify-between p-4 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-default)]"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl">
+                    <div className="w-10 h-10 bg-[var(--success-light)] rounded-full flex items-center justify-center text-xl">
                       {getPaymentMethodIcon(payment.method)}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-[var(--text-primary)]">
                         {formatCurrency(payment.amount)}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-[var(--text-muted)]">
                         {getPaymentMethodLabel(payment.method)} • {payment.reference}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-blue-600">{payment.receiptNumber}</p>
-                    <p className="text-sm text-gray-500">{formatDate(payment.date)}</p>
+                    <p className="text-sm font-medium text-[var(--chart-blue)]">{payment.receiptNumber}</p>
+                    <p className="text-sm text-[var(--text-muted)]">{formatDate(payment.date)}</p>
                   </div>
                 </div>
               ))}
 
               {/* Total Paid Summary */}
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200 mt-4">
-                <span className="font-medium text-gray-900">Total Paid This Term</span>
-                <span className="font-bold text-green-600">
+              <div className="flex items-center justify-between p-4 bg-[var(--success-light)] rounded-lg border border-[var(--success-light)] mt-4">
+                <span className="font-medium text-[var(--text-primary)]">Total Paid This Term</span>
+                <span className="font-bold text-[var(--chart-green)]">
                   {formatCurrency(currentTerm.totalPaid)}
                 </span>
               </div>
@@ -255,19 +255,19 @@ export default function StudentFeesPage() {
 
         {/* Previous Terms Tab */}
         <TabsContent value="previous" className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Previous Terms</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Previous Terms</h3>
           {previousTerms.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No previous term records.</p>
+            <p className="text-[var(--text-muted)] text-center py-8">No previous term records.</p>
           ) : (
             <div className="space-y-3">
               {previousTerms.map((term, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-[var(--bg-surface)] rounded-lg"
                 >
                   <div>
-                    <p className="font-medium text-gray-900">{term.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-[var(--text-primary)]">{term.name}</p>
+                    <p className="text-sm text-[var(--text-muted)]">
                       Paid: {formatCurrency(term.totalPaid)} / {formatCurrency(term.totalFees)}
                     </p>
                   </div>
@@ -283,13 +283,13 @@ export default function StudentFeesPage() {
 
       {/* Payment Instructions */}
       {currentTerm.hasArrears && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">💡 Payment Information</h3>
-          <p className="text-gray-700 mb-4">
+        <div className="bg-[var(--info-light)] border border-[var(--info-light)] rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">💡 Payment Information</h3>
+          <p className="text-[var(--text-primary)] mb-4">
             Please contact your parent or guardian to clear the outstanding balance. Payments can be
             made through:
           </p>
-          <ul className="space-y-2 text-gray-700">
+          <ul className="space-y-2 text-[var(--text-primary)]">
             <li className="flex items-center gap-2">
               <span>💵</span>
               <span>Cash payment at the school bursar&apos;s office</span>

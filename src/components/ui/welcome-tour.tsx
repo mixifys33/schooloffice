@@ -127,14 +127,14 @@ export function WelcomeTour({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-[var(--text-primary)]/50 backdrop-blur-sm"
         aria-hidden="true"
       />
 
       {/* Highlight ring around target element */}
       {highlightedElement && step.placement !== 'center' && (
         <div
-          className="fixed z-50 rounded-lg ring-4 ring-blue-500 ring-offset-4 ring-offset-transparent pointer-events-none"
+          className="fixed z-50 rounded-lg ring-4 ring-[var(--accent-primary)] ring-offset-4 ring-offset-transparent pointer-events-none"
           style={{
             top: highlightedElement.getBoundingClientRect().top - 4,
             left: highlightedElement.getBoundingClientRect().left - 4,
@@ -171,22 +171,22 @@ export function WelcomeTour({
             </Button>
           </div>
           {/* Progress bar */}
-          <div className="mt-2 h-1 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+          <div className="mt-2 h-1 w-full rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
             <div
-              className="h-1 rounded-full bg-blue-600 transition-all duration-300"
+              className="h-1 rounded-full bg-[var(--chart-blue)] transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
         </CardHeader>
 
         <CardContent id="tour-content" className="pb-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             {step.content}
           </p>
         </CardContent>
 
         <CardFooter className="flex items-center justify-between pt-0">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[var(--text-muted)]">
             Step {currentStep + 1} of {sortedSteps.length}
           </span>
           <div className="flex items-center gap-2">

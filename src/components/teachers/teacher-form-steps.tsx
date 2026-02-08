@@ -255,19 +255,19 @@ export function TeacherFormSteps({
                   onClick={() => goToStep(step)}
                   className={cn(
                     'flex flex-col items-center gap-2 transition-colors',
-                    isActive && 'text-blue-600',
-                    isCompleted && !hasError && 'text-green-600',
-                    hasError && 'text-red-600',
-                    !isActive && !isCompleted && !hasError && 'text-gray-400'
+                    isActive && 'text-[var(--chart-blue)]',
+                    isCompleted && !hasError && 'text-[var(--chart-green)]',
+                    hasError && 'text-[var(--chart-red)]',
+                    !isActive && !isCompleted && !hasError && 'text-[var(--text-muted)]'
                   )}
                 >
                   <div
                     className={cn(
                       'w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-colors',
-                      isActive && 'border-blue-600 bg-blue-600 text-white',
-                      isCompleted && !hasError && 'border-green-600 bg-green-600 text-white',
-                      hasError && 'border-red-600 bg-red-600 text-white',
-                      !isActive && !isCompleted && !hasError && 'border-gray-300 bg-white text-gray-500'
+                      isActive && 'border-[var(--chart-blue)] bg-[var(--chart-blue)] text-[var(--white-pure)]',
+                      isCompleted && !hasError && 'border-[var(--chart-green)] bg-[var(--chart-green)] text-[var(--white-pure)]',
+                      hasError && 'border-[var(--chart-red)] bg-[var(--chart-red)] text-[var(--white-pure)]',
+                      !isActive && !isCompleted && !hasError && 'border-[var(--border-default)] bg-[var(--bg-main)] text-[var(--text-muted)]'
                     )}
                   >
                     {isCompleted && !hasError ? (
@@ -288,7 +288,7 @@ export function TeacherFormSteps({
                   <div
                     className={cn(
                       'flex-1 h-0.5 mx-2',
-                      formState.currentStep > step ? 'bg-green-600' : 'bg-gray-200'
+                      formState.currentStep > step ? 'bg-[var(--chart-green)]' : 'bg-[var(--bg-surface)]'
                     )}
                   />
                 )}
@@ -370,21 +370,32 @@ export function TeacherFormSteps({
             </Button>
           ) : (
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => handleSubmit('create')}
-                disabled={loading}
-              >
-                {loading ? 'Creating...' : 'Create Teacher'}
-              </Button>
-              {formState.data.accessPermissions.grantSystemAccess && (
+              {formState.data.accessPermissions.grantSystemAccess ? (
+                <>
+                  <Button
+                    type="button"
+                    onClick={() => handleSubmit('create_invite')}
+                    disabled={loading}
+                    className="bg-[var(--chart-blue)] hover:bg-[var(--chart-blue)]/90"
+                  >
+                    {loading ? 'Creating...' : 'Create Teacher & Send Login Invite'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSubmit('create')}
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating...' : 'Create Teacher Only'}
+                  </Button>
+                </>
+              ) : (
                 <Button
                   type="button"
-                  onClick={() => handleSubmit('create_invite')}
+                  onClick={() => handleSubmit('create')}
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create & Send Login Invite'}
+                  {loading ? 'Creating...' : 'Create Teacher (Record Only)'}
                 </Button>
               )}
             </>

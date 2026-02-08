@@ -64,9 +64,9 @@ const flagColors: Record<GuardianFlag, 'destructive' | 'secondary' | 'outline'> 
 
 // Data quality score color
 function getQualityColor(score: number): string {
-  if (score >= 75) return 'text-green-600 dark:text-green-400'
-  if (score >= 50) return 'text-yellow-600 dark:text-yellow-400'
-  return 'text-red-600 dark:text-red-400'
+  if (score >= 75) return 'text-[var(--chart-green)] dark:text-[var(--success)]'
+  if (score >= 50) return 'text-[var(--chart-yellow)] dark:text-[var(--warning)]'
+  return 'text-[var(--chart-red)] dark:text-[var(--danger)]'
 }
 
 export default function GuardiansPage() {
@@ -264,7 +264,7 @@ export default function GuardiansPage() {
               {score}%
             </span>
             {hasIssues && (
-              <AlertTriangle className="h-4 w-4 text-yellow-500" title={row.dataQualityIssues?.join(', ')} />
+              <AlertTriangle className="h-4 w-4 text-[var(--warning)]" title={row.dataQualityIssues?.join(', ')} />
             )}
           </div>
         )

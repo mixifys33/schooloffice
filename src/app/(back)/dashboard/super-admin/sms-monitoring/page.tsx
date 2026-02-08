@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { Toast, useToast } from '@/components/ui/toast'
+import { Toast, useToast } from '@/hooks/use-toast'
 
 /**
  * Super Admin SMS Monitoring Page
@@ -54,12 +54,12 @@ function StatCard({
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray'
 }) {
   const colorClasses = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-    red: 'bg-red-50 border-red-200 text-red-700',
-    purple: 'bg-purple-50 border-purple-200 text-purple-700',
-    gray: 'bg-gray-50 border-gray-200 text-gray-700',
+    blue: 'bg-[var(--info-light)] border-[var(--info-light)] text-[var(--accent-hover)]',
+    green: 'bg-[var(--success-light)] border-[var(--success-light)] text-[var(--chart-green)]',
+    yellow: 'bg-[var(--warning-light)] border-[var(--warning-light)] text-[var(--warning)]',
+    red: 'bg-[var(--danger-light)] border-[var(--danger-light)] text-[var(--chart-red)]',
+    purple: 'bg-[var(--info-light)] border-[var(--info-light)] text-[var(--chart-purple)]',
+    gray: 'bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)]',
   }
 
   return (
@@ -95,16 +95,16 @@ function ThrottleModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-main)] rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4">Set Daily SMS Limit</h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Set a daily SMS limit for <strong>{school.schoolName}</strong> to control usage.
           Set to 0 to remove the limit.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Daily SMS Limit
             </label>
             <input
@@ -112,7 +112,7 @@ function ThrottleModal({
               min="0"
               value={dailyLimit}
               onChange={(e) => setDailyLimit(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               placeholder="Enter daily limit (0 to remove)"
             />
           </div>
@@ -120,14 +120,14 @@ function ThrottleModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-md hover:bg-[var(--accent-hover)] disabled:opacity-50"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Set Limit'}
@@ -165,16 +165,16 @@ function AddCreditsModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-main)] rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4">Add SMS Credits</h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
           Add SMS credits to <strong>{school.schoolName}</strong>.
           Current balance: {formatCurrency(school.smsBalance)}
         </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Amount (UGX)
             </label>
             <input
@@ -182,20 +182,20 @@ function AddCreditsModal({
               min="1"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               placeholder="Enter amount in UGX"
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
               Reason (optional)
             </label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               placeholder="e.g., Monthly top-up, Promotional credits"
             />
           </div>
@@ -203,14 +203,14 @@ function AddCreditsModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--chart-green)] text-[var(--white-pure)] rounded-md hover:bg-[var(--chart-green)] disabled:opacity-50"
               disabled={loading || !amount || parseInt(amount) <= 0}
             >
               {loading ? 'Adding...' : 'Add Credits'}
@@ -315,8 +315,8 @@ export default function SMSMonitoringPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">SMS Monitoring</h1>
-          <p className="text-gray-600">Monitor SMS usage across all schools</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">SMS Monitoring</h1>
+          <p className="text-[var(--text-secondary)]">Monitor SMS usage across all schools</p>
         </div>
 
         {/* Skeleton for stat cards */}
@@ -336,14 +336,14 @@ export default function SMSMonitoringPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">SMS Monitoring</h1>
-          <p className="text-gray-600">Monitor SMS usage across all schools</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">SMS Monitoring</h1>
+          <p className="text-[var(--text-secondary)]">Monitor SMS usage across all schools</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
+          <p className="text-[var(--chart-red)]">{error}</p>
           <button
             onClick={() => fetchData()}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -359,8 +359,8 @@ export default function SMSMonitoringPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">SMS Monitoring</h1>
-        <p className="text-gray-600">Monitor SMS usage across all schools</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">SMS Monitoring</h1>
+        <p className="text-[var(--text-secondary)]">Monitor SMS usage across all schools</p>
       </div>
 
       {/* Summary Stats - Requirement 16.1 */}
@@ -394,7 +394,7 @@ export default function SMSMonitoringPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <input
@@ -402,7 +402,7 @@ export default function SMSMonitoringPage() {
               placeholder="Search by school name or code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-[var(--border-default)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -411,39 +411,39 @@ export default function SMSMonitoringPage() {
                 type="checkbox"
                 checked={filterAbnormal}
                 onChange={(e) => setFilterAbnormal(e.target.checked)}
-                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                className="w-4 h-4 text-[var(--chart-red)] border-[var(--border-default)] rounded focus:ring-[var(--danger)]"
               />
-              <span className="text-sm text-gray-700">Show only abnormal usage</span>
+              <span className="text-sm text-[var(--text-primary)]">Show only abnormal usage</span>
             </label>
           </div>
         </div>
       </div>
 
       {/* Schools Table - Requirements 16.1, 16.2 */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-[var(--bg-surface)] border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   School
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   SMS Sent
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   SMS Cost
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Balance
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Usage
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -452,29 +452,29 @@ export default function SMSMonitoringPage() {
               {filteredSchools.map((school) => (
                 <tr 
                   key={school.schoolId} 
-                  className={school.isAbnormal ? 'bg-red-50' : 'hover:bg-gray-50'}
+                  className={school.isAbnormal ? 'bg-[var(--danger-light)]' : 'hover:bg-[var(--bg-surface)]'}
                 >
                   <td className="px-4 py-4">
                     <div>
-                      <p className="font-medium text-gray-900">{school.schoolName}</p>
-                      <p className="text-sm text-gray-500">{school.schoolCode}</p>
+                      <p className="font-medium text-[var(--text-primary)]">{school.schoolName}</p>
+                      <p className="text-sm text-[var(--text-muted)]">{school.schoolCode}</p>
                     </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-1">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                         school.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-[var(--success-light)] text-[var(--success-dark)]' 
+                          : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
                       }`}>
                         {school.isActive ? 'Active' : 'Inactive'}
                       </span>
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                         school.licenseType === 'FREE_PILOT'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-[var(--warning-light)] text-[var(--warning-dark)]'
                           : school.licenseType === 'PREMIUM'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-blue-100 text-blue-800'
+                          ? 'bg-[var(--info-light)] text-[var(--info-dark)]'
+                          : 'bg-[var(--info-light)] text-[var(--info-dark)]'
                       }`}>
                         {school.licenseType.replace('_', ' ')}
                       </span>
@@ -488,7 +488,7 @@ export default function SMSMonitoringPage() {
                   </td>
                   <td className="px-4 py-4 text-right">
                     <span className={`font-medium ${
-                      school.smsBalance < 10000 ? 'text-red-600' : 'text-green-600'
+                      school.smsBalance < 10000 ? 'text-[var(--chart-red)]' : 'text-[var(--chart-green)]'
                     }`}>
                       {formatCurrency(school.smsBalance)}
                     </span>
@@ -496,15 +496,15 @@ export default function SMSMonitoringPage() {
                   <td className="px-4 py-4 text-center">
                     {school.isAbnormal ? (
                       <div className="flex flex-col items-center">
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[var(--danger-light)] text-[var(--danger-dark)]">
                           Abnormal
                         </span>
-                        <span className="text-xs text-red-600 mt-1" title={school.abnormalReason}>
+                        <span className="text-xs text-[var(--chart-red)] mt-1" title={school.abnormalReason}>
                           2x+ avg
                         </span>
                       </div>
                     ) : (
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[var(--success-light)] text-[var(--success-dark)]">
                         Normal
                       </span>
                     )}
@@ -516,8 +516,8 @@ export default function SMSMonitoringPage() {
                         onClick={() => setThrottleModal(school)}
                         className={`px-3 py-1 text-xs font-medium rounded ${
                           school.isAbnormal
-                            ? 'bg-red-600 text-white hover:bg-red-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-[var(--chart-red)] text-[var(--white-pure)] hover:bg-[var(--chart-red)]'
+                            : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
                         }`}
                         title="Set daily SMS limit"
                       >
@@ -526,7 +526,7 @@ export default function SMSMonitoringPage() {
                       {/* Add Credits Button - Requirement 16.4 */}
                       <button
                         onClick={() => setCreditsModal(school)}
-                        className="px-3 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200"
+                        className="px-3 py-1 text-xs font-medium rounded bg-[var(--success-light)] text-[var(--chart-green)] hover:bg-[var(--success)]"
                         title="Add SMS credits"
                       >
                         + Credits
@@ -537,7 +537,7 @@ export default function SMSMonitoringPage() {
               ))}
               {filteredSchools.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)]">
                     No schools found matching your criteria
                   </td>
                 </tr>

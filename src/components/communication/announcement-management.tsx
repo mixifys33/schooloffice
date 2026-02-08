@@ -60,9 +60,11 @@ const TARGET_OPTIONS = [
 
 const CHANNEL_OPTIONS = [
   { value: MessageChannel.SMS, label: 'SMS', icon: Smartphone },
-  { value: MessageChannel.WHATSAPP, label: 'WhatsApp', icon: MessageSquare },
-  { value: MessageChannel.EMAIL, label: 'Email', icon: Mail },
 ]
+
+// SMS constraints for Uganda market
+const SMS_MAX_CHARACTERS = 160
+const SMS_COST_UGX = 45
 
 type TabType = 'all' | 'published' | 'scheduled' | 'drafts' | 'pinned'
 
@@ -260,9 +262,9 @@ export function AnnouncementManagement({
   }
 
   const getStatusBadge = (a: EnhancedAnnouncement) => {
-    if (a.publishedAt) return <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Published</span>
-    if (a.scheduledAt) return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Scheduled</span>
-    return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Draft</span>
+    if (a.publishedAt) return <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/30 dark:text-[var(--success)]">Published</span>
+    if (a.scheduledAt) return <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)]/30 dark:text-[var(--chart-blue)]">Scheduled</span>
+    return <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--bg-surface)] text-[var(--text-secondary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]">Draft</span>
   }
 
   const filteredAnnouncements = announcements.filter(a => {
@@ -285,7 +287,7 @@ export function AnnouncementManagement({
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/20 dark:text-[var(--danger)]">
             <AlertTriangle className="h-4 w-4" /><span className="text-sm">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto"><X className="h-4 w-4" /></button>
           </div>
@@ -314,7 +316,7 @@ export function AnnouncementManagement({
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium">{announcement.title}</h4>
                       {getStatusBadge(announcement)}
-                      {announcement.isPinned && <Pin className="h-4 w-4 text-yellow-500" />}
+                      {announcement.isPinned && <Pin className="h-4 w-4 text-[var(--warning)]" />}
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{announcement.content}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -330,7 +332,7 @@ export function AnnouncementManagement({
                     {announcement.publishedAt && <Button variant="ghost" size="sm" onClick={() => handleShowStats(announcement.id)} title="View delivery stats"><BarChart3 className="h-4 w-4" /></Button>}
                     <Button variant="ghost" size="sm" onClick={() => handleTogglePin(announcement)} title={announcement.isPinned ? 'Unpin' : 'Pin'}>{announcement.isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</Button>
                     {!announcement.publishedAt && (<><Button variant="ghost" size="sm" onClick={() => handlePublish(announcement.id)} title="Publish now"><Send className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => handleOpenForm(announcement)} title="Edit"><Edit2 className="h-4 w-4" /></Button></>)}
-                    <Button variant="ghost" size="sm" onClick={() => { setDeletingAnnouncement(announcement.id); setConfirmDelete(true) }} title="Delete" className="text-red-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setDeletingAnnouncement(announcement.id); setConfirmDelete(true) }} title="Delete" className="text-[var(--danger)] hover:text-[var(--chart-red)]"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </div>
@@ -340,7 +342,7 @@ export function AnnouncementManagement({
 
         {/* Announcement Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold">{editingAnnouncement ? 'Edit Announcement' : 'Create Announcement'}</h3>
@@ -354,8 +356,34 @@ export function AnnouncementManagement({
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Content *</label>
-                  <textarea value={formData.content} onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="Announcement content..." rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none" />
+                  <textarea 
+                    value={formData.content} 
+                    onChange={(e) => {
+                      const newValue = e.target.value
+                      if (newValue.length <= SMS_MAX_CHARACTERS) {
+                        setFormData(prev => ({ ...prev, content: newValue }))
+                      }
+                    }}
+                    placeholder={`Announcement content... (${SMS_MAX_CHARACTERS} characters max)`} 
+                    rows={4} 
+                    className={`w-full rounded-md border px-3 py-2 text-sm resize-none ${
+                      formData.content.length > SMS_MAX_CHARACTERS * 0.9 
+                        ? 'border-[var(--warning)] bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/20' 
+                        : 'border-input bg-background'
+                    }`} 
+                  />
+                  <div className="flex justify-between items-center text-xs mt-1">
+                    <span className={`${
+                      formData.content.length > SMS_MAX_CHARACTERS * 0.9 
+                        ? 'text-[var(--chart-yellow)]' 
+                        : 'text-muted-foreground'
+                    }`}>
+                      {formData.content.length}/{SMS_MAX_CHARACTERS} characters
+                    </span>
+                    <span className="text-muted-foreground">
+                      Cost: UGX {SMS_COST_UGX}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Target Recipients</label>
@@ -400,17 +428,16 @@ export function AnnouncementManagement({
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Channels *</label>
-                  <div className="flex gap-2">
-                    {CHANNEL_OPTIONS.map((opt) => {
-                      const Icon = opt.icon
-                      return (
-                        <button key={opt.value} onClick={() => handleChannelToggle(opt.value)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm ${formData.channels.includes(opt.value) ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input hover:bg-accent'}`}>
-                          <Icon className="h-4 w-4" />{opt.label}
-                        </button>
-                      )
-                    })}
+                  <label className="block text-sm font-medium mb-2">Communication Channel</label>
+                  <div className="p-3 rounded-md bg-muted/50 border">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="text-sm font-medium">SMS Only</span>
+                      <span className="text-xs text-muted-foreground">UGX {SMS_COST_UGX} per message</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cost-effective SMS communication for universal accessibility.
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -454,7 +481,7 @@ export function AnnouncementManagement({
 
         {/* Delivery Stats Modal */}
         {selectedAnnouncementStats && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-md w-full">
               <div className="p-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold flex items-center gap-2"><BarChart3 className="h-5 w-5" />Delivery Statistics</h3>
@@ -470,12 +497,12 @@ export function AnnouncementManagement({
                         <div className="text-2xl font-bold">{deliveryStats.total}</div>
                         <div className="text-xs text-muted-foreground">Total</div>
                       </div>
-                      <div className="text-center p-3 rounded-md bg-green-50 dark:bg-green-900/20">
-                        <div className="text-2xl font-bold text-green-600">{deliveryStats.delivered + deliveryStats.read}</div>
+                      <div className="text-center p-3 rounded-md bg-[var(--success-light)] dark:bg-[var(--success-dark)]/20">
+                        <div className="text-2xl font-bold text-[var(--chart-green)]">{deliveryStats.delivered + deliveryStats.read}</div>
                         <div className="text-xs text-muted-foreground">Delivered</div>
                       </div>
-                      <div className="text-center p-3 rounded-md bg-red-50 dark:bg-red-900/20">
-                        <div className="text-2xl font-bold text-red-600">{deliveryStats.failed}</div>
+                      <div className="text-center p-3 rounded-md bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20">
+                        <div className="text-2xl font-bold text-[var(--chart-red)]">{deliveryStats.failed}</div>
                         <div className="text-xs text-muted-foreground">Failed</div>
                       </div>
                     </div>
@@ -502,10 +529,10 @@ export function AnnouncementManagement({
 
         {/* Delete Confirmation Modal */}
         {confirmDelete && deletingAnnouncement && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
             <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30"><AlertTriangle className="h-5 w-5" /></div>
+                <div className="p-2 rounded-full bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30"><AlertTriangle className="h-5 w-5" /></div>
                 <h3 className="font-semibold">Delete Announcement?</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-6">This action cannot be undone. The announcement and all its delivery records will be permanently deleted.</p>

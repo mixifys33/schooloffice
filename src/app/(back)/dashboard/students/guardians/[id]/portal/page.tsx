@@ -269,7 +269,7 @@ export default function GuardianPortalPage() {
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-main)] transition-transform ${
                   formData.isEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -296,8 +296,8 @@ export default function GuardianPortalPage() {
           {/* Attendance */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="h-10 w-10 rounded-lg bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
               </div>
               <div>
                 <p className="font-medium">Attendance</p>
@@ -312,7 +312,7 @@ export default function GuardianPortalPage() {
               } ${!formData.isEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-main)] transition-transform ${
                   formData.canViewAttendance ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -322,8 +322,8 @@ export default function GuardianPortalPage() {
           {/* Results */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div className="h-10 w-10 rounded-lg bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-[var(--chart-green)] dark:text-[var(--success)]" />
               </div>
               <div>
                 <p className="font-medium">Results</p>
@@ -338,7 +338,7 @@ export default function GuardianPortalPage() {
               } ${!formData.isEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-main)] transition-transform ${
                   formData.canViewResults ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -348,8 +348,8 @@ export default function GuardianPortalPage() {
           {/* Fees */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <div className="h-10 w-10 rounded-lg bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-[var(--chart-yellow)] dark:text-[var(--warning)]" />
               </div>
               <div>
                 <p className="font-medium">Fees</p>
@@ -364,7 +364,7 @@ export default function GuardianPortalPage() {
               } ${!formData.isEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-main)] transition-transform ${
                   formData.canViewFees ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -374,8 +374,8 @@ export default function GuardianPortalPage() {
           {/* Download Reports */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <div className="h-10 w-10 rounded-lg bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-[var(--chart-purple)] dark:text-[var(--chart-purple)]" />
               </div>
               <div>
                 <p className="font-medium">Download Reports</p>
@@ -390,7 +390,7 @@ export default function GuardianPortalPage() {
               } ${!formData.isEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-main)] transition-transform ${
                   formData.canDownloadReports ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />

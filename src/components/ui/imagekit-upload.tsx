@@ -249,7 +249,7 @@ export function ImageKitUpload({
             <Image src={previewUrl} alt="Preview" fill className="object-cover" unoptimized />
           </div>
         ) : previewUrl ? (
-          <div className="flex items-center gap-1 text-sm text-green-600">
+          <div className="flex items-center gap-1 text-sm text-[var(--chart-green)]">
             <Check className="h-4 w-4" />
             <span>Uploaded</span>
           </div>
@@ -288,7 +288,7 @@ export function ImageKitUpload({
         )}
 
         {error && (
-          <span className="text-sm text-red-500">{error}</span>
+          <span className="text-sm text-[var(--danger)]">{error}</span>
         )}
       </div>
     )
@@ -313,9 +313,9 @@ export function ImageKitUpload({
       <div
         className={cn(
           'relative border-2 border-dashed rounded-lg p-6 transition-colors',
-          isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-300 dark:border-gray-700',
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-gray-400',
-          error && 'border-red-500'
+          isDragging ? 'border-[var(--accent-primary)] bg-[var(--info-light)] dark:bg-[var(--info-dark)]' : 'border-[var(--border-default)] dark:border-[var(--border-strong)]',
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--border-default)]',
+          error && 'border-[var(--danger)]'
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -324,11 +324,11 @@ export function ImageKitUpload({
       >
         {isUploading ? (
           <div className="text-center">
-            <Loader2 className="h-10 w-10 mx-auto mb-3 animate-spin text-blue-600" />
+            <Loader2 className="h-10 w-10 mx-auto mb-3 animate-spin text-[var(--chart-blue)]" />
             <p className="text-sm font-medium">Uploading... {uploadProgress}%</p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div className="w-full bg-[var(--bg-surface)] rounded-full h-2 mt-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all"
+                className="bg-[var(--chart-blue)] h-2 rounded-full transition-all"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -352,17 +352,17 @@ export function ImageKitUpload({
                     e.stopPropagation()
                     clearFile()
                   }}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  className="absolute -top-2 -right-2 p-1 bg-[var(--danger)] text-[var(--white-pure)] rounded-full hover:bg-[var(--chart-red)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <FileText className="h-8 w-8 text-green-600" />
+                <FileText className="h-8 w-8 text-[var(--chart-green)]" />
                 <div className="text-left">
-                  <p className="text-sm font-medium text-green-600">File uploaded</p>
-                  <p className="text-xs text-gray-500">{uploadedFile?.name}</p>
+                  <p className="text-sm font-medium text-[var(--chart-green)]">File uploaded</p>
+                  <p className="text-xs text-[var(--text-muted)]">{uploadedFile?.name}</p>
                 </div>
                 <button
                   type="button"
@@ -370,25 +370,25 @@ export function ImageKitUpload({
                     e.stopPropagation()
                     clearFile()
                   }}
-                  className="p-1 text-gray-400 hover:text-red-500"
+                  className="p-1 text-[var(--text-muted)] hover:text-[var(--danger)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-2">Click to replace</p>
+            <p className="text-xs text-[var(--text-muted)] mt-2">Click to replace</p>
           </div>
         ) : (
           <div className="text-center">
             {isImageUpload ? (
-              <ImageIcon className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+              <ImageIcon className="h-10 w-10 mx-auto mb-3 text-[var(--text-muted)]" />
             ) : (
-              <FileText className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+              <FileText className="h-10 w-10 mx-auto mb-3 text-[var(--text-muted)]" />
             )}
             <p className="text-sm font-medium mb-1">
               Drop your file here, or click to browse
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--text-muted)]">
               {isImageUpload ? 'JPG, PNG, GIF, WebP' : 'PDF, JPG, PNG, DOC, DOCX'} up to {maxSizeMB}MB
             </p>
           </div>
@@ -396,14 +396,14 @@ export function ImageKitUpload({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-500">
+        <div className="flex items-center gap-2 text-sm text-[var(--danger)]">
           <AlertCircle className="h-4 w-4" />
           {error}
         </div>
       )}
 
       {helpText && !error && (
-        <p className="text-xs text-gray-500">{helpText}</p>
+        <p className="text-xs text-[var(--text-muted)]">{helpText}</p>
       )}
     </div>
   )

@@ -118,20 +118,20 @@ export default function QuotaManagementModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50">
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-slate-100">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
               Manage Quotas - {school.schoolName}
             </h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[var(--text-muted)]">
               Configure messaging limits and credits for this school
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200"
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -146,15 +146,15 @@ export default function QuotaManagementModal({
             {/* SMS Section */}
             <div className="border border-slate-700 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-4">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[var(--chart-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                <h4 className="text-sm font-medium text-slate-200">SMS Configuration</h4>
+                <h4 className="text-sm font-medium text-[var(--text-secondary)]">SMS Configuration</h4>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Daily Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Daily Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.smsLimitDaily)}
@@ -167,7 +167,7 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Monthly Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Monthly Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.smsLimitMonthly)}
@@ -180,8 +180,8 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Current Credits</label>
-                  <div className="text-lg font-semibold text-slate-100 py-2">
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Current Credits</label>
+                  <div className="text-lg font-semibold text-[var(--text-primary)] py-2">
                     {quotas.smsCredits.toLocaleString()}
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export default function QuotaManagementModal({
                 <Button
                   onClick={() => handleAddCredits(MessageChannel.SMS)}
                   disabled={!creditAmount[MessageChannel.SMS]}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)]"
                 >
                   Add Credits
                 </Button>
@@ -208,15 +208,15 @@ export default function QuotaManagementModal({
             {/* WhatsApp Section */}
             <div className="border border-slate-700 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-4">
-                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[var(--success)]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.700"/>
                 </svg>
-                <h4 className="text-sm font-medium text-slate-200">WhatsApp Configuration</h4>
+                <h4 className="text-sm font-medium text-[var(--text-secondary)]">WhatsApp Configuration</h4>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Daily Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Daily Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.whatsappLimitDaily)}
@@ -229,7 +229,7 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Monthly Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Monthly Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.whatsappLimitMonthly)}
@@ -242,8 +242,8 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Current Credits</label>
-                  <div className="text-lg font-semibold text-slate-100 py-2">
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Current Credits</label>
+                  <div className="text-lg font-semibold text-[var(--text-primary)] py-2">
                     {quotas.whatsappCredits.toLocaleString()}
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export default function QuotaManagementModal({
                 <Button
                   onClick={() => handleAddCredits(MessageChannel.WHATSAPP)}
                   disabled={!creditAmount[MessageChannel.WHATSAPP]}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-[var(--chart-green)] hover:bg-[var(--chart-green)]"
                 >
                   Add Credits
                 </Button>
@@ -270,15 +270,15 @@ export default function QuotaManagementModal({
             {/* Email Section */}
             <div className="border border-slate-700 rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-4">
-                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[var(--chart-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <h4 className="text-sm font-medium text-slate-200">Email Configuration</h4>
+                <h4 className="text-sm font-medium text-[var(--text-secondary)]">Email Configuration</h4>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Daily Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Daily Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.emailLimitDaily)}
@@ -291,7 +291,7 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Monthly Limit</label>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Monthly Limit</label>
                   <Input
                     type="number"
                     value={formatNumber(quotaValues.emailLimitMonthly)}
@@ -304,8 +304,8 @@ export default function QuotaManagementModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Current Credits</label>
-                  <div className="text-lg font-semibold text-slate-100 py-2">
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Current Credits</label>
+                  <div className="text-lg font-semibold text-[var(--text-primary)] py-2">
                     {quotas.emailCredits.toLocaleString()}
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export default function QuotaManagementModal({
                 <Button
                   onClick={() => handleAddCredits(MessageChannel.EMAIL)}
                   disabled={!creditAmount[MessageChannel.EMAIL]}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-[var(--chart-purple)] hover:bg-[var(--chart-purple)]"
                 >
                   Add Credits
                 </Button>
@@ -330,15 +330,15 @@ export default function QuotaManagementModal({
             </div>
 
             {/* Emergency Override */}
-            <div className="border border-red-700/50 rounded-lg p-4 bg-red-950/20">
+            <div className="border border-[var(--chart-red)]/50 rounded-lg p-4 bg-[var(--danger-dark)]/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-[var(--danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                   <div>
-                    <h4 className="text-sm font-medium text-red-400">Emergency Override</h4>
-                    <p className="text-xs text-slate-400">Allow critical messages to bypass all quotas and pause status</p>
+                    <h4 className="text-sm font-medium text-[var(--danger)]">Emergency Override</h4>
+                    <p className="text-xs text-[var(--text-muted)]">Allow critical messages to bypass all quotas and pause status</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -348,11 +348,11 @@ export default function QuotaManagementModal({
                     onChange={(e) => handleEmergencyOverrideToggle(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                  <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--bg-main)] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--chart-red)]"></div>
                 </label>
               </div>
               {quotas.emergencyOverride && (
-                <div className="mt-3 p-2 bg-red-900/30 rounded text-xs text-red-300">
+                <div className="mt-3 p-2 bg-[var(--danger-dark)]/30 rounded text-xs text-[var(--danger)]">
                   ⚠️ Emergency override is active. Critical messages will bypass all limits.
                 </div>
               )}
@@ -360,7 +360,7 @@ export default function QuotaManagementModal({
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-slate-400">Failed to load quota information</p>
+            <p className="text-[var(--text-muted)]">Failed to load quota information</p>
             <Button
               onClick={fetchQuotas}
               variant="outline"
@@ -382,7 +382,7 @@ export default function QuotaManagementModal({
           <Button
             onClick={handleSaveQuotas}
             disabled={loading || saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-[var(--chart-blue)] hover:bg-[var(--accent-hover)] text-[var(--white-pure)]"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>

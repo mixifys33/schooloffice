@@ -7,6 +7,7 @@ import {
   BarChart3,
   DollarSign,
   User,
+  Settings,
 } from 'lucide-react'
 import {
   DashboardLayout,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { href: '/student/timetable', label: 'Timetable', icon: <Calendar className="h-5 w-5" /> },
   { href: '/student/results', label: 'Results', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/student/fees', label: 'Fees', icon: <DollarSign className="h-5 w-5" /> },
+  { href: '/student/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ]
 
 export default function StudentLayout({ children }: StudentLayoutProps) {
@@ -56,7 +58,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         </div>
       }
       sidebarFooter={
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[var(--text-muted)]">
           <p>Logged in as Student</p>
         </div>
       }

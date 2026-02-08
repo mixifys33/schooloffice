@@ -120,9 +120,9 @@ export class AccountLifecycleService {
       where: {
         schoolId: school.id,
         OR: [
-          { email: normalizedIdentifier },
-          { phone: normalizedIdentifier },
-          { username: normalizedIdentifier },
+          { email: { equals: normalizedIdentifier, mode: 'insensitive' } },
+          { phone: normalizedIdentifier }, // Phone numbers don't need case-insensitive matching
+          { username: { equals: normalizedIdentifier, mode: 'insensitive' } },
         ],
         status: AccountStatus.ACTIVE, // Only allow reset for active accounts
       },

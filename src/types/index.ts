@@ -1,25 +1,45 @@
 /**
- * SchoolOffice Type Definitions
- * Central export for all types, enums, and interfaces
+ * SchoolOffice Type Definitions - Optimized for build performance
+ * Import specific types instead of using wildcard exports
  */
 
-// Export all enums
-export * from './enums'
+// Core enums - most commonly used
+export { 
+  Role, 
+  StudentStatus as UserStatus, 
+  StaffStatus as SchoolStatus,
+  RecipientType,
+  TargetType,
+  MessageChannel,
+  MessageStatus,
+  AttendanceStatus,
+  PaymentMethod
+} from './enums'
 
-// Export all entity types
-export * from './entities'
+// Essential entity types
+export type { 
+  User, 
+  School, 
+  Student, 
+  Guardian,
+  Staff,
+  Class,
+  Subject,
+  Term,
+  CreateTermInput,
+  TargetingParams,
+  TargetingValidation,
+  Recipient,
+  TargetCriteria
+} from './entities'
 
-// Export all service interfaces
-export * from './services'
+// Teacher types
+export type { Teacher } from './teacher'
 
-// Export all finance types
-export * from './finance'
+// Core service interfaces
+export type { 
+  ITargetingService
+} from './services'
 
-// Export all staff dashboard types
-export * from './staff-dashboard'
-
-// Export all communication hub types
-export * from './communication-hub'
-
-// Export all teacher management types
-export * from './teacher'
+// For other types, import directly from their files:
+// import type { SpecificType } from '@/types/specific-file'

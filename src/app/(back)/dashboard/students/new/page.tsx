@@ -454,8 +454,8 @@ export default function NewStudentPage() {
 
       {/* Draft Restored Notice */}
       {hasDraft && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 p-3">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
+        <div className="rounded-lg border border-[var(--info-light)] bg-[var(--info-light)] dark:bg-[var(--info-dark)] dark:border-[var(--info-dark)] p-3">
+          <p className="text-sm text-[var(--info-dark)] dark:text-[var(--info)]">
             Your previous draft has been restored. Continue where you left off or clear the form to start fresh.
           </p>
         </div>
@@ -560,8 +560,8 @@ export default function NewStudentPage() {
 
             {/* Inline Class Creation Form */}
             {showClassForm && (
-              <div className="rounded-lg border border-dashed border-blue-300 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 p-4 space-y-3">
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Create New Class</p>
+              <div className="rounded-lg border border-dashed border-[var(--info)] bg-[var(--info-light)] dark:bg-[var(--info-dark)] dark:border-[var(--info-dark)] p-4 space-y-3">
+                <p className="text-sm font-medium text-[var(--info-dark)] dark:text-[var(--info)]">Create New Class</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField
                     label="Class Name"
@@ -580,7 +580,7 @@ export default function NewStudentPage() {
                   />
                 </div>
                 {classError && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{classError}</p>
+                  <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">{classError}</p>
                 )}
                 <div className="flex gap-2">
                   <Button
@@ -640,8 +640,8 @@ export default function NewStudentPage() {
 
             {/* Inline Stream Creation Form */}
             {showStreamForm && formData.classId && (
-              <div className="rounded-lg border border-dashed border-green-300 bg-green-50 dark:bg-green-950 dark:border-green-800 p-4 space-y-3">
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+              <div className="rounded-lg border border-dashed border-[var(--success)] bg-[var(--success-light)] dark:bg-[var(--success-dark)] dark:border-[var(--success-dark)] p-4 space-y-3">
+                <p className="text-sm font-medium text-[var(--success-dark)] dark:text-[var(--success)]">
                   Create New Stream for {selectedClass?.name}
                 </p>
                 <FormField
@@ -652,7 +652,7 @@ export default function NewStudentPage() {
                   placeholder="e.g., A, B, East, West"
                 />
                 {streamError && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{streamError}</p>
+                  <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">{streamError}</p>
                 )}
                 <div className="flex gap-2">
                   <Button
@@ -716,8 +716,8 @@ export default function NewStudentPage() {
         </div>
 
         {/* Payment Status Notice */}
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 p-4">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="rounded-lg border border-[var(--warning-light)] bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] dark:border-[var(--warning-dark)] p-4">
+          <p className="text-sm text-[var(--warning-dark)] dark:text-[var(--warning)]">
             <strong>Note:</strong> New students are enrolled with payment status set to{' '}
             <span className="font-semibold">NOT PAID</span> by default. Update payment status
             in the Fees section after receiving payment.

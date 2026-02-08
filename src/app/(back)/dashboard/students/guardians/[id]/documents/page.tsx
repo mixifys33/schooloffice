@@ -354,7 +354,7 @@ export default function GuardianDocumentsPage() {
 
       {/* Upload Dialog - Requirement 7.1 */}
       {showUploadDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>Upload Document</CardTitle>
@@ -382,7 +382,7 @@ export default function GuardianDocumentsPage() {
                 <label className="text-sm font-medium">File *</label>
                 <div 
                   className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors ${
-                    fileError ? 'border-red-500' : 'border-input'
+                    fileError ? 'border-[var(--danger)]' : 'border-input'
                   }`}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -414,7 +414,7 @@ export default function GuardianDocumentsPage() {
                   )}
                 </div>
                 {fileError && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-[var(--danger)] flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
                     {fileError}
                   </p>

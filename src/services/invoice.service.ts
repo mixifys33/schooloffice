@@ -1022,10 +1022,10 @@ export function generateInvoiceHTML(invoice: Invoice, schoolInfo?: {
 
   const statusColor = {
     DRAFT: '#6b7280',
-    ISSUED: '#3b82f6',
-    PARTIALLY_PAID: '#f59e0b',
-    PAID: '#10b981',
-    OVERDUE: '#ef4444',
+    ISSUED: 'var(--chart-blue)',
+    PARTIALLY_PAID: 'var(--chart-yellow)',
+    PAID: 'var(--chart-green)',
+    OVERDUE: 'var(--chart-red)',
     CANCELLED: '#6b7280',
   }[invoice.status] || '#6b7280'
 
@@ -1057,7 +1057,7 @@ export function generateInvoiceHTML(invoice: Invoice, schoolInfo?: {
     .summary-section { margin-top: 20px; border-top: 2px solid #333; padding-top: 20px; }
     .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
     .summary-row.total { font-size: 18px; font-weight: bold; border-top: 2px solid #333; margin-top: 10px; padding-top: 15px; }
-    .summary-row.balance { font-size: 20px; font-weight: bold; color: ${invoice.balance > 0 ? '#ef4444' : '#10b981'}; }
+    .summary-row.balance { font-size: 20px; font-weight: bold; color: ${invoice.balance > 0 ? 'var(--chart-red)' : 'var(--chart-green)'}; }
     .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #666; }
     .payment-info { background: #f5f5f5; padding: 15px; margin-top: 20px; border-radius: 5px; }
     .payment-info h4 { margin-bottom: 10px; font-size: 14px; }
@@ -1120,13 +1120,13 @@ export function generateInvoiceHTML(invoice: Invoice, schoolInfo?: {
         <span>UGX ${invoice.subtotal.toLocaleString()}</span>
       </div>
       ${invoice.discountAmount > 0 ? `
-      <div class="summary-row" style="color: #10b981;">
+      <div class="summary-row" style="color: var(--chart-green);">
         <span>Discounts</span>
         <span>- UGX ${invoice.discountAmount.toLocaleString()}</span>
       </div>
       ` : ''}
       ${invoice.penaltyAmount > 0 ? `
-      <div class="summary-row" style="color: #ef4444;">
+      <div class="summary-row" style="color: var(--chart-red);">
         <span>Penalties</span>
         <span>+ UGX ${invoice.penaltyAmount.toLocaleString()}</span>
       </div>
@@ -1136,7 +1136,7 @@ export function generateInvoiceHTML(invoice: Invoice, schoolInfo?: {
         <span>UGX ${invoice.totalAmount.toLocaleString()}</span>
       </div>
       ${invoice.paidAmount > 0 ? `
-      <div class="summary-row" style="color: #10b981;">
+      <div class="summary-row" style="color: var(--chart-green);">
         <span>Amount Paid</span>
         <span>- UGX ${invoice.paidAmount.toLocaleString()}</span>
       </div>

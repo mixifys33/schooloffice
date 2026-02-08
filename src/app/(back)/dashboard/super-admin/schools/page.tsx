@@ -203,8 +203,8 @@ export default function SchoolsManagementPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Schools Management</h1>
-          <p className="text-gray-600">Manage all schools, subscriptions, and access</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Schools Management</h1>
+          <p className="text-[var(--text-secondary)]">Manage all schools, subscriptions, and access</p>
         </div>
         <SkeletonLoader variant="table" count={5} />
       </div>
@@ -215,14 +215,14 @@ export default function SchoolsManagementPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Schools Management</h1>
-          <p className="text-gray-600">Manage all schools, subscriptions, and access</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Schools Management</h1>
+          <p className="text-[var(--text-secondary)]">Manage all schools, subscriptions, and access</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
+          <p className="text-[var(--chart-red)]">{error}</p>
           <button
             onClick={fetchSchools}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
+            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
           >
             Try again
           </button>
@@ -247,11 +247,11 @@ export default function SchoolsManagementPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schools Management</h1>
-          <p className="text-gray-600">Manage all schools, subscriptions, and access</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Schools Management</h1>
+          <p className="text-[var(--text-secondary)]">Manage all schools, subscriptions, and access</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--text-muted)]">
             {filteredSchools.length} school{filteredSchools.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -268,71 +268,71 @@ export default function SchoolsManagementPage() {
       </div>
 
       {/* Schools table - Requirement 13.1 */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-[var(--bg-main)] rounded-lg shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-[var(--bg-surface)] border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   School
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Students
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Plan
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Amount Due
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Due Date
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedSchools.map((school) => (
-                <tr key={school.id} className="hover:bg-gray-50">
+                <tr key={school.id} className="hover:bg-[var(--bg-surface)]">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-blue-600" />
+                      <div className="h-10 w-10 rounded-lg bg-[var(--info-light)] flex items-center justify-center">
+                        <Building2 className="h-5 w-5 text-[var(--chart-blue)]" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{school.name}</div>
-                        <div className="text-sm text-gray-500">{school.code}</div>
+                        <div className="font-medium text-[var(--text-primary)]">{school.name}</div>
+                        <div className="text-sm text-[var(--text-muted)]">{school.code}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1.5 text-gray-700">
-                      <Users className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center gap-1.5 text-[var(--text-primary)]">
+                      <Users className="h-4 w-4 text-[var(--text-muted)]" />
                       {school.studentCount}
                     </div>
                   </td>
                   <td className="px-4 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       school.plan === 'PREMIUM' 
-                        ? 'bg-purple-100 text-purple-700'
+                        ? 'bg-[var(--info-light)] text-[var(--chart-purple)]'
                         : school.plan === 'BASIC'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
+                        ? 'bg-[var(--info-light)] text-[var(--accent-hover)]'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
                     }`}>
                       {planLabels[school.plan]}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-gray-700">
+                  <td className="px-4 py-4 text-[var(--text-primary)]">
                     {school.amountDue > 0 ? formatCurrency(school.amountDue) : '-'}
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-1.5 text-gray-700">
-                      <Calendar className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center gap-1.5 text-[var(--text-primary)]">
+                      <Calendar className="h-4 w-4 text-[var(--text-muted)]" />
                       {formatDate(school.dueDate)}
                     </div>
                   </td>
@@ -343,11 +343,11 @@ export default function SchoolsManagementPage() {
                     <div className="relative">
                       <button
                         onClick={() => setActionMenuOpen(actionMenuOpen === school.id ? null : school.id)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+                        className="p-1.5 rounded-lg hover:bg-[var(--bg-surface)] text-[var(--text-muted)]"
                         disabled={actionLoading === school.id}
                       >
                         {actionLoading === school.id ? (
-                          <div className="h-5 w-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                          <div className="h-5 w-5 border-2 border-[var(--border-default)] border-t-blue-600 rounded-full animate-spin" />
                         ) : (
                           <MoreVertical className="h-5 w-5" />
                         )}
@@ -355,15 +355,15 @@ export default function SchoolsManagementPage() {
 
                       {/* Action dropdown menu */}
                       {actionMenuOpen === school.id && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border z-10">
+                        <div className="absolute right-0 mt-1 w-48 bg-[var(--bg-main)] rounded-lg shadow-lg border z-10">
                           <div className="py-1">
                             {/* Requirement 13.2: Activate school */}
                             {!school.isActive && (
                               <button
                                 onClick={() => handleActivate(school.id)}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-surface)] flex items-center gap-2"
                               >
-                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <CheckCircle className="h-4 w-4 text-[var(--success)]" />
                                 Activate School
                               </button>
                             )}
@@ -372,9 +372,9 @@ export default function SchoolsManagementPage() {
                             {school.isActive && (
                               <button
                                 onClick={() => handleSuspend(school.id)}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-surface)] flex items-center gap-2"
                               >
-                                <XCircle className="h-4 w-4 text-red-500" />
+                                <XCircle className="h-4 w-4 text-[var(--danger)]" />
                                 Suspend School
                               </button>
                             )}
@@ -386,9 +386,9 @@ export default function SchoolsManagementPage() {
                                   setExtendPilotModal({ open: true, school })
                                   setActionMenuOpen(null)
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-surface)] flex items-center gap-2"
                               >
-                                <Clock className="h-4 w-4 text-purple-500" />
+                                <Clock className="h-4 w-4 text-[var(--chart-purple)]" />
                                 Extend Pilot
                               </button>
                             )}
@@ -399,9 +399,9 @@ export default function SchoolsManagementPage() {
                                 router.push(`/dashboard/super-admin/schools/${school.id}`)
                                 setActionMenuOpen(null)
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-surface)] flex items-center gap-2"
                             >
-                              <Edit className="h-4 w-4 text-blue-500" />
+                              <Edit className="h-4 w-4 text-[var(--accent-primary)]" />
                               Edit Details
                             </button>
                           </div>
@@ -414,7 +414,7 @@ export default function SchoolsManagementPage() {
 
               {paginatedSchools.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-[var(--text-muted)]">
                     {searchQuery ? 'No schools match your search' : 'No schools found'}
                   </td>
                 </tr>
@@ -425,25 +425,25 @@ export default function SchoolsManagementPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
+          <div className="px-4 py-3 border-t bg-[var(--bg-surface)] flex items-center justify-between">
+            <div className="text-sm text-[var(--text-muted)]">
               Showing {startIndex + 1} to {Math.min(startIndex + pageSize, filteredSchools.length)} of {filteredSchools.length}
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border bg-[var(--bg-main)] hover:bg-[var(--bg-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-[var(--text-primary)]">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border bg-[var(--bg-main)] hover:bg-[var(--bg-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -454,23 +454,23 @@ export default function SchoolsManagementPage() {
 
       {/* Extend Pilot Modal - Requirement 13.4 */}
       {extendPilotModal.open && extendPilotModal.school && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-[var(--text-primary)]/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-main)] rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
               Extend Pilot Period
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-[var(--text-secondary)] mb-4">
               Extend the pilot period for <strong>{extendPilotModal.school.name}</strong>
             </p>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 Extension Days
               </label>
               <select
                 value={extensionDays}
                 onChange={(e) => setExtensionDays(Number(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
               >
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>
@@ -483,14 +483,14 @@ export default function SchoolsManagementPage() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setExtendPilotModal({ open: false, school: null })}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-[var(--text-primary)] hover:bg-[var(--bg-surface)] rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExtendPilot}
                 disabled={actionLoading === extendPilotModal.school.id}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--chart-purple)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--chart-purple)] disabled:opacity-50"
               >
                 {actionLoading === extendPilotModal.school.id ? 'Extending...' : 'Extend Pilot'}
               </button>

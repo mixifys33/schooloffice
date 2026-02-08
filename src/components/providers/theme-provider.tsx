@@ -1,103 +1,69 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { createContext, useContext, useEffect, useState } from 'react'
-
-type Theme = 'light' | 'dark' | 'system'
+import { createContext, useContext, useEffect, useState } from 'react';
+import { ThemePreference, initializeTheme, setTheme, getCurrentTheme, getCurrentResolvedTheme } from '@/lib/theme';
 
 interface ThemeContextType {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-  resolvedTheme: 'light' | 'dark'
+  theme: ThemePreference;
+  resolvedTheme: string;
+  setTheme: (theme: ThemePreference) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
-
-export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
-}
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 interface ThemeProviderProps {
-  children: React.ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
+  children: React.ReactNode;
 }
 
-export function ThemeProvider({
-  children,
-  defaultTheme = 'system',
-  storageKey = 'schooloffice-theme',
-}: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme)
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
-  const [mounted, setMounted] = useState(false)
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<ThemePreference>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<string>('light');
+  const [mounted, setMounted] = useState(false);
 
-  // Get system preference
-  const getSystemTheme = (): 'light' | 'dark' => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    return 'light'
-  }
-
-  // Initialize theme from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setThemeState(stored)
-    }
-    setMounted(true)
-  }, [storageKey])
+    // Initialize theme system
+    initializeTheme();
+    
+    // Set initial state
+    setThemeState(getCurrentTheme());
+    setResolvedTheme(getCurrentResolvedTheme());
+    setMounted(true);
 
-  // Update resolved theme and apply to document
-  useEffect(() => {
-    if (!mounted) return
+    // Listen for theme changes
+    const handleThemeChange = (event: CustomEvent) => {
+      setThemeState(event.detail.theme);
+      setResolvedTheme(event.detail.resolvedTheme);
+    };
 
-    const resolved = theme === 'system' ? getSystemTheme() : theme
-    setResolvedTheme(resolved)
+    window.addEventListener('themechange', handleThemeChange as EventListener);
 
-    const root = document.documentElement
-    root.classList.remove('light', 'dark')
-    root.classList.add(resolved)
-  }, [theme, mounted])
+    return () => {
+      window.removeEventListener('themechange', handleThemeChange as EventListener);
+    };
+  }, []);
 
-  // Listen for system theme changes
-  useEffect(() => {
-    if (!mounted || theme !== 'system') return
+  const handleSetTheme = (newTheme: ThemePreference) => {
+    setTheme(newTheme);
+  };
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = () => {
-      const resolved = getSystemTheme()
-      setResolvedTheme(resolved)
-      document.documentElement.classList.remove('light', 'dark')
-      document.documentElement.classList.add(resolved)
-    }
-
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme, mounted])
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme)
-    localStorage.setItem(storageKey, newTheme)
-  }
-
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return (
-      <ThemeContext.Provider value={{ theme: defaultTheme, setTheme, resolvedTheme: 'light' }}>
-        {children}
-      </ThemeContext.Provider>
-    )
-  }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        resolvedTheme,
+        setTheme: handleSetTheme,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
-  )
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
 }

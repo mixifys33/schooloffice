@@ -37,8 +37,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const { searchParams } = new URL(request.url)
+    const activeParam = searchParams.get('active')
+    
+    const whereClause: any = { schoolId }
+    
+    // Filter by active status if specified
+    if (activeParam !== null) {
+      whereClause.isActive = activeParam === 'true'
+    }
+
     const subjects = await prisma.subject.findMany({
-      where: { schoolId },
+      where: whereClause,
       include: {
         _count: {
           select: {
@@ -58,7 +68,7 @@ export async function GET(request: NextRequest) {
       classCount: subject._count.classSubjects,
     }))
 
-    return NextResponse.json(result)
+    return NextResponse.json({ subjects: result })
   } catch (error) {
     console.error('Error fetching subjects:', error)
     return NextResponse.json(

@@ -11,7 +11,8 @@ import {
   Users, 
   Shield, 
   Zap, 
-  Activity 
+  Activity,
+  Palette
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SchoolIdentitySettings } from '@/components/settings/school-identity-settings'
@@ -24,6 +25,7 @@ import { GuardianSettingsPage } from '@/components/settings/guardian-settings'
 import { SecuritySettings } from '@/components/settings/security-settings'
 import { AutomationRulesPage } from '@/components/settings/automation-rules'
 import { SystemHealthDashboard } from '@/components/settings/system-health-dashboard'
+import { AppearanceSettings } from '@/components/settings/appearance-settings'
 
 /**
  * School Settings Page with Tabbed Navigation
@@ -32,17 +34,36 @@ import { SystemHealthDashboard } from '@/components/settings/system-health-dashb
  */
 
 const settingsTabs = [
-  { id: 'identity', label: 'School Setup', icon: Building2 },
-  { id: 'academic', label: 'Academic', icon: GraduationCap },
-  { id: 'finance', label: 'Finance', icon: DollarSign },
-  { id: 'communication', label: 'Communication', icon: MessageSquare },
-  { id: 'attendance', label: 'Attendance', icon: Clock },
-  { id: 'grading', label: 'Grading', icon: Award },
-  { id: 'guardian', label: 'Guardian', icon: Users },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'automation', label: 'Automation', icon: Zap },
-  { id: 'system', label: 'System', icon: Activity },
+  { id: 'identity', label: 'School', icon: Building2, status: 'working' },
+  { id: 'academic', label: 'Academic', icon: GraduationCap, status: 'coming-soon' },
+  { id: 'finance', label: 'Finance', icon: DollarSign, status: 'partial' },
+  { id: 'communication', label: 'Communication', icon: MessageSquare, status: 'partial' },
+  { id: 'attendance', label: 'Attendance', icon: Clock, status: 'working' },
+  { id: 'grading', label: 'Grading', icon: Award, status: 'working' },
+  { id: 'guardian', label: 'Guardian', icon: Users, status: 'partial' },
+  { id: 'security', label: 'Security', icon: Shield, status: 'coming-soon' },
+  { id: 'automation', label: 'Automation', icon: Zap, status: 'partial' },
+  { id: 'appearance', label: 'Appearance', icon: Palette, status: 'working' },
+  { id: 'system', label: 'System', icon: Activity, status: 'partial' },
 ]
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'working': return 'text-[var(--chart-green)]'
+    case 'partial': return 'text-[var(--chart-yellow)]'
+    case 'coming-soon': return 'text-[var(--text-muted)]'
+    default: return 'text-[var(--text-secondary)]'
+  }
+}
+
+const getStatusIndicator = (status: string) => {
+  switch (status) {
+    case 'working': return '●'
+    case 'partial': return '◐'
+    case 'coming-soon': return '○'
+    default: return ''
+  }
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('identity')
@@ -54,12 +75,19 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Configure your school&apos;s system settings and preferences
         </p>
+        <div className="mt-2 text-xs text-[var(--text-muted)]">
+          Status: <span className="text-[var(--chart-green)]">● Working</span> | 
+          <span className="text-[var(--chart-yellow)]"> ◐ Partial</span> | 
+          <span className="text-[var(--text-muted)]"> ○ Coming Soon</span>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50">
           {settingsTabs.map((tab) => {
             const Icon = tab.icon
+            const statusColor = getStatusColor(tab.status)
+            const statusIndicator = getStatusIndicator(tab.status)
             return (
               <TabsTrigger
                 key={tab.id}
@@ -68,6 +96,7 @@ export default function SettingsPage() {
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
+                <span className={`text-xs ${statusColor}`}>{statusIndicator}</span>
               </TabsTrigger>
             )
           })}
@@ -107,6 +136,10 @@ export default function SettingsPage() {
 
         <TabsContent value="automation" className="mt-6">
           <AutomationRulesPage />
+        </TabsContent>
+
+        <TabsContent value="appearance" className="mt-6">
+          <AppearanceSettings />
         </TabsContent>
 
         <TabsContent value="system" className="mt-6">

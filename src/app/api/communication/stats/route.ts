@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
 
     const monthStats = {
       sms: monthMessages.filter(m => m.channel === MessageChannel.SMS).length,
-      whatsapp: monthMessages.filter(m => m.channel === MessageChannel.WHATSAPP).length,
       email: monthMessages.filter(m => m.channel === MessageChannel.EMAIL).length,
       total: monthMessages.length,
     }
@@ -104,10 +103,16 @@ export async function GET(request: NextRequest) {
     let smsBalance = 0
     try {
       const schoolSettings = await prisma.schoolSettings.findUnique({
-        where: { schoolId },
+        where: {
+          schoolId_category: {
+            schoolId,
+            category: 'communication',
+          },
+        },
       })
       // Check if settings has smsCredits or similar field
-      smsBalance = (schoolSettings as { smsCredits?: number })?.smsCredits || 0
+      const settingsData = schoolSettings?.settings as { smsCredits?: number };
+      smsBalance = settingsData?.smsCredits || 0
     } catch {
       // Field may not exist, use default
     }

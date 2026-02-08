@@ -8,6 +8,7 @@ import { hashPassword } from '@/lib/auth'
 import { Role, LicenseType } from '@/types/enums'
 import { FeatureFlags } from '@/types'
 import { securityService } from './security.service'
+import { getUserFriendlyError } from '@/lib/error-messages'
 
 // ============================================
 // TYPES
@@ -30,6 +31,7 @@ export interface SchoolRegistrationInput {
 
   // Section 2: System Identity
   schoolCode: string // Immutable tenant identifier
+  schoolLogo?: string // Optional school logo URL or base64 data
 
   // Section 3: First Admin Account
   adminFullName: string
@@ -70,13 +72,11 @@ export type SchoolRegistrationErrorCode =
 // CONSTANTS
 // ============================================
 
-// Default feature flags for new schools (FREE_PILOT)
+// Default feature flags for new schools - SIMPLIFIED
 const DEFAULT_FEATURES: FeatureFlags = {
   smsEnabled: true,
-  whatsappEnabled: true,
-  paymentIntegration: false,
-  advancedReporting: false,
-  bulkMessaging: false,
+  emailEnabled: true,
+  paymentIntegration: true,
 }
 
 // School code validation regex - alphanumeric only
@@ -327,6 +327,7 @@ export class SchoolRegistrationService {
             address: input.physicalLocation?.trim() || null,
             phone: input.contactPhone?.trim() || null,
             email: input.contactEmail.trim().toLowerCase(),
+            logo: input.schoolLogo?.trim() || null,
             licenseType: LicenseType.FREE_PILOT,
             features: DEFAULT_FEATURES,
             smsBudgetPerTerm: 0,
@@ -341,6 +342,11 @@ export class SchoolRegistrationService {
         const firstName = nameParts[0] || ''
         const lastName = nameParts.slice(1).join(' ') || nameParts[0] || ''
 
+        // Generate unique username based on actual names to avoid constraint violations
+        const baseUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/[^a-z.]/g, '')
+        const schoolSuffix = school.id.slice(-6) // Last 6 chars of schoolId for uniqueness
+        const username = `${baseUsername}.${schoolSuffix}`
+
         // Create seed School_Admin user
         // Property 6: Seed Admin Role Lock
         // Requirement 1.5: Lock the role to School_Admin and not allow role selection
@@ -349,6 +355,7 @@ export class SchoolRegistrationService {
             schoolId: school.id,
             email: input.adminEmail.trim().toLowerCase(),
             phone: input.adminPhone?.trim() || null,
+            username,
             passwordHash,
             role: Role.SCHOOL_ADMIN, // Locked to SCHOOL_ADMIN
             roles: [Role.SCHOOL_ADMIN], // Multi-role support with single role
@@ -388,22 +395,26 @@ export class SchoolRegistrationService {
       // Log error for debugging (in production, use proper logging)
       console.error('School registration failed:', error)
 
-      // Check for unique constraint violations
-      if (error instanceof Error) {
-        if (error.message.includes('Unique constraint') && error.message.includes('code')) {
-          return {
-            success: false,
-            error: 'This school code is already in use',
-            errorCode: 'SCHOOL_CODE_TAKEN',
-          }
-        }
+      // Convert technical errors to user-friendly messages
+      const userError = getUserFriendlyError(error)
+      
+      // Map specific error codes to registration error codes
+      let errorCode: SchoolRegistrationErrorCode = 'REGISTRATION_FAILED'
+      
+      if (userError.code === 'SCHOOL_CODE_EXISTS') {
+        errorCode = 'SCHOOL_CODE_TAKEN'
+      } else if (userError.code === 'EMAIL_EXISTS') {
+        errorCode = 'INVALID_EMAIL_FORMAT'
+      } else if (userError.code === 'WEAK_PASSWORD') {
+        errorCode = 'PASSWORD_TOO_WEAK'
+      } else if (userError.field === 'email') {
+        errorCode = 'INVALID_EMAIL_FORMAT'
       }
 
-      // Requirement 1.7: Display a descriptive error message
       return {
         success: false,
-        error: 'Registration failed. Please try again.',
-        errorCode: 'REGISTRATION_FAILED',
+        error: userError.message,
+        errorCode,
       }
     }
   }

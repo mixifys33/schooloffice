@@ -130,9 +130,10 @@ export default function StudentsPage() {
       }
 
       const response = await fetch(`/api/students?${params}`)
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch students')
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch students')
       }
 
       const data: StudentsResponse = await response.json()
@@ -141,7 +142,7 @@ export default function StudentsPage() {
       setError(null)
     } catch (err) {
       console.error('Error fetching students:', err)
-      setError('Unable to load students. Please try again.')
+      setError(err instanceof Error ? err.message : 'Unable to load students. Please try again.')
     } finally {
       setLoading(false)
       setSearchLoading(false)
@@ -210,7 +211,7 @@ export default function StudentsPage() {
   }
 
   // Prepare filter configurations
-  const selectedClass = classes.find((c) => c.id === filters.classId)
+  const selectedClass = Array.isArray(classes) ? classes.find((c) => c.id === filters.classId) : null
   const availableStreams = selectedClass?.streams || []
 
   const filterConfigs: FilterConfig[] = [
@@ -218,7 +219,7 @@ export default function StudentsPage() {
       key: 'classId',
       label: 'Class',
       placeholder: 'Filter by class',
-      options: classes.map((c) => ({ value: c.id, label: c.name })),
+      options: Array.isArray(classes) ? classes.map((c) => ({ value: c.id, label: c.name })) : [],
     },
     {
       key: 'streamId',
@@ -274,7 +275,7 @@ export default function StudentsPage() {
   const activeFilters: ActiveFilter[] = []
   
   if (filters.classId) {
-    const classOption = classes.find((c) => c.id === filters.classId)
+    const classOption = Array.isArray(classes) ? classes.find((c) => c.id === filters.classId) : null
     if (classOption) {
       activeFilters.push({
         key: 'classId',
@@ -357,9 +358,9 @@ export default function StudentsPage() {
       header: 'Name',
       primary: true,
       render: (_, row) => (
-        <div>
-          <div className="font-medium">{row.name}</div>
-          <div className="text-xs text-muted-foreground">{row.admissionNumber}</div>
+        <div className="min-w-[120px]">
+          <div className="font-medium truncate max-w-[100px] sm:max-w-[150px]">{row.name}</div>
+          <div className="text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-[150px]">{row.admissionNumber}</div>
         </div>
       ),
     },
@@ -367,7 +368,7 @@ export default function StudentsPage() {
       key: 'className',
       header: 'Class',
       render: (_, row) => (
-        <span>
+        <span className="truncate max-w-[80px] sm:max-w-[100px]">
           {row.className}
           {row.streamName && <span className="text-muted-foreground"> - {row.streamName}</span>}
         </span>
@@ -389,14 +390,18 @@ export default function StudentsPage() {
       key: 'parentPhone',
       header: 'Parent Phone',
       hideOnMobile: true,
-      render: (value) => value || '-',
+      render: (value) => value ? (
+        <span className="truncate max-w-[80px] sm:max-w-[100px]">{value}</span>
+      ) : '-',
     },
     {
       key: 'parentEmail',
       header: 'Parent Email',
       hideOnMobile: true,
       hideOnTablet: true,
-      render: (value) => value || '-',
+      render: (value) => value ? (
+        <span className="truncate max-w-[100px] sm:max-w-[120px]">{value}</span>
+      ) : '-',
     },
     {
       key: 'paymentStatus',
@@ -417,10 +422,10 @@ export default function StudentsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="space-y-6 p-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Students</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Students</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage student records and enrollment
             </p>
@@ -432,23 +437,25 @@ export default function StudentsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6 p-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Students</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Students</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {pagination.total} students enrolled
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleBulkUpload} className="gap-2">
+        
+        {/* Action buttons - stacked on mobile, side-by-side on larger screens */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+          <Button variant="outline" onClick={handleBulkUpload} className="gap-2 w-full sm:w-auto">
             <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Bulk Upload</span>
+            <span>Bulk Upload</span>
           </Button>
-          <Button onClick={handleAddStudent} className="gap-2">
+          <Button onClick={handleAddStudent} className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Student</span>
+            <span>Add Student</span>
           </Button>
         </div>
       </div>
@@ -464,23 +471,23 @@ export default function StudentsPage() {
 
       {/* Search and Filters */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <div className="flex flex-col gap-4">
           <SearchInput
             placeholder="Search by name, admission number..."
             value={searchQuery}
             onChange={handleSearch}
             loading={searchLoading}
-            className="sm:w-80"
+            className="w-full"
           />
-          
+
           {/* Quick filter summary */}
           {activeFilters.length > 0 && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground text-center sm:text-left">
               Showing {pagination.total} student{pagination.total !== 1 ? 's' : ''} with {activeFilters.length} filter{activeFilters.length !== 1 ? 's' : ''} applied
             </div>
           )}
         </div>
-        
+
         <MultiFilter
           filters={filterConfigs}
           activeFilters={activeFilters}
@@ -490,20 +497,71 @@ export default function StudentsPage() {
         />
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        data={students}
-        columns={columns}
-        keyExtractor={(row) => row.id}
-        onRowClick={handleRowClick}
-        emptyMessage="No students found. Add your first student to get started."
-        loading={searchLoading}
-      />
+      {/* Data Table - Mobile-friendly card view for small screens */}
+      <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <DataTable
+            data={students}
+            columns={columns}
+            keyExtractor={(row) => row.id}
+            onRowClick={handleRowClick}
+            emptyMessage="No students found. Add your first student to get started."
+            loading={searchLoading}
+          />
+        </div>
+        
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {students.map((student) => (
+            <div 
+              key={student.id}
+              className="border rounded-lg p-4 hover:bg-accent cursor-pointer transition-colors"
+              onClick={() => handleRowClick(student)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium">{student.name}</div>
+                  <div className="text-xs text-muted-foreground">{student.admissionNumber}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PaymentStatusBadge status={student.paymentStatus as PaymentStatus} />
+                  <Badge variant={student.isActive ? 'default' : 'secondary'}>
+                    {student.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Class:</span> {student.className}
+                  {student.streamName && ` - ${student.streamName}`}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Gender:</span> {student.gender || '-'}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Age:</span> {student.age ? `${student.age} yrs` : '-'}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Phone:</span> {student.parentPhone || '-'}
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {students.length === 0 && !searchLoading && (
+            <div className="text-center py-8 text-muted-foreground">
+              No students found. Add your first student to get started.
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* Pagination */}
+      {/* Pagination - centered on mobile, justified on larger screens */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <p className="text-sm text-muted-foreground text-center sm:text-left">
             Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{' '}
             {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{' '}
             {pagination.total} students

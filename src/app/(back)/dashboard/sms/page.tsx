@@ -180,10 +180,76 @@ export default function SMSCenterPage() {
 
   // Handle template selection
   const handleTemplateSelect = (templateType: string) => {
-    const template = data?.templates.find(t => t.type === templateType)
-    if (template) {
-      setSelectedTemplate(templateType)
-      setMessage(template.content)
+    setSelectedTemplate(templateType)
+    
+    // Set sample content based on template
+    switch (templateType) {
+      case 'FEES_BALANCE':
+        setMessage('Dear {PARENT_NAME}, {STUDENT_NAME} has an outstanding school fees balance of UGX {BALANCE} for {TERM}. Kindly clear by {PAYMENT_DEADLINE}. {SCHOOL_NAME}')
+        break
+      case 'FEES_RECEIPT':
+        setMessage('Payment of UGX {AMOUNT_PAID} received for {STUDENT_NAME} on {DATE}. Receipt No: {RECEIPT_NO}. Balance: UGX {BALANCE}. Thank you.')
+        break
+      case 'REPORT_READY':
+        setMessage('Dear Parent, {STUDENT_NAME}\'s report for {TERM} is ready. Position: {POSITION}. Kindly visit the school for details. {SCHOOL_NAME}')
+        break
+      case 'ANNOUNCEMENT':
+        setMessage('NOTICE: {MESSAGE} {SCHOOL_NAME}')
+        break
+      case 'EMERGENCY_ALERT':
+        setMessage('URGENT: Please contact the school regarding {STUDENT_NAME}. Reason: {REASON}. Call: {CONTACT}.')
+        break
+      default:
+        setMessage('')
+    }
+  }
+
+  // Handle sending with template system
+  const handleSendWithTemplate = async (templateType: string) => {
+    try {
+      setSending(true)
+      setProgress({ total: 0, sent: 0, failed: 0, currentRecipient: 'Preparing...', percentage: 0 })
+      
+      const response = await fetch('/api/sms/send-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateType,
+          targetType: recipientType,
+          targetOptions: {
+            classIds: recipientType === 'class' ? selectedClasses : undefined,
+            studentIds: recipientType === 'individual' ? selectedStudents : undefined,
+            minimumBalance: templateType === 'FEES_BALANCE' ? 1000 : undefined
+          }
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send SMS')
+      }
+
+      setProgress({
+        total: result.totalRecipients,
+        sent: result.sentCount,
+        failed: result.failedCount,
+        currentRecipient: 'Complete!',
+        percentage: 100
+      })
+
+      setTimeout(() => {
+        showToast('success', `SMS sent to ${result.sentCount} recipients${result.failedCount > 0 ? ` (${result.failedCount} failed)` : ''}`)
+        setProgress(null)
+        fetchData()
+      }, 1000)
+
+    } catch (err) {
+      console.error('Error sending SMS with template:', err)
+      showToast('error', err instanceof Error ? err.message : 'Failed to send SMS')
+      setProgress(null)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -313,29 +379,29 @@ export default function SMSCenterPage() {
       case 'DELIVERED':
         return (
           <div className="flex items-center gap-1" title="Delivered">
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className="h-4 w-4 text-[var(--success)]" />
           </div>
         )
       case 'SENT':
         return (
           <div className="flex items-center gap-1" title="Sent successfully">
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className="h-4 w-4 text-[var(--success)]" />
           </div>
         )
       case 'FAILED':
         return (
           <div className="flex items-center gap-1" title="Failed to deliver">
-            <XCircle className="h-4 w-4 text-red-500" />
+            <XCircle className="h-4 w-4 text-[var(--danger)]" />
           </div>
         )
       case 'QUEUED':
         return (
           <div className="flex items-center gap-1" title="Queued for sending">
-            <Clock className="h-4 w-4 text-yellow-500" />
+            <Clock className="h-4 w-4 text-[var(--warning)]" />
           </div>
         )
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-[var(--text-muted)]" />
     }
   }
 
@@ -471,24 +537,24 @@ export default function SMSCenterPage() {
           <h3 className="text-sm font-medium mb-3">Delivery Status (Last 24 Hours)</h3>
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <div className="w-3 h-3 rounded-full bg-[var(--success)]" />
               <span>Delivered: {data.deliveryStats.delivered}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <div className="w-3 h-3 rounded-full bg-[var(--accent-primary)]" />
               <span>Pending: {data.deliveryStats.sent}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-[var(--danger)]" />
               <span>Failed: {data.deliveryStats.failed}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-3 h-3 rounded-full bg-[var(--warning)]" />
               <span>Queued: {data.deliveryStats.queued}</span>
             </div>
           </div>
           {data.deliveryStats.failed > 0 && (
-            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+            <p className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)] mt-2">
               ⚠️ {data.deliveryStats.failed} message(s) failed to deliver. Check recipient phone numbers.
             </p>
           )}
@@ -514,14 +580,17 @@ export default function SMSCenterPage() {
                 disabled={data.isSchoolSuspended || data.isPaused}
               >
                 <option value="">Select a template...</option>
-                {data.templates.map((template) => (
-                  <option key={template.type} value={template.type}>
-                    {template.type.replace(/_/g, ' ')}
-                  </option>
-                ))}
+                <option value="FEES_BALANCE">Fee Balance Reminder</option>
+                <option value="FEES_RECEIPT">Fee Payment Confirmation</option>
+                <option value="REPORT_READY">Report Card Ready</option>
+                <option value="ANNOUNCEMENT">General Announcement</option>
+                <option value="EMERGENCY_ALERT">Emergency Alert</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Templates use the new SMS system with proper validation and cost protection
+            </p>
           </div>
 
           {/* Message Input */}
@@ -616,7 +685,7 @@ export default function SMSCenterPage() {
                       <span className="text-sm">{student.name}</span>
                       <span className="text-xs text-muted-foreground">({student.className})</span>
                       {!student.isPaid && excludeUnpaid && (
-                        <span className="text-xs text-red-500">(Unpaid - will be excluded)</span>
+                        <span className="text-xs text-[var(--danger)]">(Unpaid - will be excluded)</span>
                       )}
                     </label>
                   ))
@@ -636,7 +705,7 @@ export default function SMSCenterPage() {
                 disabled={data.isSchoolSuspended || data.isPaused}
               />
               <span className="text-sm">Exclude unpaid students</span>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertTriangle className="h-4 w-4 text-[var(--warning)]" />
             </label>
             <p className="text-xs text-muted-foreground mt-1 ml-6">
               Students with unpaid fees will not receive SMS
@@ -645,20 +714,20 @@ export default function SMSCenterPage() {
 
           {/* Progress Display */}
           {progress && (
-            <div className="mb-4 p-4 rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <div className="mb-4 p-4 rounded-lg border bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 border-[var(--info-light)] dark:border-[var(--info-dark)]">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                <span className="text-sm font-medium text-[var(--info-dark)] dark:text-[var(--info-light)]">
                   Sending SMS...
                 </span>
-                <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                <span className="text-sm font-bold text-[var(--accent-hover)] dark:text-[var(--info)]">
                   {progress.percentage}%
                 </span>
               </div>
               
               {/* Progress Bar */}
-              <div className="w-full h-3 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden mb-3">
+              <div className="w-full h-3 bg-[var(--info)] dark:bg-[var(--info-dark)] rounded-full overflow-hidden mb-3">
                 <div 
-                  className="h-full bg-blue-600 dark:bg-blue-400 rounded-full transition-all duration-300 ease-out"
+                  className="h-full bg-[var(--chart-blue)] dark:bg-[var(--info)] rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${progress.percentage}%` }}
                 />
               </div>
@@ -666,25 +735,25 @@ export default function SMSCenterPage() {
               {/* Stats */}
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                  <span className="flex items-center gap-1 text-[var(--chart-green)] dark:text-[var(--success)]">
                     <CheckCircle className="h-3.5 w-3.5" />
                     {progress.sent} sent
                   </span>
                   {progress.failed > 0 && (
-                    <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                    <span className="flex items-center gap-1 text-[var(--chart-red)] dark:text-[var(--danger)]">
                       <XCircle className="h-3.5 w-3.5" />
                       {progress.failed} failed
                     </span>
                   )}
                 </div>
-                <span className="text-blue-600 dark:text-blue-400">
+                <span className="text-[var(--chart-blue)] dark:text-[var(--chart-blue)]">
                   {progress.sent + progress.failed} / {progress.total}
                 </span>
               </div>
               
               {/* Current Recipient */}
               {progress.currentRecipient && (
-                <div className="mt-2 text-xs text-blue-700 dark:text-blue-300 truncate">
+                <div className="mt-2 text-xs text-[var(--accent-hover)] dark:text-[var(--info)] truncate">
                   {progress.percentage < 100 ? '→ ' : '✓ '}{progress.currentRecipient}
                 </div>
               )}
@@ -696,29 +765,53 @@ export default function SMSCenterPage() {
             <Button
               onClick={handleCancelSend}
               variant="outline"
-              className="w-full gap-2 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+              className="w-full gap-2 border-[var(--danger)] text-[var(--chart-red)] hover:bg-[var(--danger-light)] dark:border-[var(--chart-red)] dark:text-[var(--danger)] dark:hover:bg-[var(--danger-dark)]"
             >
               <XCircle className="h-4 w-4" />
               Cancel Sending
             </Button>
           ) : (
-            <Button
-              onClick={handleSendSMS}
-              disabled={sending || data.isSchoolSuspended || data.isPaused || !message.trim()}
-              className="w-full gap-2"
-            >
-              {sending ? (
-                <>
-                  <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                  Preparing...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Send SMS
-                </>
+            <div className="space-y-2">
+              <Button
+                onClick={handleSendSMS}
+                disabled={sending || data.isSchoolSuspended || data.isPaused || !message.trim()}
+                className="w-full gap-2"
+              >
+                {sending ? (
+                  <>
+                    <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                    Preparing...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send SMS
+                  </>
+                )}
+              </Button>
+              
+              {/* Quick Template Actions */}
+              {selectedTemplate && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={() => handleSendWithTemplate('FEES_BALANCE')}
+                    disabled={sending || data.isSchoolSuspended || data.isPaused}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Send Fee Reminders
+                  </Button>
+                  <Button
+                    onClick={() => handleSendWithTemplate('REPORT_READY')}
+                    disabled={sending || data.isSchoolSuspended || data.isPaused}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Send Report Alerts
+                  </Button>
+                </div>
               )}
-            </Button>
+            </div>
           )}
         </div>
 
@@ -765,9 +858,9 @@ export default function SMSCenterPage() {
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-1.5 py-0.5 rounded ${
                             msg.status === 'DELIVERED' || msg.status === 'SENT' 
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                            msg.status === 'FAILED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              ? 'bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/30 dark:text-[var(--success)]' :
+                            msg.status === 'FAILED' ? 'bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/30 dark:text-[var(--danger)]' :
+                            'bg-[var(--warning-light)] text-[var(--warning)] dark:bg-[var(--warning-dark)]/30 dark:text-[var(--warning)]'
                           }`}>
                             {getStatusText(msg.status)}
                           </span>

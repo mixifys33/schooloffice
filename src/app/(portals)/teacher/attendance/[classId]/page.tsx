@@ -189,15 +189,15 @@ export default function AttendanceRecordingPage() {
       <div className="p-4 sm:p-6">
         <div className="mb-4">
           <Link 
-            href="/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            href="/portals/teacher/attendance"
+            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Attendance
           </Link>
         </div>
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
           </div>
@@ -230,21 +230,21 @@ export default function AttendanceRecordingPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link 
-            href="/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-2"
+            href="/portals/teacher/attendance"
+            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Attendance
           </Link>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {data.className}
             {data.streamName && (
-              <span className="text-gray-500 dark:text-gray-400 font-normal">
+              <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)] font-normal">
                 {' '}({data.streamName})
               </span>
             )}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
             {today}
           </p>
         </div>
@@ -252,14 +252,14 @@ export default function AttendanceRecordingPage() {
 
       {/* Lock State Warning - Requirements: 4.3, 4.4, 4.5 */}
       {isLocked && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <Lock className="h-5 w-5 text-[var(--chart-yellow)] dark:text-[var(--warning)] mt-0.5" />
             <div>
-              <p className="font-medium text-amber-800 dark:text-amber-200">
+              <p className="font-medium text-[var(--warning-dark)] dark:text-[var(--warning)]">
                 Attendance Locked
               </p>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+              <p className="text-sm text-[var(--warning-dark)] dark:text-[var(--warning)] mt-1">
                 {data.lockState.message || `Attendance cutoff time (${data.lockState.cutoffTime}) has passed. Contact administration for approval to make changes.`}
               </p>
             </div>
@@ -269,8 +269,8 @@ export default function AttendanceRecordingPage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 border border-[var(--success-light)] dark:border-[var(--success-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-green)] dark:text-[var(--success)]">
             <CheckCircle2 className="h-5 w-5" />
             <span>{successMessage}</span>
           </div>
@@ -279,8 +279,8 @@ export default function AttendanceRecordingPage() {
 
       {/* Error Message */}
       {error && data && (
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
           </div>
@@ -289,21 +289,21 @@ export default function AttendanceRecordingPage() {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.total}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 text-center">
+          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{stats.total}</div>
+          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">Total</div>
         </div>
-        <div className="bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-green-700 dark:text-green-300">{stats.present}</div>
-          <div className="text-xs text-green-600 dark:text-green-400">Present</div>
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 rounded-lg border border-[var(--success-light)] dark:border-[var(--success-dark)] p-3 text-center">
+          <div className="text-2xl font-semibold text-[var(--chart-green)] dark:text-[var(--success)]">{stats.present}</div>
+          <div className="text-xs text-[var(--chart-green)] dark:text-[var(--success)]">Present</div>
         </div>
-        <div className="bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-red-700 dark:text-red-300">{stats.absent}</div>
-          <div className="text-xs text-red-600 dark:text-red-400">Absent</div>
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 rounded-lg border border-[var(--danger-light)] dark:border-[var(--danger-dark)] p-3 text-center">
+          <div className="text-2xl font-semibold text-[var(--chart-red)] dark:text-[var(--danger)]">{stats.absent}</div>
+          <div className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)]">Absent</div>
         </div>
-        <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-amber-700 dark:text-amber-300">{stats.late}</div>
-          <div className="text-xs text-amber-600 dark:text-amber-400">Late</div>
+        <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 rounded-lg border border-amber-200 dark:border-amber-800 p-3 text-center">
+          <div className="text-2xl font-semibold text-[var(--warning-dark)] dark:text-[var(--warning)]">{stats.late}</div>
+          <div className="text-xs text-[var(--chart-yellow)] dark:text-[var(--warning)]">Late</div>
         </div>
       </div>
 
@@ -314,7 +314,7 @@ export default function AttendanceRecordingPage() {
             variant="outline" 
             size="sm" 
             onClick={() => handleMarkAll('PRESENT')}
-            className="text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+            className="text-[var(--chart-green)] dark:text-[var(--success)] border-[var(--success)] dark:border-[var(--chart-green)]"
           >
             Mark All Present
           </Button>
@@ -322,7 +322,7 @@ export default function AttendanceRecordingPage() {
             variant="outline" 
             size="sm" 
             onClick={() => handleMarkAll('ABSENT')}
-            className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+            className="text-[var(--chart-red)] dark:text-[var(--danger)] border-[var(--danger)] dark:border-[var(--chart-red)]"
           >
             Mark All Absent
           </Button>
@@ -330,7 +330,7 @@ export default function AttendanceRecordingPage() {
       )}
 
       {/* Student List */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] overflow-hidden">
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {data.students.map((student, index) => (
             <StudentAttendanceRow
@@ -391,10 +391,10 @@ function StudentAttendanceRow({
   isLocked 
 }: StudentAttendanceRowProps) {
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+    <div className="flex items-center justify-between p-4 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
       <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-500 dark:text-gray-400 w-6">{index}.</span>
-        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+        <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] w-6">{index}.</span>
+        <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center">
           {student.photo ? (
             <img 
               src={student.photo} 
@@ -402,14 +402,14 @@ function StudentAttendanceRow({
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
-            <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <User className="h-4 w-4 text-[var(--text-muted)] dark:text-[var(--text-muted)]" />
           )}
         </div>
         <div>
-          <div className="font-medium text-gray-900 dark:text-white">
+          <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             {student.firstName} {student.lastName}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {student.admissionNumber}
           </div>
         </div>
@@ -423,8 +423,8 @@ function StudentAttendanceRow({
           disabled={isLocked}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
             status === 'PRESENT'
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+              ? 'bg-[var(--chart-green)] text-[var(--white-pure)]'
+              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--success-light)] dark:hover:bg-[var(--success-dark)]/30'
           } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Present
@@ -435,8 +435,8 @@ function StudentAttendanceRow({
           disabled={isLocked}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
             status === 'ABSENT'
-              ? 'bg-red-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+              ? 'bg-[var(--chart-red)] text-[var(--white-pure)]'
+              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)]/30'
           } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Absent
@@ -447,8 +447,8 @@ function StudentAttendanceRow({
           disabled={isLocked}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
             status === 'LATE'
-              ? 'bg-amber-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+              ? 'bg-[var(--chart-yellow)] text-[var(--white-pure)]'
+              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--warning-light)] dark:hover:bg-[var(--warning-dark)]/30'
           } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Late

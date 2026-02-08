@@ -31,7 +31,7 @@ import {
 } from '@/types/teacher'
 import { Gender } from '@/types/enums'
 import { auditService, AuditAction, AuditResource } from './audit.service'
-import { timetableService } from './timetable.service'
+// import { timetableService } from './timetable.service' // Unused import - commented out
 
 /**
  * Validation error for teacher operations
@@ -77,7 +77,6 @@ function mapPrismaTeacherToDomain(prismaTeacher: {
   forcePasswordReset: boolean
   inAppMessagingEnabled: boolean
   smsEnabled: boolean
-  whatsappEnabled: boolean
   emailEnabled: boolean
   assignedSubjectIds: string[]
   assignedClassIds: string[]
@@ -113,7 +112,7 @@ function mapPrismaTeacherToDomain(prismaTeacher: {
   const channelConfig: ChannelConfig = {
     inAppMessaging: prismaTeacher.inAppMessagingEnabled,
     sms: prismaTeacher.smsEnabled,
-    whatsapp: prismaTeacher.whatsappEnabled,
+    whatsapp: false, // WhatsApp removed from schema
     email: prismaTeacher.emailEnabled,
   }
 
@@ -391,12 +390,11 @@ export class TeacherManagementService {
         forcePasswordReset: true,
         inAppMessagingEnabled: DEFAULT_CHANNEL_CONFIG.inAppMessaging,
         smsEnabled: DEFAULT_CHANNEL_CONFIG.sms,
-        whatsappEnabled: DEFAULT_CHANNEL_CONFIG.whatsapp,
         emailEnabled: DEFAULT_CHANNEL_CONFIG.email,
-        assignedSubjectIds: [],
-        assignedClassIds: [],
-        assignedStreamIds: [],
-        classTeacherForIds: [],
+        assignedSubjectIds: data.assignedSubjects || [],
+        assignedClassIds: data.assignedClasses || [],
+        assignedStreamIds: data.assignedStreams || [],
+        classTeacherForIds: data.classTeacherFor || [],
         createdBy,
       },
       include: {
@@ -555,13 +553,31 @@ export class TeacherManagementService {
       'department',
       'photo',
       'address',
+      'assignedSubjects',
+      'assignedClasses',
+      'assignedStreams',
+      'classTeacherFor',
     ]
 
     for (const field of fieldsToUpdate) {
-      if (data[field] !== undefined && data[field] !== existingTeacher[field]) {
-        previousValue[field] = existingTeacher[field]
-        newValue[field] = data[field]
-        updateData[field] = data[field]
+      if (data[field] !== undefined) {
+        // Handle assignment arrays specially
+        if (['assignedSubjects', 'assignedClasses', 'assignedStreams', 'classTeacherFor'].includes(field)) {
+          const dbField = field === 'assignedSubjects' ? 'assignedSubjectIds' :
+                         field === 'assignedClasses' ? 'assignedClassIds' :
+                         field === 'assignedStreams' ? 'assignedStreamIds' :
+                         'classTeacherForIds';
+          
+          if (JSON.stringify(data[field]) !== JSON.stringify(existingTeacher[dbField])) {
+            previousValue[field] = existingTeacher[dbField]
+            newValue[field] = data[field]
+            updateData[dbField] = data[field]
+          }
+        } else if (data[field] !== (existingTeacher as Record<string, unknown>)[field]) {
+          previousValue[field] = (existingTeacher as Record<string, unknown>)[field]
+          newValue[field] = data[field]
+          updateData[field] = data[field]
+        }
       }
     }
 
@@ -639,7 +655,7 @@ export class TeacherManagementService {
         { firstName: { contains: searchTerm, mode: 'insensitive' } },
         { lastName: { contains: searchTerm, mode: 'insensitive' } },
         { email: { contains: searchTerm, mode: 'insensitive' } },
-        { phone: { contains: searchTerm, mode: 'insensitive' } },
+        { phone: { contains: searchTerm } }, // Phone search without case-insensitive mode
         { nationalId: { contains: searchTerm, mode: 'insensitive' } },
       ]
     }
@@ -1019,11 +1035,17 @@ export class TeacherManagementService {
       // Requirement 2.7: Exclude inactive teachers from timetable assignments
       let removedCount = 0
       try {
-        const result = await timetableService.removeInactiveTeacherFromTimetable(
-          teacherId,
-          schoolId
-        )
-        removedCount = result.removedCount
+        const { TimetableService } = await import('./timetable.service')
+        // Check if the method exists before calling it
+        if (typeof TimetableService.removeInactiveTeacherFromTimetable === 'function') {
+          const result = await TimetableService.removeInactiveTeacherFromTimetable(
+            teacherId,
+            schoolId
+          )
+          removedCount = result ? 1 : 0
+        } else {
+          console.warn('removeInactiveTeacherFromTimetable method not available on TimetableService')
+        }
       } catch (timetableError) {
         // If the timetable service throws (e.g., teacher not found in timetable),
         // we continue with the audit logging
@@ -1499,7 +1521,7 @@ export class TeacherManagementService {
           forcePasswordReset: true,
           inAppMessagingEnabled: accessData.channelConfig.inAppMessaging,
           smsEnabled: accessData.channelConfig.sms,
-          whatsappEnabled: accessData.channelConfig.whatsapp,
+          // whatsappEnabled removed from schema
           emailEnabled: accessData.channelConfig.email,
         },
         include: {
@@ -1931,7 +1953,7 @@ export class TeacherManagementService {
     const previousChannelConfig: import('@/types/teacher').ChannelConfig = {
       inAppMessaging: existingTeacher.inAppMessagingEnabled,
       sms: existingTeacher.smsEnabled,
-      whatsapp: existingTeacher.whatsappEnabled,
+      whatsapp: false, // WhatsApp removed from schema
       email: existingTeacher.emailEnabled,
     }
 
@@ -1941,7 +1963,7 @@ export class TeacherManagementService {
       data: {
         inAppMessagingEnabled: channelConfig.inAppMessaging,
         smsEnabled: channelConfig.sms,
-        whatsappEnabled: channelConfig.whatsapp,
+        // whatsappEnabled removed from schema
         emailEnabled: channelConfig.email,
       },
       include: {
@@ -2050,7 +2072,7 @@ export class TeacherManagementService {
       select: {
         inAppMessagingEnabled: true,
         smsEnabled: true,
-        whatsappEnabled: true,
+        // whatsappEnabled removed from schema
         emailEnabled: true,
       },
     })
@@ -2062,7 +2084,7 @@ export class TeacherManagementService {
     return {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: teacher.whatsappEnabled,
+      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
   }

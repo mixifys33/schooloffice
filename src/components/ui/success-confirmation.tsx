@@ -68,16 +68,23 @@ export function SuccessConfirmation({
     <Card
       role="alert"
       aria-live="polite"
-      className={cn(
-        'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950',
-        className
-      )}
+      className={cn(className)}
+      style={{
+        backgroundColor: 'var(--success-light)',
+        borderColor: 'var(--success)',
+      }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <CardTitle className="text-base text-green-800 dark:text-green-200">
+            <CheckCircle 
+              className="h-5 w-5" 
+              style={{ color: 'var(--success)' }}
+            />
+            <CardTitle 
+              className="text-base"
+              style={{ color: 'var(--success-dark)' }}
+            >
               {title}
             </CardTitle>
           </div>
@@ -85,7 +92,8 @@ export function SuccessConfirmation({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-green-600 hover:text-green-700 dark:text-green-400"
+              className="h-6 w-6 hover:opacity-80"
+              style={{ color: 'var(--success)' }}
               onClick={handleClose}
               aria-label="Close"
             >
@@ -96,7 +104,10 @@ export function SuccessConfirmation({
       </CardHeader>
 
       <CardContent className="pb-3">
-        <p className="text-sm text-green-700 dark:text-green-300">
+        <p 
+          className="text-sm"
+          style={{ color: 'var(--success-dark)' }}
+        >
           {message}
         </p>
       </CardContent>
@@ -116,10 +127,16 @@ export function SuccessConfirmation({
                 variant={step.isPrimary ? 'default' : 'outline'}
                 size="sm"
                 className={cn(
-                  step.isPrimary
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'border-green-300 text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300'
+                  !step.isPrimary && 'hover:opacity-80'
                 )}
+                style={
+                  step.isPrimary
+                    ? undefined
+                    : {
+                        borderColor: 'var(--success)',
+                        color: 'var(--success-dark)',
+                      }
+                }
               >
                 {step.href ? (
                   <a href={step.href}>
@@ -186,11 +203,14 @@ export function SuccessToast({
       className={cn(
         'fixed bottom-4 right-4 z-50',
         'flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg',
-        'bg-green-600 text-white',
         'transition-all duration-300',
         isExiting ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0',
         className
       )}
+      style={{
+        backgroundColor: 'var(--success)',
+        color: 'var(--accent-contrast)',
+      }}
     >
       <CheckCircle className="h-5 w-5" />
       <span className="text-sm font-medium">{message}</span>

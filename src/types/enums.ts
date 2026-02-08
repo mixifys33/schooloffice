@@ -18,6 +18,13 @@ export enum PilotType {
   PAID = 'PAID',
 }
 
+export enum LicenseType {
+  BASIC = 'BASIC',
+  STANDARD = 'STANDARD',
+  PREMIUM = 'PREMIUM',
+  ENTERPRISE = 'ENTERPRISE',
+}
+
 export enum StudentStatus {
   ACTIVE = 'ACTIVE',
   TRANSFERRED = 'TRANSFERRED',
@@ -46,18 +53,84 @@ export enum ExamType {
   MID = 'MID',   // Mid-Term
   EOT = 'EOT',   // End of Term
   CA = 'CA',     // Continuous Assessment
+  EXAM = 'EXAM', // General Exam
+}
+
+export enum AssessmentType {
+  ASSIGNMENT = 'ASSIGNMENT',
+  EXAM = 'EXAM',
+  PROJECT = 'PROJECT',
+  QUIZ = 'QUIZ',
+}
+
+export enum TeacherSubmissionStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum MarksSubmissionStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum CAType {
+  ASSIGNMENT = 'ASSIGNMENT',
+  TEST = 'TEST',
+  PROJECT = 'PROJECT',
+  PRACTICAL = 'PRACTICAL',
+  OBSERVATION = 'OBSERVATION',
 }
 
 export enum PaymentMethod {
   CASH = 'CASH',
   MOBILE_MONEY = 'MOBILE_MONEY',
   BANK = 'BANK',
+  CHEQUE = 'CHEQUE',
+}
+
+export enum StudentType {
+  DAY = 'DAY',
+  BOARDING = 'BOARDING',
+}
+
+export enum FeeCategory {
+  TUITION = 'TUITION',
+  BOARDING = 'BOARDING',
+  TRANSPORT = 'TRANSPORT',
+  UNIFORM = 'UNIFORM',
+  BOOKS = 'BOOKS',
+  MEALS = 'MEALS',
+  ACTIVITIES = 'ACTIVITIES',
+  OTHER = 'OTHER',
+}
+
+export enum DiscountType {
+  PERCENTAGE = 'PERCENTAGE',
+  FIXED_AMOUNT = 'FIXED_AMOUNT',
+}
+
+export enum DiscountStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  APPLIED = 'APPLIED',
+}
+
+export enum PaymentRecordStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  REVERSED = 'REVERSED',
+  FAILED = 'FAILED',
 }
 
 export enum MessageChannel {
   SMS = 'SMS',
-  WHATSAPP = 'WHATSAPP',
   EMAIL = 'EMAIL',
+  WHATSAPP = 'WHATSAPP',
 }
 
 export enum MessageStatus {
@@ -118,10 +191,43 @@ export enum DisciplineAction {
   EXPULSION = 'EXPULSION',
 }
 
-export enum LicenseType {
-  FREE_PILOT = 'FREE_PILOT',
-  BASIC = 'BASIC',
-  PREMIUM = 'PREMIUM',
+export enum SchoolType {
+  PRIMARY = 'PRIMARY',
+  SECONDARY = 'SECONDARY',
+  COMBINED = 'COMBINED',
+}
+
+export enum DoSReportCardStatus {
+  DRAFT = 'DRAFT',
+  APPROVED = 'APPROVED',
+  PUBLISHED = 'PUBLISHED',
+  LOCKED = 'LOCKED',
+}
+
+export enum HubAlertType {
+  SYSTEM = 'SYSTEM',
+  SCHOOL = 'SCHOOL',
+  FINANCIAL = 'FINANCIAL',
+  TECHNICAL = 'TECHNICAL',
+}
+
+export enum HubAlertSeverity {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum HubAuditActionType {
+  SCHOOL_CREATED = 'SCHOOL_CREATED',
+  SCHOOL_UPDATED = 'SCHOOL_UPDATED',
+  SCHOOL_SUSPENDED = 'SCHOOL_SUSPENDED',
+  SCHOOL_REACTIVATED = 'SCHOOL_REACTIVATED',
+  BULK_MESSAGE_SENT = 'BULK_MESSAGE_SENT',
+  TEMPLATE_UPDATED = 'TEMPLATE_UPDATED',
+  ALERT_CREATED = 'ALERT_CREATED',
+  SETTINGS_UPDATED = 'SETTINGS_UPDATED',
+  RESUME_SCHOOL_MESSAGING = 'RESUME_SCHOOL_MESSAGING',
 }
 
 export enum MessageTemplateType {
@@ -364,12 +470,31 @@ export enum TargetType {
 }
 
 export enum MessageType {
+  AUTOMATED = 'AUTOMATED',
+  MANUAL = 'MANUAL',
   GENERAL = 'GENERAL',
   ACADEMIC = 'ACADEMIC',
   FINANCIAL = 'FINANCIAL',
   ATTENDANCE = 'ATTENDANCE',
   EMERGENCY = 'EMERGENCY',
   ANNOUNCEMENT = 'ANNOUNCEMENT',
+}
+
+export enum AutomationFrequency {
+  WEEKLY = 'WEEKLY',
+  BIWEEKLY = 'BIWEEKLY',
+  TRI_WEEKLY = 'TRI_WEEKLY',
+}
+
+export enum StudentAccountStatus {
+  OK = 'OK',
+  WARNING = 'WARNING',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum TrackerStatus {
+  PENDING = 'PENDING',
+  CLEARED = 'CLEARED',
 }
 
 // ============================================

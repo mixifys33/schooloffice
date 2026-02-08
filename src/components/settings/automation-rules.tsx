@@ -64,8 +64,6 @@ const ACTION_TYPES = [
 
 const MESSAGE_CHANNELS = [
   { value: 'SMS', label: 'SMS' },
-  { value: 'WHATSAPP', label: 'WhatsApp' },
-  { value: 'EMAIL', label: 'Email' },
 ]
 
 export function AutomationRulesPage() {
@@ -412,7 +410,7 @@ export function AutomationRulesPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         {rule.executionCount > 0 ? (
-                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <CheckCircle className="h-3 w-3 text-[var(--success)]" />
                         ) : (
                           <AlertCircle className="h-3 w-3" />
                         )}

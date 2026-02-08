@@ -46,13 +46,14 @@ export async function POST(request: NextRequest) {
     // Hash new password
     const passwordHash = await bcrypt.hash(newPassword, 12)
 
-    // Update user password
+    // Update user password and clear force reset flag
     await prisma.user.update({
       where: { id: tokenData.userId },
       data: {
         passwordHash,
         failedAttempts: 0,
         lockedUntil: null,
+        forcePasswordReset: false, // Clear the force password reset flag
       }
     })
 

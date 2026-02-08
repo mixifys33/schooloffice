@@ -57,6 +57,10 @@ export interface TeacherDetailViewProps {
   onRevokeAccess?: () => void
   /** Loading state */
   loading?: boolean
+  /** Loading states for individual buttons */
+  editLoading?: boolean
+  statusLoading?: boolean
+  accessLoading?: boolean
 }
 
 // Helper functions for display labels
@@ -102,12 +106,12 @@ const getStatusLabel = (status: TeacherEmploymentStatus): string => {
 
 const getStatusColor = (status: TeacherEmploymentStatus): string => {
   const colors: Record<TeacherEmploymentStatus, string> = {
-    [TeacherEmploymentStatus.ACTIVE]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    [TeacherEmploymentStatus.ON_LEAVE]: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-    [TeacherEmploymentStatus.SUSPENDED]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    [TeacherEmploymentStatus.LEFT]: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+    [TeacherEmploymentStatus.ACTIVE]: 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)] dark:text-[var(--success)]',
+    [TeacherEmploymentStatus.ON_LEAVE]: 'bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)] dark:text-[var(--warning)]',
+    [TeacherEmploymentStatus.SUSPENDED]: 'bg-[var(--danger-light)] text-[var(--danger-dark)] dark:bg-[var(--danger-dark)] dark:text-[var(--danger)]',
+    [TeacherEmploymentStatus.LEFT]: 'bg-[var(--bg-surface)] text-[var(--text-primary)] dark:bg-[var(--border-default)] dark:text-[var(--text-secondary)]',
   }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return colors[status] || 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
 }
 
 const getAccessLevelLabel = (level: TeacherAccessLevel | undefined): string => {
@@ -168,76 +172,135 @@ export function TeacherDetailView({
   onGrantAccess,
   onRevokeAccess,
   loading = false,
+  editLoading = false,
+  statusLoading = false,
+  accessLoading = false,
 }: TeacherDetailViewProps) {
   // Get names for IDs
   const getSubjectNames = (ids: string[]): string[] => {
-    return ids.map((id) => subjects.find((s) => s.id === id)?.name || id)
+    return ids.map((id) => {
+      const subject = subjects.find((s) => s.id === id)
+      return typeof subject?.name === 'string' ? subject.name : id
+    })
   }
 
   const getClassNames = (ids: string[]): string[] => {
-    return ids.map((id) => classes.find((c) => c.id === id)?.name || id)
+    return ids.map((id) => {
+      const cls = classes.find((c) => c.id === id)
+      return typeof cls?.name === 'string' ? cls.name : id
+    })
   }
 
   const getStreamNames = (ids: string[]): string[] => {
-    return ids.map((id) => streams.find((s) => s.id === id)?.name || id)
+    return ids.map((id) => {
+      const stream = streams.find((s) => s.id === id)
+      return typeof stream?.name === 'string' ? stream.name : id
+    })
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--chart-blue)]"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 p-4 sm:p-6">
       {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {teacher.firstName} {teacher.lastName}
-          </h1>
-          <p className="text-muted-foreground">
-            {getJobTitleLabel(teacher.jobTitle)} • {teacher.department}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge className={cn('text-sm', getStatusColor(teacher.employmentStatus))}>
-            {getStatusLabel(teacher.employmentStatus)}
-          </Badge>
-          {teacher.hasSystemAccess ? (
-            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-sm">
-              Has System Access
+      <div className="flex flex-col space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold truncate">
+              {teacher.firstName} {teacher.lastName}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {getJobTitleLabel(teacher.jobTitle)} • {teacher.department}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Badge className={cn('text-sm', getStatusColor(teacher.employmentStatus))}>
+              {getStatusLabel(teacher.employmentStatus)}
             </Badge>
-          ) : (
-            <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 text-sm">
-              Record Only
-            </Badge>
-          )}
+            {teacher.hasSystemAccess ? (
+              <Badge className="bg-[var(--info-light)] text-[var(--info-dark)] dark:bg-[var(--info-dark)] dark:text-[var(--info)] text-sm">
+                Has System Access
+              </Badge>
+            ) : (
+              <Badge className="bg-[var(--bg-surface)] text-[var(--text-secondary)] dark:bg-[var(--border-default)] dark:text-[var(--text-muted)] text-sm">
+                Record Only
+              </Badge>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      {canEdit && (
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onEdit}>
-            Edit Profile
-          </Button>
-          <Button variant="outline" onClick={onStatusChange}>
-            Change Status
-          </Button>
-          {teacher.hasSystemAccess ? (
-            <Button variant="outline" className="text-red-600" onClick={onRevokeAccess}>
-              Revoke Access
+        {/* Action Buttons */}
+        {canEdit && (
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              onClick={onEdit}
+              disabled={editLoading}
+            >
+              {editLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Loading...
+                </>
+              ) : (
+                'Edit Profile'
+              )}
             </Button>
-          ) : (
-            <Button variant="outline" onClick={onGrantAccess}>
-              Grant Access
+            <Button 
+              variant="outline" 
+              onClick={onStatusChange}
+              disabled={statusLoading}
+            >
+              {statusLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                'Change Status'
+              )}
             </Button>
-          )}
-        </div>
-      )}
+            {teacher.hasSystemAccess ? (
+              <Button 
+                variant="outline" 
+                className="text-[var(--chart-red)]" 
+                onClick={onRevokeAccess}
+                disabled={accessLoading}
+              >
+                {accessLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Revoking...
+                  </>
+                ) : (
+                  'Revoke Access'
+                )}
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={onGrantAccess}
+                disabled={accessLoading}
+              >
+                {accessLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Granting...
+                  </>
+                ) : (
+                  'Grant Access'
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Information */}
@@ -279,78 +342,94 @@ export function TeacherDetailView({
           <CardTitle className="text-base">Academic Assignments</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
             {/* Subjects */}
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Assigned Subjects</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Assigned Subjects</h4>
               {teacher.assignedSubjects.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {getSubjectNames(teacher.assignedSubjects).map((name, i) => (
-                    <Badge key={i} variant="secondary">{name}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No subjects assigned</p>
-              )}
-            </div>
-
-            {/* Classes */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Assigned Classes</h4>
-              {teacher.assignedClasses.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {getClassNames(teacher.assignedClasses).map((name, i) => (
-                    <Badge key={i} variant="secondary">{name}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No classes assigned</p>
-              )}
-            </div>
-
-            {/* Streams */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Assigned Streams</h4>
-              {teacher.assignedStreams.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {getStreamNames(teacher.assignedStreams).map((name, i) => (
-                    <Badge key={i} variant="secondary">{name}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No streams assigned</p>
-              )}
-            </div>
-
-            {/* Class Teacher For */}
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Class Teacher For</h4>
-              {teacher.classTeacherFor && teacher.classTeacherFor.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {getClassNames(teacher.classTeacherFor).map((name, i) => (
-                    <Badge key={i} className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                    <Badge key={i} variant="secondary" className="text-sm px-3 py-1">
                       {name}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Not a class teacher</p>
+                <p className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  No subjects assigned yet
+                </p>
+              )}
+            </div>
+
+            {/* Classes */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Assigned Classes</h4>
+              {teacher.assignedClasses.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {getClassNames(teacher.assignedClasses).map((name, i) => (
+                    <Badge key={i} variant="secondary" className="text-sm px-3 py-1">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  No classes assigned yet
+                </p>
+              )}
+            </div>
+
+            {/* Streams */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Assigned Streams</h4>
+              {teacher.assignedStreams.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {getStreamNames(teacher.assignedStreams).map((name, i) => (
+                    <Badge key={i} variant="secondary" className="text-sm px-3 py-1">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  No streams assigned yet
+                </p>
+              )}
+            </div>
+
+            {/* Class Teacher For */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Class Teacher For</h4>
+              {teacher.classTeacherFor && teacher.classTeacherFor.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {getClassNames(teacher.classTeacherFor).map((name, i) => (
+                    <Badge key={i} className="bg-[var(--info-light)] text-[var(--info-dark)] dark:bg-[var(--info-dark)] dark:text-[var(--info)] text-sm px-3 py-1">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  Not assigned as a class teacher
+                </p>
               )}
             </div>
 
             {/* Examination Roles */}
-            <div className="md:col-span-2">
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Examination Roles</h4>
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Examination Roles</h4>
               {teacher.examinationRoles.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {teacher.examinationRoles.map((role, i) => (
-                    <Badge key={i} className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                    <Badge key={i} className="bg-indigo-100 text-[var(--info-dark)] dark:bg-indigo-900 dark:text-[var(--info)] text-sm px-3 py-1">
                       {getExamRoleLabel(role.role)}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground italic">No examination roles assigned</p>
+                <p className="text-sm text-muted-foreground italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  No examination roles assigned
+                </p>
               )}
             </div>
           </div>
@@ -462,8 +541,8 @@ export function TeacherDetailView({
                     className="flex items-center justify-between p-3 border rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 bg-[var(--bg-surface)] dark:bg-[var(--bg-surface)] rounded flex items-center justify-center">
+                        <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
@@ -515,9 +594,9 @@ interface DetailFieldProps {
 
 function DetailField({ label, value }: DetailFieldProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-      <span className="text-sm text-muted-foreground min-w-[140px]">{label}:</span>
-      <span className="text-sm font-medium">{value}</span>
+    <div className="flex flex-col space-y-1">
+      <span className="text-sm text-muted-foreground font-medium">{label}:</span>
+      <span className="text-sm break-words">{value}</span>
     </div>
   )
 }
@@ -533,8 +612,8 @@ function PermissionIndicator({ label, enabled }: PermissionIndicatorProps) {
       className={cn(
         'flex items-center gap-2 px-3 py-2 rounded-md text-sm',
         enabled
-          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+          ? 'bg-[var(--success-light)] text-[var(--success-dark)] dark:bg-[var(--success-dark)] dark:text-[var(--success)]'
+          : 'bg-[var(--bg-surface)] text-[var(--text-muted)] dark:bg-[var(--border-default)] dark:text-[var(--text-muted)]'
       )}
     >
       {enabled ? (
@@ -563,11 +642,11 @@ function MetricCard({ title, value, subtitle, warning }: MetricCardProps) {
     <div
       className={cn(
         'p-4 rounded-lg border',
-        warning ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950' : ''
+        warning ? 'border-amber-200 bg-[var(--warning-light)] dark:border-amber-800 dark:bg-[var(--warning-dark)]' : ''
       )}
     >
       <p className="text-sm text-muted-foreground">{title}</p>
-      <p className={cn('text-2xl font-bold', warning && 'text-amber-600 dark:text-amber-400')}>
+      <p className={cn('text-2xl font-bold', warning && 'text-[var(--chart-yellow)] dark:text-[var(--warning)]')}>
         {value}
       </p>
       <p className="text-xs text-muted-foreground">{subtitle}</p>

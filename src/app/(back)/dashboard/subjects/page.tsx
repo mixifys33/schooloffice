@@ -255,7 +255,7 @@ export default function SubjectsPage() {
               e.stopPropagation()
               handleDeleteClick(subject)
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-[var(--chart-red)] hover:text-[var(--chart-red)] hover:bg-[var(--danger-light)]"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -358,7 +358,7 @@ export default function SubjectsPage() {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className={cn(
-              'fixed inset-0 z-50 bg-black/50',
+              'fixed inset-0 z-50 bg-[var(--text-primary)]/50',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
             )}
@@ -367,7 +367,7 @@ export default function SubjectsPage() {
             className={cn(
               'fixed left-[50%] top-[50%] z-50 w-full max-w-md',
               'translate-x-[-50%] translate-y-[-50%]',
-              'bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6',
+              'bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-lg p-6',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

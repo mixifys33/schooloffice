@@ -1,499 +1,387 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Camera, 
-  Briefcase, 
-  BookOpen, 
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import {
+  User,
+  BookOpen,
+  Users,
+  Calendar,
+  Clock,
+  Award,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
   GraduationCap,
-  Check,
-  Loader2,
-  Lock
+  Settings,
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  Edit3
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FormField } from '@/components/ui/form-field'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { ImageKitUpload, type ImageKitUploadResult } from '@/components/ui/imagekit-upload'
-import { ErrorMessagePanel, SuccessMessage, ActionButton, ButtonGroup } from '@/components/teacher'
-import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { 
-  cardStyles, 
-  typography, 
-  spacing, 
-  teacherColors, 
+import {
+  cardStyles,
+  typography,
+  spacing,
+  teacherColors,
   transitions,
-  errorMessages 
+  errorMessages
 } from '@/lib/teacher-ui-standards'
 
 /**
- * Teacher Profile Self-Service Page
- * Requirements: 10.1, 10.2, 10.3, 10.4
- * - Allow editing of phone, email, and profile photo (10.1)
- * - Display name, role, subjects, and classes as read-only (10.4)
- * - Log all updates to audit service (10.2)
- * - Prevent modification of name, role, subjects, classes (10.3)
+ * Profile & Workload Page for Teacher Portal
+ * Requirements: 8.1, 8.2, 8.3
+ * - Display teacher profile information
+ * - Show workload (classes, subjects, periods)
+ * - Allow profile updates
  */
 
-interface EditableProfileData {
-  phone: string
-  email: string
-  photo: string | null
-}
-
-interface ReadOnlyProfileData {
+interface TeacherProfile {
   id: string
   firstName: string
   lastName: string
-  fullName: string
-  role: string
-  jobTitle: string
+  email: string
+  phone: string
+  address: string
+  position: string
   department: string
-  employmentType: string
-  assignedSubjects: Array<{ id: string; name: string }>
-  assignedClasses: Array<{ id: string; name: string }>
-  classTeacherFor: Array<{ id: string; name: string }>
+  hireDate: string
+  qualifications: string[]
+  photo: string | null
 }
 
-interface TeacherProfileResponse {
-  editable: EditableProfileData
-  readOnly: ReadOnlyProfileData
+interface WorkloadItem {
+  id: string
+  className: string
+  streamName: string | null
+  subjectName: string
+  periodsPerWeek: number
+  studentCount: number
+  isClassTeacher: boolean
 }
 
-export default function TeacherProfilePage() {
-  const [profile, setProfile] = useState<TeacherProfileResponse | null>(null)
+interface ProfileData {
+  profile: TeacherProfile
+  workload: WorkloadItem[]
+  workloadStats: {
+    totalClasses: number
+    totalSubjects: number
+    totalPeriods: number
+    totalStudents: number
+  }
+}
+
+export default function ProfileWorkloadPage() {
+  const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  
-  // Form state for editable fields
-  const [formData, setFormData] = useState<EditableProfileData>({
-    phone: '',
-    email: '',
-    photo: null,
-  })
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-  const [hasChanges, setHasChanges] = useState(false)
+  const [editing, setEditing] = useState(false)
 
-  // Fetch profile data
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchData() {
       try {
         const response = await fetch('/api/teacher/profile')
         if (!response.ok) {
-          throw new Error('Failed to fetch profile')
+          throw new Error('Failed to fetch profile data')
         }
-        const data: TeacherProfileResponse = await response.json()
-        setProfile(data)
-        setFormData({
-          phone: data.editable.phone,
-          email: data.editable.email,
-          photo: data.editable.photo,
-        })
+        const profileData = await response.json()
+        setData(profileData)
       } catch (err) {
-        setError('Unable to load profile')
-        console.error('Error fetching teacher profile:', err)
+        setError('Unable to load profile data')
+        console.error('Error fetching profile data:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProfile()
+    fetchData()
   }, [])
-
-  // Check for changes
-  useEffect(() => {
-    if (profile) {
-      const changed = 
-        formData.phone !== profile.editable.phone ||
-        formData.email !== profile.editable.email ||
-        formData.photo !== profile.editable.photo
-      setHasChanges(changed)
-    }
-  }, [formData, profile])
-
-  // Handle input changes
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    setFormErrors(prev => ({ ...prev, [name]: '' }))
-    setSuccess(null)
-  }, [])
-
-  // Handle photo upload
-  const handlePhotoUpload = useCallback((result: ImageKitUploadResult) => {
-    setFormData(prev => ({ ...prev, photo: result.url }))
-    setSuccess(null)
-  }, [])
-
-  // Handle photo upload error
-  const handlePhotoError = useCallback((error: string) => {
-    setFormErrors(prev => ({ ...prev, photo: error }))
-  }, [])
-
-  // Validate form
-  const validateForm = useCallback((): boolean => {
-    const errors: Record<string, string> = {}
-
-    // Validate email
-    if (!formData.email) {
-      errors.email = 'Email is required'
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(formData.email)) {
-        errors.email = 'Invalid email format'
-      }
-    }
-
-    // Validate phone
-    if (!formData.phone) {
-      errors.phone = 'Phone number is required'
-    } else {
-      const phoneRegex = /^[+]?[\d\s-]{10,}$/
-      if (!phoneRegex.test(formData.phone)) {
-        errors.phone = 'Invalid phone number format'
-      }
-    }
-
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }, [formData])
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
-
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const response = await fetch('/api/teacher/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: formData.phone,
-          email: formData.email,
-          photo: formData.photo,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update profile')
-      }
-
-      if (data.updated) {
-        setSuccess('Profile updated successfully')
-        // Update the profile state with new values
-        if (profile) {
-          setProfile({
-            ...profile,
-            editable: data.editable,
-          })
-        }
-        setHasChanges(false)
-      } else {
-        setSuccess('No changes to save')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Reset form to original values
-  const handleReset = useCallback(() => {
-    if (profile) {
-      setFormData({
-        phone: profile.editable.phone,
-        email: profile.editable.email,
-        photo: profile.editable.photo,
-      })
-      setFormErrors({})
-      setSuccess(null)
-      setError(null)
-    }
-  }, [profile])
 
   if (loading) {
     return (
       <div className={cn(spacing.section, 'p-4 sm:p-6')}>
         <SkeletonLoader variant="text" count={2} />
-        <SkeletonLoader variant="card" count={2} />
+        <SkeletonLoader variant="card" count={4} />
       </div>
     )
   }
 
-  if (error && !profile) {
+  if (error || !data) {
     return (
       <div className="p-4 sm:p-6">
-        <ErrorMessagePanel
-          config={{
-            title: 'Unable to Load Profile',
-            message: error,
-            nextSteps: [
-              'Check your internet connection',
-              'Try refreshing the page',
-              'Contact support if the problem persists',
-            ],
-          }}
-          onRetry={() => window.location.reload()}
-        />
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+            <AlertCircle className="h-5 w-5" />
+            <span>{error || 'Unable to load profile data'}</span>
+          </div>
+        </div>
       </div>
     )
   }
 
-  if (!profile) {
-    return null
-  }
-
-  const { readOnly } = profile
+  const { profile, workload, workloadStats } = data
 
   return (
-    <div className={cn(spacing.section, 'p-4 sm:p-6 max-w-4xl mx-auto')}>
-      {/* Page Header */}
-      <div className={cn(cardStyles.base, cardStyles.compact)}>
-        <h1 className={cn(typography.pageTitle, 'flex items-center gap-2')}>
-          <User className="h-5 w-5" />
-          My Profile
-        </h1>
-        <p className={cn(typography.caption, 'mt-1')}>
-          View and update your contact information
-        </p>
-      </div>
-
+    <div className={cn(spacing.section, 'p-4 sm:p-6')}>
       {/* Success/Error Messages */}
-      {success && (
-        <SuccessMessage message={success} />
-      )}
-
       {error && (
-        <ErrorMessagePanel
-          config={{
-            title: 'Update Failed',
-            message: error,
-            nextSteps: [
-              'Check your input and try again',
-              'Ensure you have a stable internet connection',
-            ],
-          }}
-        />
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+            <AlertCircle className="h-5 w-5" />
+            <span>{error}</span>
+          </div>
+        </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Editable Section - Requirements: 10.1 */}
-        <div className={cn(cardStyles.base, cardStyles.normal)}>
-          <h2 className={cn(typography.sectionTitle, 'mb-3 flex items-center gap-2')}>
-            <Mail className="h-4 w-4" />
-            Contact Information
-          </h2>
-          <p className={cn(typography.body, 'mb-4')}>
-            You can update your contact details below.
-          </p>
-
-          <form onSubmit={handleSubmit} className={spacing.form}>
-            {/* Profile Photo */}
-            <div className={spacing.card}>
-              <label className={cn(typography.label, 'flex items-center gap-2')}>
-                <Camera className="h-4 w-4" />
-                Profile Photo
-              </label>
-              <div className="flex items-center gap-4">
-                {formData.photo ? (
-                  <div className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700">
-                    <Image 
-                      src={formData.photo} 
-                      alt="Profile" 
-                      fill 
-                      className="object-cover" 
-                      unoptimized 
-                    />
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Profile Card */}
+        <div className="lg:col-span-1">
+          <Card className={cn(cardStyles.base, cardStyles.normal)}>
+            <CardHeader>
+              <CardTitle className={cn(typography.sectionTitle)}>Profile Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="mx-auto mb-4">
+                  <div className="h-24 w-24 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center text-xl font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                    {profile.firstName[0]}{profile.lastName[0]}
                   </div>
-                ) : (
-                  <div className={cn('h-20 w-20 rounded-full flex items-center justify-center border-2', teacherColors.secondary.bg, teacherColors.secondary.border)}>
-                    <User className="h-8 w-8 text-slate-400" />
+                </div>
+                
+                <h2 className={cn(typography.h2, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                  {profile.firstName} {profile.lastName}
+                </h2>
+                <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-4')}>
+                  {profile.position} • {profile.department}
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Email</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.email}</span>
                   </div>
-                )}
-                <ImageKitUpload
-                  uploadType="teacher_photo"
-                  entityId={readOnly.id}
-                  onUploadComplete={handlePhotoUpload}
-                  onUploadError={handlePhotoError}
-                  currentFileUrl={formData.photo || undefined}
-                  compact
-                  maxSizeMB={5}
-                />
+                  
+                  <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Phone</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.phone}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Address</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.address}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Hire Date</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                      {new Date(profile.hireDate).toLocaleDateString('en-UG', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Qualifications</span>
+                    <div className="text-right">
+                      {profile.qualifications.map((qual, idx) => (
+                        <Badge key={idx} variant="outline" className="ml-1">
+                          {qual}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <Button className="w-full gap-2">
+                    <Edit3 className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                </div>
               </div>
-              {formErrors.photo && (
-                <p className={typography.error}>{formErrors.photo}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <FormField
-              label="Email Address"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              error={formErrors.email}
-              required
-              helpText="Your primary email for school communications"
-            />
-
-            {/* Phone */}
-            <FormField
-              label="Phone Number"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleInputChange}
-              error={formErrors.phone}
-              required
-              helpText="Your contact phone number"
-            />
-
-            {/* Action Buttons */}
-            <ButtonGroup className="justify-end pt-2">
-              <ActionButton
-                label="Reset"
-                onClick={handleReset}
-                isPermitted={!saving && hasChanges}
-                variant="outline"
-              />
-              <ActionButton
-                label={saving ? 'Saving...' : 'Save Changes'}
-                type="submit"
-                isPermitted={!saving && hasChanges}
-                isLoading={saving}
-                variant="primary"
-              />
-            </ButtonGroup>
-          </form>
+            </CardContent>
+          </Card>
+          
+          {/* Workload Stats */}
+          <Card className={cn(cardStyles.base, cardStyles.normal, 'mt-6')}>
+            <CardHeader>
+              <CardTitle className={cn(typography.sectionTitle)}>Workload Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-[var(--chart-blue)]" />
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Classes</span>
+                  </div>
+                  <span className={cn(typography.h3, 'font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {workloadStats.totalClasses}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-[var(--chart-green)]" />
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Subjects</span>
+                  </div>
+                  <span className={cn(typography.h3, 'font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {workloadStats.totalSubjects}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-[var(--chart-yellow)]" />
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Periods/Week</span>
+                  </div>
+                  <span className={cn(typography.h3, 'font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {workloadStats.totalPeriods}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-[var(--chart-purple)]" />
+                    <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Students</span>
+                  </div>
+                  <span className={cn(typography.h3, 'font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {workloadStats.totalStudents}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Read-Only Section - Requirements: 10.3, 10.4 */}
-        <div className={spacing.card}>
-          {/* Personal Information */}
-          <div className={cn(cardStyles.base, cardStyles.normal)}>
-            <h2 className={cn(typography.sectionTitle, 'mb-3 flex items-center gap-2')}>
-              <Lock className="h-4 w-4 text-slate-400" />
-              Personal Information
-              <span className={cn(typography.caption, 'font-normal')}>(Read-only)</span>
-            </h2>
-            <p className={cn(typography.body, 'mb-4')}>
-              Contact administration to update these details.
-            </p>
-
-            <div className={spacing.card}>
-              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                <span className={typography.caption}>Full Name</span>
-                <span className={typography.label}>{readOnly.fullName}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                <span className={typography.caption}>Role</span>
-                <span className={typography.label}>{readOnly.role}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                <span className={typography.caption}>Job Title</span>
-                <span className={typography.label}>{readOnly.jobTitle.replace(/_/g, ' ')}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                <span className={typography.caption}>Department</span>
-                <span className={typography.label}>{readOnly.department}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className={typography.caption}>Employment Type</span>
-                <span className={typography.label}>{readOnly.employmentType.replace(/_/g, ' ')}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Academic Assignments */}
-          <div className={cn(cardStyles.base, cardStyles.normal)}>
-            <h2 className={cn(typography.sectionTitle, 'mb-3 flex items-center gap-2')}>
-              <GraduationCap className="h-4 w-4 text-slate-400" />
-              Academic Assignments
-              <span className={cn(typography.caption, 'font-normal')}>(Read-only)</span>
-            </h2>
-
-            {/* Assigned Subjects */}
-            <div className="mb-4">
-              <h3 className={cn(typography.label, 'mb-2 flex items-center gap-2')}>
-                <BookOpen className="h-4 w-4" />
-                Subjects
-              </h3>
-              {readOnly.assignedSubjects.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {readOnly.assignedSubjects.map(subject => (
-                    <span 
-                      key={subject.id}
-                      className={cn('px-3 py-1 text-sm rounded-full', teacherColors.info.bg, teacherColors.info.text)}
+        
+        {/* Workload Details */}
+        <div className="lg:col-span-2">
+          <Card className={cn(cardStyles.base, cardStyles.normal)}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className={cn(typography.sectionTitle)}>Teaching Assignments</CardTitle>
+              <Badge variant="outline">{workload.length} assignments</Badge>
+            </CardHeader>
+            <CardContent>
+              {workload.length > 0 ? (
+                <div className="space-y-4">
+                  {workload.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 transition-colors"
                     >
-                      {subject.name}
-                    </span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                              {item.className} {item.streamName && `(${item.streamName})`}
+                            </h3>
+                            {item.isClassTeacher && (
+                              <Badge variant="default">Class Teacher</Badge>
+                            )}
+                          </div>
+                          <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1')}>
+                            {item.subjectName} • {item.studentCount} students
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
+                            <span className={cn(typography.caption, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                              {item.periodsPerWeek} periods/week
+                            </span>
+                          </div>
+                          <Button size="sm" variant="outline" className="mt-2">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge variant="secondary">Term 1</Badge>
+                        <Badge variant="secondary">Mathematics Dept</Badge>
+                        <Badge variant="outline">Updated recently</Badge>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <p className={typography.body}>No subjects assigned</p>
-              )}
-            </div>
-
-            {/* Assigned Classes */}
-            <div className="mb-4">
-              <h3 className={cn(typography.label, 'mb-2 flex items-center gap-2')}>
-                <Briefcase className="h-4 w-4" />
-                Classes
-              </h3>
-              {readOnly.assignedClasses.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {readOnly.assignedClasses.map(cls => (
-                    <span 
-                      key={cls.id}
-                      className={cn('px-3 py-1 text-sm rounded-full', teacherColors.success.bg, teacherColors.success.text)}
-                    >
-                      {cls.name}
-                    </span>
-                  ))}
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>
+                    No Teaching Assignments
+                  </h3>
+                  <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                    You are not currently assigned to any classes. Contact administration for class assignments.
+                  </p>
                 </div>
-              ) : (
-                <p className={typography.body}>No classes assigned</p>
               )}
-            </div>
-
-            {/* Class Teacher For */}
-            {readOnly.classTeacherFor.length > 0 && (
-              <div>
-                <h3 className={cn(typography.label, 'mb-2 flex items-center gap-2')}>
-                  <User className="h-4 w-4" />
-                  Class Teacher For
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {readOnly.classTeacherFor.map(cls => (
-                    <span 
-                      key={cls.id}
-                      className={cn('px-3 py-1 text-sm rounded-full', teacherColors.warning.bg, teacherColors.warning.text)}
-                    >
-                      {cls.name}
-                    </span>
-                  ))}
+            </CardContent>
+          </Card>
+          
+          {/* Professional Development */}
+          <Card className={cn(cardStyles.base, cardStyles.normal, 'mt-6')}>
+            <CardHeader>
+              <CardTitle className={cn(typography.sectionTitle)}>Professional Development</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('p-2 rounded-lg', teacherColors.success.bg)}>
+                      <Award className={cn('h-5 w-5', teacherColors.success.text)} />
+                    </div>
+                    <div>
+                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                        New Curriculum Training
+                      </h3>
+                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                        Completed on Jan 15, 2024
+                      </p>
+                    </div>
+                    <Badge variant="default">Completed</Badge>
+                  </div>
+                </div>
+                
+                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('p-2 rounded-lg', teacherColors.warning.bg)}>
+                      <Clock className={cn('h-5 w-5', teacherColors.warning.text)} />
+                    </div>
+                    <div>
+                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                        ICT Skills Workshop
+                      </h3>
+                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                        Scheduled for Feb 20, 2024
+                      </p>
+                    </div>
+                    <Badge variant="outline">Pending</Badge>
+                  </div>
+                </div>
+                
+                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                      <BookOpen className={cn('h-5 w-5', teacherColors.info.text)} />
+                    </div>
+                    <div>
+                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                        Assessment Methods Seminar
+                      </h3>
+                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                        Next available: Mar 5, 2024
+                      </p>
+                    </div>
+                    <Badge variant="outline">Available</Badge>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

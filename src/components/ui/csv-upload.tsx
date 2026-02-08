@@ -276,19 +276,19 @@ export function CSVUpload({
 
       {/* Validation errors */}
       {errors.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-red-800 dark:text-red-200">
+              <p className="font-medium text-[var(--danger-dark)] dark:text-[var(--danger)]">
                 Validation Errors
               </p>
-              <ul className="mt-2 text-sm text-red-700 dark:text-red-300 space-y-1">
+              <ul className="mt-2 text-sm text-[var(--chart-red)] dark:text-[var(--danger)] space-y-1">
                 {errors.slice(0, 5).map((error, i) => (
                   <li key={i}>• {error}</li>
                 ))}
                 {errors.length > 5 && (
-                  <li className="text-red-600">
+                  <li className="text-[var(--chart-red)]">
                     ...and {errors.length - 5} more errors
                   </li>
                 )}
@@ -300,10 +300,10 @@ export function CSVUpload({
 
       {/* Success message */}
       {uploadSuccess && (
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)] border border-[var(--success-light)] dark:border-[var(--success-dark)] rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-500" />
-            <p className="font-medium text-green-800 dark:text-green-200">
+            <CheckCircle className="h-5 w-5 text-[var(--success)]" />
+            <p className="font-medium text-[var(--success-dark)] dark:text-[var(--success)]">
               Upload successful! {parsedData?.rows.length} records processed.
             </p>
           </div>

@@ -152,14 +152,14 @@ export function RoleSwitcher({
   if (variant === 'modal') {
     return (
       <div className="w-full max-w-md mx-auto">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-lg p-8">
           {/* Header */}
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
               Select Your Role
             </h2>
             {schoolName && (
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                 at {schoolName}
               </p>
             )}
@@ -169,9 +169,9 @@ export function RoleSwitcher({
           {error && (
             <div 
               role="alert"
-              className="mb-4 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg"
+              className="mb-4 p-3 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg"
             >
-              <p className="text-sm text-red-600 dark:text-red-400 text-center">
+              <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)] text-center">
                 {error}
               </p>
             </div>
@@ -187,8 +187,8 @@ export function RoleSwitcher({
                 className={`
                   w-full p-4 rounded-lg border-2 transition-all text-left
                   ${currentRole === role 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                    ? 'border-[var(--accent-primary)] bg-[var(--info-light)] dark:bg-[var(--info-dark)]' 
+                    : 'border-[var(--border-default)] dark:border-[var(--border-strong)] hover:border-[var(--info)] dark:hover:border-[var(--chart-blue)]'
                   }
                   ${isPending && selectedRole === role 
                     ? 'opacity-75 cursor-wait' 
@@ -204,25 +204,25 @@ export function RoleSwitcher({
                   <div className={`
                     p-2 rounded-lg
                     ${currentRole === role 
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                      ? 'bg-[var(--info-light)] dark:bg-[var(--info-dark)] text-[var(--chart-blue)] dark:text-[var(--chart-blue)]' 
+                      : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)]'
                     }
                   `}>
                     {getRoleIcon(role)}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
                         {getRoleDisplayName(role)}
                       </span>
                       {currentRole === role && (
-                        <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-full">
+                        <span className="text-xs px-2 py-0.5 bg-[var(--info-light)] dark:bg-[var(--info-dark)] text-[var(--chart-blue)] dark:text-[var(--chart-blue)] rounded-full">
                           Current
                         </span>
                       )}
                       {isPending && selectedRole === role && (
                         <svg 
-                          className="animate-spin h-4 w-4 text-blue-600" 
+                          className="animate-spin h-4 w-4 text-[var(--chart-blue)]" 
                           xmlns="http://www.w3.org/2000/svg" 
                           fill="none" 
                           viewBox="0 0 24 24"
@@ -243,7 +243,7 @@ export function RoleSwitcher({
                         </svg>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                       {getRoleDescription(role)}
                     </p>
                   </div>
@@ -265,11 +265,11 @@ export function RoleSwitcher({
           onChange={(e) => handleRoleSelect(e.target.value as Role)}
           disabled={isPending}
           className="
-            appearance-none bg-white dark:bg-gray-800 
-            border border-gray-300 dark:border-gray-600 
+            appearance-none bg-[var(--bg-main)] dark:bg-[var(--border-strong)] 
+            border border-[var(--border-default)] dark:border-[var(--border-strong)] 
             rounded-lg px-4 py-2 pr-8
-            text-sm font-medium text-gray-700 dark:text-gray-200
-            focus:outline-none focus:ring-2 focus:ring-blue-500
+            text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-secondary)]
+            focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
@@ -282,7 +282,7 @@ export function RoleSwitcher({
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
           {isPending ? (
             <svg 
-              className="animate-spin h-4 w-4 text-gray-400" 
+              className="animate-spin h-4 w-4 text-[var(--text-muted)]" 
               xmlns="http://www.w3.org/2000/svg" 
               fill="none" 
               viewBox="0 0 24 24"
@@ -302,7 +302,7 @@ export function RoleSwitcher({
               />
             </svg>
           ) : (
-            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           )}

@@ -64,21 +64,34 @@ export function ErrorBanner({
       role="alert"
       aria-live="assertive"
       className={cn(
-        'rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4',
+        'rounded-lg border p-4',
         className
       )}
+      style={{
+        backgroundColor: 'var(--danger-light)',
+        borderColor: 'var(--danger)',
+      }}
     >
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
+        <AlertCircle 
+          className="h-5 w-5 flex-shrink-0 mt-0.5" 
+          style={{ color: 'var(--danger)' }}
+        />
         
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-medium text-sm text-red-800 dark:text-red-200">
+              <h3 
+                className="font-medium text-sm"
+                style={{ color: 'var(--danger-dark)' }}
+              >
                 {title}
               </h3>
               {errorCode && (
-                <span className="text-xs text-red-600 dark:text-red-400">
+                <span 
+                  className="text-xs"
+                  style={{ color: 'var(--danger)' }}
+                >
                   Error code: {errorCode}
                 </span>
               )}
@@ -89,7 +102,8 @@ export function ErrorBanner({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
+                  className="h-6 w-6 hover:opacity-80"
+                  style={{ color: 'var(--danger)' }}
                   onClick={() => setIsExpanded(!isExpanded)}
                   aria-label={isExpanded ? 'Hide suggestions' : 'Show suggestions'}
                 >
@@ -104,7 +118,8 @@ export function ErrorBanner({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
+                  className="h-6 w-6 hover:opacity-80"
+                  style={{ color: 'var(--danger)' }}
                   onClick={handleDismiss}
                   aria-label="Dismiss error"
                 >
@@ -114,22 +129,29 @@ export function ErrorBanner({
             </div>
           </div>
           
-          <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+          <p 
+            className="mt-1 text-sm"
+            style={{ color: 'var(--danger-dark)' }}
+          >
             {message}
           </p>
           
           {suggestedActions.length > 0 && isExpanded && (
             <div className="mt-3">
-              <p className="text-xs font-medium text-red-700 dark:text-red-300 mb-2">
+              <p 
+                className="text-xs font-medium mb-2"
+                style={{ color: 'var(--danger-dark)' }}
+              >
                 Suggested actions:
               </p>
               <ul className="space-y-1">
                 {suggestedActions.map((action, index) => (
                   <li
                     key={index}
-                    className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400"
+                    className="flex items-start gap-2 text-sm"
+                    style={{ color: 'var(--danger)' }}
                   >
-                    <span className="text-red-400 mt-0.5">•</span>
+                    <span className="mt-0.5" style={{ color: 'var(--danger)' }}>•</span>
                     <span>{action}</span>
                   </li>
                 ))}
@@ -144,7 +166,11 @@ export function ErrorBanner({
                 size="sm"
                 onClick={onRetry}
                 disabled={isRetrying}
-                className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900"
+                className="hover:opacity-80"
+                style={{
+                  borderColor: 'var(--danger)',
+                  color: 'var(--danger-dark)',
+                }}
               >
                 {isRetrying ? (
                   <>
@@ -304,9 +330,10 @@ export function InlineServerError({
     <div
       role="alert"
       className={cn(
-        'flex items-center gap-2 text-sm text-red-600 dark:text-red-400',
+        'flex items-center gap-2 text-sm',
         className
       )}
+      style={{ color: 'var(--danger)' }}
     >
       <AlertCircle className="h-4 w-4 flex-shrink-0" />
       <span className="flex-1">{serverError.message || errorDetails.message}</span>
@@ -315,7 +342,8 @@ export function InlineServerError({
           type="button"
           onClick={onRetry}
           disabled={isRetrying}
-          className="inline-flex items-center gap-1 text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200 underline underline-offset-2 disabled:opacity-50"
+          className="inline-flex items-center gap-1 underline underline-offset-2 disabled:opacity-50 hover:opacity-80"
+          style={{ color: 'var(--danger-dark)' }}
         >
           {isRetrying ? (
             <>

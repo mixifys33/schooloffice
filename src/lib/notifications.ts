@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from 'react'
-import { useToast } from '@/components/ui/toast'
+import { useToast } from '@/hooks/use-toast'
 
 /**
  * Server error response structure

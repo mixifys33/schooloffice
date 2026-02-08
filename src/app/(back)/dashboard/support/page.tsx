@@ -40,15 +40,15 @@ import type {
 const priorityStyles = {
   low: {
     variant: 'secondary' as const,
-    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    className: 'bg-[var(--bg-surface)] text-[var(--text-primary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]',
   },
   normal: {
     variant: 'secondary' as const,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+    className: 'bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)]/50 dark:text-[var(--info)]',
   },
   high: {
     variant: 'destructive' as const,
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+    className: 'bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/50 dark:text-[var(--danger)]',
   },
 }
 
@@ -58,21 +58,21 @@ function NoticeCard({ notice }: { notice: Notice }) {
   const isExpired = notice.expiresAt && new Date(notice.expiresAt) < new Date()
   
   return (
-    <div className={`p-4 rounded-lg border ${isExpired ? 'opacity-60' : ''} bg-white dark:bg-gray-900`}>
+    <div className={`p-4 rounded-lg border ${isExpired ? 'opacity-60' : ''} bg-[var(--bg-main)] dark:bg-[var(--text-primary)]`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
+            <h3 className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)] line-clamp-1">
               {notice.title}
             </h3>
             <Badge className={priorityStyle.className}>
               {notice.priority}
             </Badge>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+          <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] line-clamp-2">
             {notice.content}
           </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-500">
+          <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             <span>
               Posted: {new Date(notice.createdAt).toLocaleDateString('en-US', {
                 month: 'short',
@@ -80,7 +80,7 @@ function NoticeCard({ notice }: { notice: Notice }) {
               })}
             </span>
             {notice.expiresAt && (
-              <span className={isExpired ? 'text-red-500' : ''}>
+              <span className={isExpired ? 'text-[var(--danger)]' : ''}>
                 {isExpired ? 'Expired' : `Expires: ${new Date(notice.expiresAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -99,8 +99,8 @@ function NoticesList({ notices }: { notices: Notice[] }) {
   if (notices.length === 0) {
     return (
       <div className="text-center py-8">
-        <Bell className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-        <p className="text-gray-500 dark:text-gray-400">
+        <Bell className="h-12 w-12 mx-auto text-[var(--text-muted)] dark:text-[var(--text-secondary)] mb-3" />
+        <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">
           No notices to display
         </p>
       </div>
@@ -166,15 +166,15 @@ function AttendanceCheckIn({ attendance }: { attendance?: SimpleAttendance }) {
 
   const getStatusBadge = () => {
     if (!attendance) {
-      return <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Not Checked In</Badge>
+      return <Badge className="bg-[var(--bg-surface)] text-[var(--text-primary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]">Not Checked In</Badge>
     }
     switch (attendance.status) {
       case 'present':
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">Present</Badge>
+        return <Badge className="bg-[var(--success-light)] text-[var(--chart-green)] dark:bg-[var(--success-dark)]/50 dark:text-[var(--success)]">Present</Badge>
       case 'late':
-        return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">Late</Badge>
+        return <Badge className="bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)]/50 dark:text-[var(--warning)]">Late</Badge>
       case 'absent':
-        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">Absent</Badge>
+        return <Badge className="bg-[var(--danger-light)] text-[var(--chart-red)] dark:bg-[var(--danger-dark)]/50 dark:text-[var(--danger)]">Absent</Badge>
       default:
         return null
     }
@@ -185,24 +185,24 @@ function AttendanceCheckIn({ attendance }: { attendance?: SimpleAttendance }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" />
+            <Clock className="h-5 w-5 text-[var(--accent-primary)]" />
             Attendance
           </CardTitle>
           {getStatusBadge()}
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{today}</p>
+        <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{today}</p>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Check In</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <div className="text-center p-3 rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+            <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Check In</p>
+            <p className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {formatTime(attendance?.checkInTime)}
             </p>
           </div>
-          <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Check Out</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <div className="text-center p-3 rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+            <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mb-1">Check Out</p>
+            <p className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
               {formatTime(attendance?.checkOutTime)}
             </p>
           </div>
@@ -300,7 +300,7 @@ export default function SupportDashboardPage() {
     return (
       <div className="space-y-6 p-4 sm:p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Support Staff Dashboard
           </h1>
         </div>
@@ -353,16 +353,16 @@ export default function SupportDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
             Support Staff Dashboard
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
             View your tasks and notices
           </p>
         </div>
         <button
           onClick={fetchDashboardData}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)] dark:hover:text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
           aria-label="Refresh dashboard"
         >
           <RefreshCw className="h-5 w-5" />
@@ -420,10 +420,10 @@ export default function SupportDashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Bell className="h-5 w-5 text-purple-500" />
+                <Bell className="h-5 w-5 text-[var(--chart-purple)]" />
                 Notices
               </CardTitle>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                 {notices.length} notice{notices.length !== 1 ? 's' : ''}
               </span>
             </div>

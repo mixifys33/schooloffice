@@ -8,39 +8,39 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { MessageChannel, MessageTemplateType } from '@/types/enums'
 
-// Default SMS templates (Requirement 8.5)
+// Default SMS templates (Requirement 8.5) - Professional, user-friendly content
 const DEFAULT_TEMPLATES: Record<MessageTemplateType, { name: string; content: string }> = {
   [MessageTemplateType.ATTENDANCE_ALERT]: {
     name: 'Attendance Alert',
-    content: 'Dear Parent, {{studentName}} was absent on {{date}}. Periods: {{periods}}. Please contact the school.',
+    content: '{{studentName}} absent {{date}}. Please confirm safety. {{schoolName}}',
   },
   [MessageTemplateType.FEES_REMINDER]: {
     name: 'Fees Reminder',
-    content: 'Dear Parent, {{studentName}} has an outstanding balance of UGX {{balance}}. Please make payment.',
+    content: '{{guardianName}}, {{studentName}} owes UGX {{balance}}. Pay now or child may be sent home. {{schoolName}}',
   },
   [MessageTemplateType.REPORT_READY]: {
     name: 'Report Ready',
-    content: 'Dear Parent, {{studentName}}\'s report card is ready. View: {{link}}',
+    content: '{{studentName}} {{term}} report ready. Visit school. {{schoolName}}',
   },
   [MessageTemplateType.TERM_START]: {
     name: 'Term Start',
-    content: 'Dear Parent, Term has started. {{studentName}} is enrolled in {{className}}.',
+    content: 'Welcome back {{guardianName}}! {{studentName}} is in {{className}} for new term. {{schoolName}}',
   },
   [MessageTemplateType.MID_TERM_PROGRESS]: {
     name: 'Mid-Term Progress',
-    content: 'Dear Parent, {{studentName}} mid-term progress: Average {{average}}%.',
+    content: '{{guardianName}}, {{studentName}} average: {{average}}%. Keep it up! {{schoolName}}',
   },
   [MessageTemplateType.TERM_SUMMARY]: {
     name: 'Term Summary',
-    content: 'Dear Parent, {{studentName}} term summary: Position {{position}}, Average {{average}}%.',
+    content: '{{guardianName}}, {{studentName}} finished {{position}} with {{average}}%. Excellent! {{schoolName}}',
   },
   [MessageTemplateType.DISCIPLINE_NOTICE]: {
     name: 'Discipline Notice',
-    content: 'Dear Parent, {{studentName}} discipline notice: {{description}}. Please contact the school.',
+    content: '{{guardianName}}, regarding {{studentName}}: {{description}}. Let\'s work together. {{schoolName}}',
   },
   [MessageTemplateType.GENERAL_ANNOUNCEMENT]: {
     name: 'General Announcement',
-    content: '{{content}}',
+    content: '{{content}} - {{schoolName}}',
   },
 }
 
@@ -82,10 +82,11 @@ export async function GET(request: NextRequest) {
     const templates = Object.entries(DEFAULT_TEMPLATES).map(([type, defaultTemplate]) => {
       const custom = templateMap.get(type as MessageTemplateType)
       return {
-        id: custom?.id || null,
+        id: custom?.id || `default-${type}`,
         type: type as MessageTemplateType,
         name: defaultTemplate.name,
         content: custom?.content || defaultTemplate.content,
+        channel: MessageChannel.SMS, // Ensure channel is always set
         isCustom: !!custom,
         isActive: custom?.isActive ?? true,
         placeholders: extractPlaceholders(custom?.content || defaultTemplate.content),

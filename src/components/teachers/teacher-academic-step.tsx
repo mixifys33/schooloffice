@@ -171,7 +171,7 @@ export function TeacherAcademicStep({
                   key={cls.id}
                   className={cn(
                     'p-4 rounded-lg border',
-                    isAssigned ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950' : 'border-gray-200 dark:border-gray-700'
+                    isAssigned ? 'border-[var(--info-light)] bg-[var(--info-light)] dark:border-[var(--info-dark)] dark:bg-[var(--info-dark)]' : 'border-[var(--border-default)] dark:border-[var(--border-strong)]'
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -193,7 +193,7 @@ export function TeacherAcademicStep({
 
                   {/* Stream selection for assigned classes */}
                   {isAssigned && classStreams.length > 0 && (
-                    <div className="ml-6 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <div className="ml-6 mt-3 pt-3 border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
                       <p className="text-sm font-medium mb-2">Streams:</p>
                       <div className="flex flex-wrap gap-3">
                         {classStreams.map((stream) => (
@@ -235,7 +235,7 @@ export function TeacherAcademicStep({
       </div>
 
       {/* Summary */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="p-4 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
         <h4 className="font-medium mb-2">Assignment Summary</h4>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>

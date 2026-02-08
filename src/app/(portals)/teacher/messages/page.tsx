@@ -184,7 +184,7 @@ export default function TeacherMessagesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
       </div>
     )
   }
@@ -194,34 +194,34 @@ export default function TeacherMessagesPage() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Messages</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">Messages</h1>
+          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Send in-app messages to students in your classes
           </p>
         </div>
       </div>
 
       {/* Requirement 8.4: Audit Notice */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+      <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-[var(--chart-yellow)] dark:text-[var(--warning)] flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+          <p className="text-sm font-medium text-[var(--warning-dark)] dark:text-[var(--warning)]">
             Messages are logged and visible to administration
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          <p className="text-xs text-[var(--chart-yellow)] dark:text-[var(--warning)] mt-1">
             All messages you send are recorded for accountability and compliance purposes.
           </p>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
         <button
           onClick={() => setActiveTab('compose')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'compose'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+              ? 'border-[var(--chart-blue)] text-[var(--chart-blue)] dark:border-[var(--info)] dark:text-[var(--chart-blue)]'
+              : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)]'
           }`}
         >
           <Send className="h-4 w-4 inline mr-2" />
@@ -231,8 +231,8 @@ export default function TeacherMessagesPage() {
           onClick={() => setActiveTab('history')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'history'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+              ? 'border-[var(--chart-blue)] text-[var(--chart-blue)] dark:border-[var(--info)] dark:text-[var(--chart-blue)]'
+              : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:text-[var(--text-muted)]'
           }`}
         >
           <History className="h-4 w-4 inline mr-2" />
@@ -241,14 +241,14 @@ export default function TeacherMessagesPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/20 border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <p className="text-sm text-[var(--chart-red)] dark:text-[var(--danger)]">{error}</p>
         </div>
       )}
 
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-sm text-green-600 dark:text-green-400">{successMessage}</p>
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)]/20 border border-[var(--success-light)] dark:border-[var(--success-dark)] rounded-lg p-4">
+          <p className="text-sm text-[var(--chart-green)] dark:text-[var(--success)]">{successMessage}</p>
         </div>
       )}
 
@@ -265,13 +265,13 @@ export default function TeacherMessagesPage() {
             <CardContent className="space-y-4">
               {/* Class Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                   Class
                 </label>
                 <select
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-primary)]"
                 >
                   <option value="">Select a class</option>
                   {config?.assignedClasses.map((cls) => (
@@ -285,7 +285,7 @@ export default function TeacherMessagesPage() {
               {/* Recipient Type - Only show if parent messaging is enabled */}
               {config?.parentMessagingEnabled && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                     Recipient Type
                   </label>
                   <div className="flex gap-2">
@@ -293,8 +293,8 @@ export default function TeacherMessagesPage() {
                       onClick={() => setRecipientType('student')}
                       className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         recipientType === 'student'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          ? 'bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)]/30 dark:text-[var(--info)]'
+                          : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
                       }`}
                     >
                       <User className="h-4 w-4 inline mr-1" />
@@ -304,8 +304,8 @@ export default function TeacherMessagesPage() {
                       onClick={() => setRecipientType('parent')}
                       className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         recipientType === 'parent'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          ? 'bg-[var(--info-light)] text-[var(--accent-hover)] dark:bg-[var(--info-dark)]/30 dark:text-[var(--info)]'
+                          : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] dark:bg-[var(--border-strong)] dark:text-[var(--text-muted)]'
                       }`}
                     >
                       <Users className="h-4 w-4 inline mr-1" />
@@ -320,12 +320,12 @@ export default function TeacherMessagesPage() {
               {selectedClass && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
                       Recipients ({selectedRecipients.length} selected)
                     </label>
                     <button
                       onClick={selectAllRecipients}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-xs text-[var(--chart-blue)] dark:text-[var(--chart-blue)] hover:underline"
                     >
                       {selectedRecipients.length === recipients.length ? 'Deselect All' : 'Select All'}
                     </button>
@@ -333,26 +333,26 @@ export default function TeacherMessagesPage() {
                   
                   {isLoadingRecipients ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                      <Loader2 className="h-6 w-6 animate-spin text-[var(--text-muted)]" />
                     </div>
                   ) : recipients.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] py-4 text-center">
                       No {recipientType === 'parent' ? 'parents' : 'students'} found in this class
                     </p>
                   ) : (
-                    <div className="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md">
+                    <div className="max-h-64 overflow-y-auto border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md">
                       {recipients.map((recipient) => (
                         <label
                           key={recipient.id}
-                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] cursor-pointer border-b border-[var(--border-default)] dark:border-[var(--border-strong)] last:border-b-0"
                         >
                           <input
                             type="checkbox"
                             checked={selectedRecipients.includes(recipient.id)}
                             onChange={() => toggleRecipient(recipient.id)}
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="h-4 w-4 rounded border-[var(--border-default)] text-[var(--chart-blue)] focus:ring-[var(--accent-primary)]"
                           />
-                          <span className="text-sm text-gray-900 dark:text-gray-100">
+                          <span className="text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {recipient.name}
                           </span>
                         </label>
@@ -374,7 +374,7 @@ export default function TeacherMessagesPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
                   Message
                 </label>
                 <textarea
@@ -383,9 +383,9 @@ export default function TeacherMessagesPage() {
                   placeholder="Type your message here..."
                   rows={8}
                   maxLength={1000}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-primary)] resize-none"
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
                   {messageContent.length}/1000 characters
                 </p>
               </div>
@@ -409,7 +409,7 @@ export default function TeacherMessagesPage() {
               </Button>
 
               {/* Requirement 8.5, 8.6, 8.7: Disabled features notice */}
-              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+              <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] space-y-1">
                 <p>• SMS and WhatsApp messaging are not available</p>
                 <p>• Bulk announcements require administrator access</p>
               </div>
@@ -427,7 +427,7 @@ export default function TeacherMessagesPage() {
           </CardHeader>
           <CardContent>
             {messageHistory.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
+              <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] py-8 text-center">
                 No messages sent yet
               </p>
             ) : (
@@ -435,12 +435,12 @@ export default function TeacherMessagesPage() {
                 {messageHistory.map((msg) => (
                   <div
                     key={msg.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                    className="border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                             {msg.recipientName}
                           </span>
                           <Badge variant={msg.recipientType === 'parent' ? 'secondary' : 'outline'}>
@@ -455,11 +455,11 @@ export default function TeacherMessagesPage() {
                             {msg.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                        <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] line-clamp-2">
                           {msg.content}
                         </p>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <span className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] whitespace-nowrap">
                         {new Date(msg.sentAt).toLocaleDateString()} {new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>

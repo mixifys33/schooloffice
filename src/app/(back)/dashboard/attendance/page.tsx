@@ -63,10 +63,10 @@ function StatCard({
   color?: 'blue' | 'green' | 'yellow' | 'red'
 }) {
   const colorClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300',
-    green: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300',
-    yellow: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300',
-    red: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300',
+    blue: 'bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 border-[var(--info-light)] dark:border-[var(--info-dark)] text-[var(--accent-hover)] dark:text-[var(--info)]',
+    green: 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 border-[var(--success-light)] dark:border-[var(--success-dark)] text-[var(--chart-green)] dark:text-[var(--success)]',
+    yellow: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 border-[var(--warning-light)] dark:border-[var(--warning-dark)] text-[var(--warning)] dark:text-[var(--warning)]',
+    red: 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 border-[var(--danger-light)] dark:border-[var(--danger-dark)] text-[var(--chart-red)] dark:text-[var(--danger)]',
   }
 
   return (
@@ -89,8 +89,8 @@ function SectionCard({
   className?: string
 }) {
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
-      <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">{title}</h2>
+    <div className={`bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg shadow-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] p-6 ${className}`}>
+      <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)] dark:text-[var(--text-primary)]">{title}</h2>
       {children}
     </div>
   )
@@ -98,13 +98,13 @@ function SectionCard({
 
 function AttendanceBar({ percentage }: { percentage: number }) {
   const getColor = (pct: number) => {
-    if (pct >= 80) return 'bg-green-500'
-    if (pct >= 60) return 'bg-yellow-500'
-    return 'bg-red-500'
+    if (pct >= 80) return 'bg-[var(--success)]'
+    if (pct >= 60) return 'bg-[var(--warning)]'
+    return 'bg-[var(--danger)]'
   }
 
   return (
-    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+    <div className="w-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-full h-2">
       <div
         className={`h-2 rounded-full transition-all duration-300 ${getColor(percentage)}`}
         style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -119,9 +119,9 @@ function GuardianStatusBadge({
   status: 'VERIFIED' | 'UNVERIFIED' | 'NO_GUARDIAN'
 }) {
   const classes = {
-    VERIFIED: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800',
-    UNVERIFIED: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
-    NO_GUARDIAN: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800',
+    VERIFIED: 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/40 text-[var(--success-dark)] dark:text-[var(--success)] border-[var(--success-light)] dark:border-[var(--success-dark)]',
+    UNVERIFIED: 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/40 text-[var(--warning-dark)] dark:text-[var(--warning)] border-[var(--warning-light)] dark:border-[var(--warning-dark)]',
+    NO_GUARDIAN: 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/40 text-[var(--danger-dark)] dark:text-[var(--danger)] border-[var(--danger-light)] dark:border-[var(--danger-dark)]',
   }
 
   const labels = {
@@ -150,16 +150,16 @@ function SimpleTrendChart({
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</p>
+      <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">{label}</p>
       <div className="flex items-end space-x-1 h-24">
         {data.map((item, index) => {
           const height = ((item.value - minValue) / range) * 80 + 20
           const color =
             item.value >= 80
-              ? 'bg-green-500'
+              ? 'bg-[var(--success)]'
               : item.value >= 60
-              ? 'bg-yellow-500'
-              : 'bg-red-500'
+              ? 'bg-[var(--warning)]'
+              : 'bg-[var(--danger)]'
 
           return (
             <div key={index} className="flex-1 flex flex-col items-center">
@@ -168,7 +168,7 @@ function SimpleTrendChart({
                 style={{ height: `${height}%` }}
                 title={`${item.label}: ${item.value}%`}
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate w-full text-center">
+              <span className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1 truncate w-full text-center">
                 {item.label.slice(-5)}
               </span>
             </div>
@@ -182,16 +182,16 @@ function SimpleTrendChart({
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--chart-blue)]"></div>
     </div>
   )
 }
 
 function RefreshIndicator({ isRefreshing, lastUpdated }: { isRefreshing: boolean; lastUpdated: Date | null }) {
   return (
-    <div className="flex items-center space-x-2 text-sm text-gray-500">
+    <div className="flex items-center space-x-2 text-sm text-[var(--text-muted)]">
       {isRefreshing && (
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--chart-blue)]"></div>
       )}
       <span>
         {lastUpdated
@@ -427,7 +427,7 @@ export default function RealTimeAttendanceDashboardPage() {
   if (status === 'loading') {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-6">
           Real-Time Attendance Dashboard
         </h1>
         <LoadingSpinner />
@@ -438,7 +438,7 @@ export default function RealTimeAttendanceDashboardPage() {
   if (isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-6">
           Real-Time Attendance Dashboard
         </h1>
         <LoadingSpinner />
@@ -449,14 +449,14 @@ export default function RealTimeAttendanceDashboardPage() {
   if (error && !data) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-6">
           Real-Time Attendance Dashboard
         </h1>
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-800 dark:text-red-300">{error}</p>
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <p className="text-[var(--danger-dark)] dark:text-[var(--danger)]">{error}</p>
           <button
             onClick={() => fetchData()}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="mt-2 px-4 py-2 bg-[var(--chart-red)] text-[var(--white-pure)] rounded hover:bg-[var(--chart-red)]"
           >
             Retry
           </button>
@@ -479,10 +479,10 @@ export default function RealTimeAttendanceDashboardPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
             Real-Time Attendance Dashboard
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             {displayDate.toLocaleDateString('en-UG', {
               weekday: 'long',
               year: 'numeric',
@@ -496,12 +496,12 @@ export default function RealTimeAttendanceDashboardPage() {
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg text-sm bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
           />
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+            className="px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 text-sm"
           >
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -536,8 +536,8 @@ export default function RealTimeAttendanceDashboardPage() {
 
       {/* Alert for classes below threshold - Requirement 39.3 */}
       {belowThresholdCount > 0 && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
-          <h3 className="font-semibold text-red-800 dark:text-red-300 mb-2">
+        <div className="mb-6 p-4 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg">
+          <h3 className="font-semibold text-[var(--danger-dark)] dark:text-[var(--danger)] mb-2">
             ⚠️ Classes Below 80% Attendance Threshold
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -546,7 +546,7 @@ export default function RealTimeAttendanceDashboardPage() {
               .map((cls) => (
                 <span
                   key={cls.classId}
-                  className="px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 rounded-full text-sm font-medium"
+                  className="px-3 py-1 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50 text-[var(--danger-dark)] dark:text-[var(--danger)] rounded-full text-sm font-medium"
                 >
                   {cls.className}: {cls.attendancePercentage}%
                 </span>
@@ -564,37 +564,37 @@ export default function RealTimeAttendanceDashboardPage() {
                 key={cls.classId}
                 className={`p-4 rounded-lg border transition-colors ${
                   cls.isBelowThreshold
-                    ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800'
-                    : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
+                    ? 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 border-[var(--danger-light)] dark:border-[var(--danger-dark)]'
+                    : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50 border-[var(--border-default)] dark:border-[var(--border-strong)]'
                 }`}
               >
                 <div className="flex justify-between items-center mb-2">
                   <div>
-                    <span className="font-medium text-gray-900 dark:text-white">{cls.className}</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                    <span className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{cls.className}</span>
+                    <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] ml-2">
                       ({cls.totalStudents} students)
                     </span>
                   </div>
                   <span
                     className={`text-lg font-bold ${
-                      cls.isBelowThreshold ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+                      cls.isBelowThreshold ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : 'text-[var(--chart-green)] dark:text-[var(--success)]'
                     }`}
                   >
                     {cls.attendancePercentage}%
                   </span>
                 </div>
                 <AttendanceBar percentage={cls.attendancePercentage} />
-                <div className="flex justify-between mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="text-green-600 dark:text-green-400">Present: {cls.presentCount}</span>
-                  <span className="text-yellow-600 dark:text-yellow-400">Late: {cls.lateCount}</span>
-                  <span className={cls.absentCount > 0 ? 'text-red-600 dark:text-red-400' : ''}>
+                <div className="flex justify-between mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                  <span className="text-[var(--chart-green)] dark:text-[var(--success)]">Present: {cls.presentCount}</span>
+                  <span className="text-[var(--chart-yellow)] dark:text-[var(--warning)]">Late: {cls.lateCount}</span>
+                  <span className={cls.absentCount > 0 ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : ''}>
                     Absent: {cls.absentCount}
                   </span>
                 </div>
               </div>
             ))}
             {data.classAttendance.length === 0 && (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+              <p className="text-center text-[var(--text-muted)] dark:text-[var(--text-muted)] py-4">
                 No attendance data available
               </p>
             )}
@@ -607,23 +607,23 @@ export default function RealTimeAttendanceDashboardPage() {
             {data.absentStudents.map((student) => (
               <div
                 key={student.studentId}
-                className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50 rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{student.studentName}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{student.className}</p>
+                    <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.studentName}</p>
+                    <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{student.className}</p>
                   </div>
                   <GuardianStatusBadge status={student.guardianContactStatus} />
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                     Periods absent: {student.periodsAbsent.join(', ')}
                   </span>
                   {student.guardianPhone && (
                     <a
                       href={`tel:${student.guardianPhone}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                      className="text-[var(--chart-blue)] dark:text-[var(--chart-blue)] hover:underline flex items-center gap-1"
                     >
                       <span>📞</span>
                       {student.guardianPhone}
@@ -633,7 +633,7 @@ export default function RealTimeAttendanceDashboardPage() {
               </div>
             ))}
             {data.absentStudents.length === 0 && (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+              <p className="text-center text-[var(--text-muted)] dark:text-[var(--text-muted)] py-4">
                 No absent students today 🎉
               </p>
             )}
@@ -666,8 +666,8 @@ export default function RealTimeAttendanceDashboardPage() {
         <div
           className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
             actionMessage.type === 'success'
-              ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800'
-              : 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+              ? 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/50 text-[var(--success-dark)] dark:text-[var(--success)] border border-[var(--success-light)] dark:border-[var(--success-dark)]'
+              : 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/50 text-[var(--danger-dark)] dark:text-[var(--danger)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)]'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -675,7 +675,7 @@ export default function RealTimeAttendanceDashboardPage() {
             <span>{actionMessage.text}</span>
             <button
               onClick={() => setActionMessage(null)}
-              className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              className="ml-2 text-[var(--text-muted)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-secondary)]"
             >
               ×
             </button>
@@ -685,30 +685,30 @@ export default function RealTimeAttendanceDashboardPage() {
 
       {/* Contact Guardians Modal */}
       {showContactModal && data && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contact Guardians of Absent Students</h3>
+        <div className="fixed inset-0 bg-[var(--text-primary)] bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)] flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Contact Guardians of Absent Students</h3>
               <button
                 onClick={handleCloseContactModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl"
+                className="text-[var(--text-muted)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--text-secondary)] text-xl"
               >
                 ×
               </button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">
               {data.absentStudents.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No absent students today</p>
+                <p className="text-center text-[var(--text-muted)] dark:text-[var(--text-muted)] py-4">No absent students today</p>
               ) : (
                 <div className="space-y-3">
                   {data.absentStudents.map((student) => (
                     <div
                       key={student.studentId}
-                      className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 flex justify-between items-center"
+                      className="p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50 rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] flex justify-between items-center"
                     >
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{student.studentName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{student.className}</p>
+                        <p className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.studentName}</p>
+                        <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{student.className}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <GuardianStatusBadge status={student.guardianContactStatus} />
@@ -716,7 +716,7 @@ export default function RealTimeAttendanceDashboardPage() {
                           <div className="flex gap-2">
                             <a
                               href={`tel:${student.guardianPhone}`}
-                              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
+                              className="px-3 py-1 bg-[var(--chart-blue)] text-[var(--white-pure)] text-sm rounded hover:bg-[var(--accent-hover)] flex items-center gap-1"
                             >
                               📞 Call
                             </a>
@@ -724,13 +724,13 @@ export default function RealTimeAttendanceDashboardPage() {
                               href={`https://wa.me/${student.guardianPhone.replace(/[^0-9]/g, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center gap-1"
+                              className="px-3 py-1 bg-[var(--chart-green)] text-[var(--white-pure)] text-sm rounded hover:bg-[var(--chart-green)] flex items-center gap-1"
                             >
                               💬 WhatsApp
                             </a>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400 dark:text-gray-500">No phone</span>
+                          <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">No phone</span>
                         )}
                       </div>
                     </div>
@@ -738,10 +738,10 @@ export default function RealTimeAttendanceDashboardPage() {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-2">
+            <div className="p-4 border-t border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex justify-end gap-2">
               <button
                 onClick={handleCloseContactModal}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="px-4 py-2 text-[var(--text-primary)] dark:text-[var(--text-muted)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded hover:bg-[var(--border-default)] dark:hover:bg-[var(--text-secondary)]"
               >
                 Close
               </button>
@@ -751,7 +751,7 @@ export default function RealTimeAttendanceDashboardPage() {
                   handleSendAbsenceAlerts()
                 }}
                 disabled={isSendingAlerts || data.absentStudents.filter(s => s.guardianContactStatus === 'VERIFIED').length === 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded hover:bg-[var(--accent-hover)] disabled:opacity-50"
               >
                 {isSendingAlerts ? 'Sending...' : 'Send SMS to All Verified'}
               </button>
@@ -766,7 +766,7 @@ export default function RealTimeAttendanceDashboardPage() {
           <button
             onClick={handleSendAbsenceAlerts}
             disabled={isSendingAlerts || !data || data.absentStudents.length === 0}
-            className="p-3 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="p-3 text-sm bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 text-[var(--accent-hover)] dark:text-[var(--info)] rounded-lg hover:bg-[var(--info-light)] dark:hover:bg-[var(--info-dark)]/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isSendingAlerts ? (
               <>
@@ -780,7 +780,7 @@ export default function RealTimeAttendanceDashboardPage() {
           <button
             onClick={handleExportReport}
             disabled={isExporting || !data}
-            className="p-3 text-sm bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="p-3 text-sm bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 text-[var(--chart-green)] dark:text-[var(--success)] rounded-lg hover:bg-[var(--success-light)] dark:hover:bg-[var(--success-dark)]/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isExporting ? (
               <>
@@ -793,14 +793,14 @@ export default function RealTimeAttendanceDashboardPage() {
           </button>
           <button
             onClick={handleViewFullHistory}
-            className="p-3 text-sm bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2"
+            className="p-3 text-sm bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 text-[var(--chart-purple)] dark:text-[var(--chart-purple)] rounded-lg hover:bg-[var(--info-light)] dark:hover:bg-[var(--info-dark)]/50 transition-colors flex items-center justify-center gap-2"
           >
             📅 View Full History
           </button>
           <button
             onClick={handleContactGuardians}
             disabled={!data || data.absentStudents.length === 0}
-            className="p-3 text-sm bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="p-3 text-sm bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 text-[var(--warning)] dark:text-[var(--warning)] rounded-lg hover:bg-[var(--warning-light)] dark:hover:bg-[var(--warning-dark)]/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             👥 Contact Guardians
           </button>
@@ -808,7 +808,7 @@ export default function RealTimeAttendanceDashboardPage() {
       </SectionCard>
 
       {/* Auto-refresh notice */}
-      <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+      <div className="mt-4 text-center text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
         Dashboard auto-refreshes every minute to show real-time attendance data
       </div>
     </div>

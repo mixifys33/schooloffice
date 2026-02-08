@@ -39,10 +39,15 @@ async function seedSuperAdmin() {
   // Hash the password
   const passwordHash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 12)
 
+  // Generate unique username for super admin
+  const emailPrefix = SUPER_ADMIN_EMAIL.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+  const username = `superadmin.${emailPrefix}`
+
   // Create the super admin user
   const superAdmin = await prisma.user.create({
     data: {
       email: SUPER_ADMIN_EMAIL,
+      username,
       passwordHash,
       role: 'SUPER_ADMIN',
       roles: ['SUPER_ADMIN'],

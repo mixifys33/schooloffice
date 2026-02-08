@@ -48,11 +48,19 @@ export function DashboardLayout({
   const BrandElement = brandLogo ? (
     <img src={brandLogo} alt={brandText} className="h-40 w-auto" />
   ) : (
-    <span className="text-lg font-bold text-blue-600">{brandText}</span>
+    <span 
+      className="text-lg font-bold"
+      style={{ color: 'var(--accent-primary)' }}
+    >
+      {brandText}
+    </span>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div 
+      className="min-h-screen"
+      style={{ backgroundColor: 'var(--bg-surface)' }}
+    >
       {/* Sidebar */}
       <Sidebar
         items={navItems}
@@ -65,7 +73,13 @@ export function DashboardLayout({
       {/* Main content area */}
       <div className="lg:pl-64">
         {/* Header */}
-        <header className="sticky top-0 z-20 border-b bg-white dark:bg-gray-900">
+        <header 
+          className="sticky top-0 z-20 border-b"
+          style={{
+            backgroundColor: 'var(--bg-elevated)',
+            borderColor: 'var(--border-default)',
+          }}
+        >
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             {/* Mobile: Space for hamburger menu */}
             <div className="w-12 lg:hidden" />
@@ -74,7 +88,12 @@ export function DashboardLayout({
             <div className="hidden lg:flex lg:items-center lg:gap-2">
               {BrandElement}
               {subtitle && (
-                <span className="text-sm text-gray-500">{subtitle}</span>
+                <span 
+                  className="text-sm"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  {subtitle}
+                </span>
               )}
             </div>
 
@@ -136,11 +155,11 @@ export function DashboardHeader({
       )}
     >
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 sm:text-2xl">
+        <h1 className="text-xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)] sm:text-2xl">
           {title}
         </h1>
         {description && (
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
             {description}
           </p>
         )}
@@ -179,12 +198,12 @@ export function DashboardSection({
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {title && (
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                 {description}
               </p>
             )}

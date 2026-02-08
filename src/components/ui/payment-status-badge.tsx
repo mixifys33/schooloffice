@@ -20,24 +20,41 @@ export interface PaymentStatusBadgeProps {
   className?: string
 }
 
+const getStatusStyles = (status: PaymentStatus) => {
+  switch (status) {
+    case 'PAID':
+      return {
+        backgroundColor: 'var(--success-light)',
+        color: 'var(--success-dark)',
+        iconColor: 'var(--success)',
+      }
+    case 'NOT_PAID':
+      return {
+        backgroundColor: 'var(--danger-light)',
+        color: 'var(--danger-dark)',
+        iconColor: 'var(--danger)',
+      }
+    case 'PARTIAL':
+      return {
+        backgroundColor: 'var(--warning-light)',
+        color: 'var(--warning-dark)',
+        iconColor: 'var(--warning)',
+      }
+  }
+}
+
 const statusConfig = {
   PAID: {
     label: 'Paid',
     icon: CheckCircle,
-    containerClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    iconClass: 'text-green-600 dark:text-green-400',
   },
   NOT_PAID: {
     label: 'Not Paid',
     icon: XCircle,
-    containerClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    iconClass: 'text-red-600 dark:text-red-400',
   },
   PARTIAL: {
     label: 'Partial',
     icon: AlertCircle,
-    containerClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    iconClass: 'text-yellow-600 dark:text-yellow-400',
   },
 }
 
@@ -47,17 +64,24 @@ export function PaymentStatusBadge({
   className,
 }: PaymentStatusBadgeProps) {
   const config = statusConfig[status]
+  const styles = getStatusStyles(status)
   const Icon = config.icon
 
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-        config.containerClass,
         className
       )}
+      style={{
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+      }}
     >
-      <Icon className={cn('h-3.5 w-3.5', config.iconClass)} />
+      <Icon 
+        className="h-3.5 w-3.5" 
+        style={{ color: styles.iconColor }}
+      />
       {showLabel && <span>{config.label}</span>}
     </span>
   )

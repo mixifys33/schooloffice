@@ -93,7 +93,7 @@ export default function ReportCardViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+      <div className="min-h-screen bg-[var(--bg-surface)] p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <SkeletonLoader variant="card" count={3} />
         </div>
@@ -103,7 +103,7 @@ export default function ReportCardViewPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+      <div className="min-h-screen bg-[var(--bg-surface)] p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <AlertBanner
             type="danger"
@@ -127,7 +127,7 @@ export default function ReportCardViewPage() {
 
   if (!reportCard) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
+      <div className="min-h-screen bg-[var(--bg-surface)] p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <AlertBanner
             type="warning"
@@ -140,20 +140,20 @@ export default function ReportCardViewPage() {
 
   const getGradeColor = (grade?: string) => {
     switch (grade?.toUpperCase()) {
-      case 'A': return 'text-green-600'
-      case 'B': return 'text-blue-600'
-      case 'C': return 'text-yellow-600'
-      case 'D': return 'text-orange-600'
-      default: return 'text-red-600'
+      case 'A': return 'text-[var(--chart-green)]'
+      case 'B': return 'text-[var(--chart-blue)]'
+      case 'C': return 'text-[var(--chart-yellow)]'
+      case 'D': return 'text-[var(--chart-yellow)]'
+      default: return 'text-[var(--chart-red)]'
     }
   }
 
   const isPromoted = ['A', 'B', 'C', 'D'].includes(reportCard.summary.overallGrade?.toUpperCase() || '')
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <div className="min-h-screen bg-[var(--bg-surface)] print:bg-[var(--bg-main)]">
       {/* Print/Download buttons - hidden when printing */}
-      <div className="print:hidden sticky top-0 bg-white border-b p-4 flex justify-end gap-2 z-10">
+      <div className="print:hidden sticky top-0 bg-[var(--bg-main)] border-b p-4 flex justify-end gap-2 z-10">
         <Button variant="outline" onClick={handlePrint} className="gap-2">
           <Printer className="h-4 w-4" />
           Print
@@ -161,9 +161,9 @@ export default function ReportCardViewPage() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4 sm:p-8 print:p-0">
-        <div className="bg-white rounded-lg shadow-lg print:shadow-none p-6 sm:p-8">
+        <div className="bg-[var(--bg-main)] rounded-lg shadow-lg print:shadow-none p-6 sm:p-8">
           {/* Header */}
-          <div className="text-center border-b-4 border-double border-gray-800 pb-6 mb-6">
+          <div className="text-center border-b-4 border-double border-[var(--border-strong)] pb-6 mb-6">
             {reportCard.school.logo && (
               <img
                 src={reportCard.school.logo}
@@ -171,40 +171,40 @@ export default function ReportCardViewPage() {
                 className="w-20 h-20 mx-auto mb-4 object-contain"
               />
             )}
-            <h1 className="text-2xl sm:text-3xl font-bold text-blue-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--info-dark)]">
               {reportCard.school.name}
             </h1>
             {reportCard.school.address && (
-              <p className="text-sm text-gray-600 mt-1">{reportCard.school.address}</p>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">{reportCard.school.address}</p>
             )}
             {reportCard.school.phone && (
-              <p className="text-sm text-gray-600">Tel: {reportCard.school.phone}</p>
+              <p className="text-sm text-[var(--text-secondary)]">Tel: {reportCard.school.phone}</p>
             )}
             <h2 className="text-xl font-bold mt-4 tracking-widest">STUDENT REPORT CARD</h2>
-            <p className="text-gray-600 mt-1">
+            <p className="text-[var(--text-secondary)] mt-1">
               {reportCard.term.name} - {reportCard.term.academicYear}
             </p>
           </div>
 
           {/* Student Info */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[var(--bg-surface)] p-4 rounded-lg mb-6">
             <div>
-              <p className="text-xs text-gray-500 uppercase">Student Name</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase">Student Name</p>
               <p className="font-bold">{reportCard.student.name}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase">Admission No.</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase">Admission No.</p>
               <p className="font-bold">{reportCard.student.admissionNumber}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase">Class</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase">Class</p>
               <p className="font-bold">
                 {reportCard.student.className}
                 {reportCard.student.streamName && ` (${reportCard.student.streamName})`}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase">Position</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase">Position</p>
               <p className="font-bold">
                 {reportCard.summary.position} of {reportCard.summary.totalStudents}
               </p>
@@ -215,28 +215,28 @@ export default function ReportCardViewPage() {
           <div className="overflow-x-auto mb-6">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-blue-900 text-white">
-                  <th className="border border-gray-300 p-2 text-left">Subject</th>
-                  <th className="border border-gray-300 p-2 text-center">Marks</th>
-                  <th className="border border-gray-300 p-2 text-center">Percentage</th>
-                  <th className="border border-gray-300 p-2 text-center">Grade</th>
-                  <th className="border border-gray-300 p-2 text-left">Remarks</th>
+                <tr className="bg-[var(--info-dark)] text-[var(--white-pure)]">
+                  <th className="border border-[var(--border-default)] p-2 text-left">Subject</th>
+                  <th className="border border-[var(--border-default)] p-2 text-center">Marks</th>
+                  <th className="border border-[var(--border-default)] p-2 text-center">Percentage</th>
+                  <th className="border border-[var(--border-default)] p-2 text-center">Grade</th>
+                  <th className="border border-[var(--border-default)] p-2 text-left">Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 {reportCard.subjects.map((subject, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="border border-gray-300 p-2">{subject.name}</td>
-                    <td className="border border-gray-300 p-2 text-center">
+                  <tr key={index} className={index % 2 === 0 ? 'bg-[var(--bg-main)]' : 'bg-[var(--bg-surface)]'}>
+                    <td className="border border-[var(--border-default)] p-2">{subject.name}</td>
+                    <td className="border border-[var(--border-default)] p-2 text-center">
                       {subject.score}/{subject.maxScore}
                     </td>
-                    <td className="border border-gray-300 p-2 text-center">
+                    <td className="border border-[var(--border-default)] p-2 text-center">
                       {subject.percentage.toFixed(1)}%
                     </td>
-                    <td className={`border border-gray-300 p-2 text-center font-bold ${getGradeColor(subject.grade)}`}>
+                    <td className={`border border-[var(--border-default)] p-2 text-center font-bold ${getGradeColor(subject.grade)}`}>
                       {subject.grade || '-'}
                     </td>
-                    <td className="border border-gray-300 p-2 text-sm">
+                    <td className="border border-[var(--border-default)] p-2 text-sm">
                       {subject.remarks || '-'}
                     </td>
                   </tr>
@@ -246,7 +246,7 @@ export default function ReportCardViewPage() {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gradient-to-r from-blue-900 to-blue-700 text-white p-4 rounded-lg mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gradient-to-r from-blue-900 to-blue-700 text-[var(--white-pure)] p-4 rounded-lg mb-6">
             <div className="text-center">
               <p className="text-xs opacity-80 uppercase">Total Marks</p>
               <p className="text-2xl font-bold">
@@ -272,8 +272,8 @@ export default function ReportCardViewPage() {
           {/* Promotion Status */}
           <div className={`text-center p-4 rounded-lg mb-6 font-bold text-lg ${
             isPromoted
-              ? 'bg-green-100 text-green-800 border-2 border-green-500'
-              : 'bg-red-100 text-red-800 border-2 border-red-500'
+              ? 'bg-[var(--success-light)] text-[var(--success-dark)] border-2 border-[var(--success)]'
+              : 'bg-[var(--danger-light)] text-[var(--danger-dark)] border-2 border-[var(--danger)]'
           }`}>
             {isPromoted
               ? `PROMOTED TO NEXT CLASS - Grade: ${reportCard.summary.overallGrade}`
@@ -284,18 +284,18 @@ export default function ReportCardViewPage() {
           {/* Remarks */}
           <div className="space-y-4 mb-6">
             <div className="border rounded-lg p-4">
-              <h3 className="text-xs text-gray-500 uppercase font-bold mb-2">
+              <h3 className="text-xs text-[var(--text-muted)] uppercase font-bold mb-2">
                 Class Teacher&apos;s Remarks
               </h3>
-              <p className="text-gray-700">
+              <p className="text-[var(--text-primary)]">
                 {reportCard.remarks.teacherRemarks || 'No remarks provided.'}
               </p>
             </div>
             <div className="border rounded-lg p-4">
-              <h3 className="text-xs text-gray-500 uppercase font-bold mb-2">
+              <h3 className="text-xs text-[var(--text-muted)] uppercase font-bold mb-2">
                 Head Teacher&apos;s Remarks
               </h3>
-              <p className="text-gray-700">
+              <p className="text-[var(--text-primary)]">
                 {reportCard.remarks.headTeacherRemarks || 'No remarks provided.'}
               </p>
             </div>
@@ -304,24 +304,24 @@ export default function ReportCardViewPage() {
           {/* Signatures */}
           <div className="grid grid-cols-3 gap-8 mt-12 print:mt-8">
             <div className="text-center">
-              <div className="border-t border-gray-400 pt-2 mt-12">
+              <div className="border-t border-[var(--border-default)] pt-2 mt-12">
                 <p className="text-sm">Class Teacher</p>
               </div>
             </div>
             <div className="text-center">
-              <div className="border-t border-gray-400 pt-2 mt-12">
+              <div className="border-t border-[var(--border-default)] pt-2 mt-12">
                 <p className="text-sm">Head Teacher</p>
               </div>
             </div>
             <div className="text-center">
-              <div className="border-t border-gray-400 pt-2 mt-12">
+              <div className="border-t border-[var(--border-default)] pt-2 mt-12">
                 <p className="text-sm">Parent/Guardian</p>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="text-center text-xs text-gray-500 mt-8 pt-4 border-t">
+          <div className="text-center text-xs text-[var(--text-muted)] mt-8 pt-4 border-t">
             <p>Generated on: {new Date(reportCard.generatedAt).toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',

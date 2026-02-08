@@ -13,9 +13,9 @@ export function SecuritySection() {
     >
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="flex items-center gap-2 text-slate-700">
+          <div className="flex items-center gap-2 text-[var(--text-primary)]">
             <Shield className="h-6 w-6" />
-            <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl text-slate-900">
+            <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl text-[var(--text-primary)]">
               {title}
             </h2>
           </div>
@@ -23,11 +23,11 @@ export function SecuritySection() {
             {points.map((point, index) => (
               <li
                 key={index}
-                className="flex items-center gap-3 text-left p-4 rounded-lg bg-white border border-slate-200 shadow-sm"
+                className="flex items-center gap-3 text-left p-4 rounded-lg bg-[var(--bg-main)] border border-slate-200 shadow-sm"
                 data-testid="security-point"
               >
                 <div className="h-2 w-2 rounded-full bg-slate-400 flex-shrink-0" />
-                <span className="text-sm text-slate-600 font-medium">
+                <span className="text-sm text-[var(--text-secondary)] font-medium">
                   {point.text}
                 </span>
               </li>
