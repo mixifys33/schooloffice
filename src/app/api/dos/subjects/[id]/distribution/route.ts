@@ -39,7 +39,6 @@ export async function GET(
       );
     }
 
-    const subjectId = params.id;
     const { searchParams } = new URL(request.url);
     const termId = searchParams.get('termId');
 

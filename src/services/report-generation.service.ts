@@ -782,12 +782,3 @@ export class ReportGenerationService {
 }
 
 export const reportGenerationService = new ReportGenerationService()
-
- 
- S u n d a y ,   F e b r u a r y   1 5 ,   2 0 2 6   1 : 5 1 : 0 7   A M 
- 
- 
- 
- 
- 
- 
