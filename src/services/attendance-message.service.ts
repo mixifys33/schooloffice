@@ -3,7 +3,7 @@
  * Handles automatic absence notifications, late arrival, and early departure notifications.
  * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
  */
-
+ 
 import { prisma } from '../lib/db'
 import { messageOrchestratorService } from './message-orchestrator.service'
 import { messageTemplateService } from './message-template.service'

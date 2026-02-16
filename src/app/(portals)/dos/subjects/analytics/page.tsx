@@ -38,7 +38,7 @@ export default function SubjectAnalyticsPage() {
   }, []);
 
   const handleBack = () => {
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   if (loading) {

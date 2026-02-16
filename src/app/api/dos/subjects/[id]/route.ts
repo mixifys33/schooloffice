@@ -1,6 +1,7 @@
 /**
  * DoS Individual Subject API Route
  * Handles CRUD operations for individual subjects
+ * Updated: 2026-02-14
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,9 +11,10 @@ import { prisma } from '@/lib/db';
 // GET individual subject for editing
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: subjectId } = await params;
     const session = await auth();
     
     if (!session?.user) {
@@ -37,8 +39,6 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    const subjectId = params.id;
 
     // Get subject with all related data
     const subject = await prisma.subject.findFirst({
@@ -134,11 +134,13 @@ export async function GET(
 }
 
 // PUT update subject
+// PUT - Update subject
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: subjectId } = await params;
     const session = await auth();
     
     if (!session?.user) {
@@ -164,7 +166,6 @@ export async function PUT(
       );
     }
 
-    const subjectId = params.id;
     const data = await request.json();
 
     // Verify subject exists and belongs to school
@@ -257,11 +258,13 @@ export async function PUT(
 }
 
 // DELETE subject
+// DELETE - Remove subject
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: subjectId } = await params;
     const session = await auth();
     
     if (!session?.user) {
@@ -286,8 +289,6 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
-    const subjectId = params.id;
 
     // Verify subject exists and belongs to school
     const existingSubject = await prisma.subject.findFirst({

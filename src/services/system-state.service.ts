@@ -9,7 +9,7 @@ import { LockType } from '@prisma/client'
 // ============================================
 // TYPES
 // ============================================
-
+      
 /**
  * Data types that can be modified
  */

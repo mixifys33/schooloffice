@@ -3,7 +3,7 @@
  * Fixes Issue #6: Penalty Auto-Application Has No Duplicate Prevention
  * 
  * Uses database queries and unique identifiers instead of string matching
- */
+ */   
 import { prisma } from '@/lib/db'
 import type {
   StudentPenalty,
@@ -144,7 +144,7 @@ export async function applyPenalty(
           schoolId: studentAccount.schoolId,
           userId: data.appliedBy,
           action: 'PENALTY_APPLIED',
-          resourceType: 'Penalty',
+          resource: "Penalty",
           resourceId: penalty.id,
           newValue: {
             name: data.name,

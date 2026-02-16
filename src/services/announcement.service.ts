@@ -2,7 +2,7 @@
  * Announcement Service
  * Handles announcements with targeting (role, class, school-wide) and delivery
  * Requirements: 11.1, 11.2, 11.3, 11.4
- */
+ */  
 import { prisma } from '@/lib/db'
 import {
   Announcement,

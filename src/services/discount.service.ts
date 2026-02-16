@@ -6,7 +6,7 @@
  * Property 10: Discount Application Validat
  * For any discount that requires approval (based on school settings),
  * the discount SHALL NOT affect the student balance until status is APPROVED.
- *
+ *    
  * Property 11: Sibling Detection
  * For any guardian with multiple linked students, the detectSiblings function
  * SHALL return all students linked to that guardian.
@@ -239,7 +239,7 @@ export async function applyDiscount(
     schoolId: studentAccount.schoolId,
     userId: data.appliedBy,
     action: 'DISCOUNT_APPLIED',
-    resourceType: 'Discount',
+    resource: "Discount",
     resourceId: discount.id,
     newValue: {
       name: data.name,
@@ -353,7 +353,7 @@ export async function approveDiscount(
     schoolId: discount.studentAccount.schoolId,
     userId: approverId,
     action: 'DISCOUNT_APPROVED',
-    resourceType: 'Discount',
+    resource: "Discount",
     resourceId: discountId,
     previousValue: { status: discount.status },
     newValue: { status: 'APPROVED' },
@@ -470,7 +470,7 @@ export async function rejectDiscount(
     schoolId: discount.studentAccount.schoolId,
     userId: rejecterId,
     action: 'DISCOUNT_REJECTED',
-    resourceType: 'Discount',
+    resource: "Discount",
     resourceId: discountId,
     previousValue: { status: discount.status },
     newValue: { status: 'REJECTED', rejectionReason: reason },
@@ -569,7 +569,7 @@ export async function removeDiscount(
     schoolId: discount.studentAccount.schoolId,
     userId,
     action: 'DISCOUNT_REMOVED',
-    resourceType: 'Discount',
+    resource: "Discount",
     resourceId: discountId,
     previousValue,
     newValue: { removed: true },

@@ -2,7 +2,7 @@
  * Consent Management Service
  * Handles data privacy consent, personal data access logging, and data export
  * Requirements: 30.1, 30.2, 30.3, 30.4, 30.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   ConsentRecord,
@@ -450,7 +450,7 @@ By providing consent, you agree to the following terms:
       schoolId: data.schoolId,
       userId: data.guardianId, // Guardian requesting their own data
       accessType: DataAccessType.EXPORT,
-      resourceType: 'data_export',
+      resource: "data_export",
       description: 'Data export requested',
     })
 

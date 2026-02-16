@@ -7,7 +7,7 @@
 import { MessageStatus } from '@/types/enums'
 
 // ============================================
-// TYPES
+// TYPES   
 // ============================================
 
 export interface SMSConfig {

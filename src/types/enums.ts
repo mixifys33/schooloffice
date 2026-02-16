@@ -130,7 +130,6 @@ export enum PaymentRecordStatus {
 export enum MessageChannel {
   SMS = 'SMS',
   EMAIL = 'EMAIL',
-  WHATSAPP = 'WHATSAPP',
 }
 
 export enum MessageStatus {

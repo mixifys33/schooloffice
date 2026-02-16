@@ -2,13 +2,13 @@
  * Academic Year Service
  * Handles academic year management operations
  * Requirements: 2.1, 2.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   AcademicYear,
   CreateAcademicYearInput,
 } from '@/types'
-
+ 
 /**
  * Map Prisma AcademicYear to domain AcademicYear type
  */

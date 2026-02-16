@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db'
 import { SecureLink, CreateSecureLinkInput } from '@/types'
 import { ISecureLinkService } from '@/types/services'
 import crypto from 'crypto'
-
+   
 // ============================================
 // LINK ACCESS RESULT TYPES
 // ============================================
@@ -519,7 +519,7 @@ export class SecureLinkService implements ISecureLinkService {
   ): Promise<SecureLink> {
     return this.createLink({
       guardianId,
-      resourceType: 'report_card',
+      resource: "report_card",
       resourceId: reportCardId,
       expiryDays,
     })

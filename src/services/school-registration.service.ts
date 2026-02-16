@@ -9,7 +9,7 @@ import { Role, LicenseType } from '@/types/enums'
 import { FeatureFlags } from '@/types'
 import { securityService } from './security.service'
 import { getUserFriendlyError } from '@/lib/error-messages'
-
+    
 // ============================================
 // TYPES
 // ============================================

@@ -13,6 +13,8 @@ export interface SubjectListItem {
   id: string
   name: string
   code: string
+  levelType?: 'O_LEVEL' | 'A_LEVEL' | null
+  isCompulsory?: boolean
   teacherCount?: number
   classCount?: number
 }
@@ -64,11 +66,13 @@ export async function GET(request: NextRequest) {
       id: subject.id,
       name: subject.name,
       code: subject.code,
+      levelType: subject.levelType,
+      isCompulsory: subject.isCompulsory,
       teacherCount: subject._count.staffSubjects,
       classCount: subject._count.classSubjects,
     }))
 
-    return NextResponse.json({ subjects: result })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching subjects:', error)
     return NextResponse.json(
@@ -109,12 +113,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, code } = body
+    const { name, code, levelType, isCompulsory } = body
 
     // Validate required fields
-    if (!name || !code) {
+    if (!name || !code || !levelType) {
       return NextResponse.json(
-        { error: 'Name and code are required' },
+        { error: 'Name, code, and level type are required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate levelType
+    if (!['O_LEVEL', 'A_LEVEL'].includes(levelType)) {
+      return NextResponse.json(
+        { error: 'Invalid level type. Must be O_LEVEL or A_LEVEL' },
         { status: 400 }
       )
     }
@@ -135,11 +147,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the subject
+    // For A-Level subjects, isCompulsory is always false (not applicable)
     const subject = await prisma.subject.create({
       data: {
         schoolId,
         name: name.trim(),
         code: code.toUpperCase().trim(),
+        levelType: levelType,
+        isCompulsory: levelType === 'O_LEVEL' ? (isCompulsory ?? true) : false,
+        educationLevel: 'SECONDARY', // Default to SECONDARY for O/A Level
+        isActive: true,
       },
     })
 

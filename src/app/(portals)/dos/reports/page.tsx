@@ -724,15 +724,10 @@ export default function ReportControlPage() {
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <Link href={`/dos/reports/templates/${template.id}`} className="flex-1">
+                    <Link href="/dos/reports/templates" className="flex-1">
                       <Button variant="outline" size="sm" className="w-full">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    </Link>
-                    <Link href={`/dos/reports/templates/${template.id}/edit`}>
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4" />
+                        <Settings className="h-4 w-4 mr-1" />
+                        Manage Templates
                       </Button>
                     </Link>
                   </div>

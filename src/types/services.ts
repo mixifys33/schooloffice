@@ -15,7 +15,7 @@ import {
   Term,
   CreateTermInput,
   Class,
-  CreateClassInput,
+  CreateClassInput, 
   Stream,
   CreateStreamInput,
   Subject,
@@ -444,7 +444,7 @@ export interface DeliveryReport {
   delivered: number
   failed: number
   read: number
-  byChannel: Record<MessageChannel, { sent: number; delivered: number; failed: number }>
+  byChannel: Record<string, { sent: number; delivered: number; failed: number }>
 }
 
 export interface ICommunicationService {

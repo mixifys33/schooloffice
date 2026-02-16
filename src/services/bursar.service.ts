@@ -397,7 +397,7 @@ export class BursarService {
             schoolId,
             userId,
             action: 'PAYMENT_RECORDED',
-            resourceType: 'Payment',
+            resource: "Payment",
             resourceId: payment.id,
             newValue: {
               studentId: data.studentId,
@@ -411,7 +411,7 @@ export class BursarService {
 
         return { payment, receipt };
       });
-
+   
     } catch (error) {
       console.error('Error recording payment:', error);
       throw new Error('Failed to record payment');

@@ -3,7 +3,7 @@
  * Comprehensive type definitions for the finance system
  * Requirements: 1.1, 1.2, 2.2, 4.1
  */
-
+  
 // ============================================
 // ENUMS - Match Prisma schema exactly
 // ============================================
@@ -711,7 +711,7 @@ export interface FinanceAuditEntry {
   userId: string
   userName?: string
   action: FinanceAuditAction
-  resourceType: 'Payment' | 'Invoice' | 'Receipt' | 'Discount' | 'Penalty' | 'FeeStructure' | 'Settings'
+  resource: "Payment" | 'Invoice' | 'Receipt' | 'Discount' | 'Penalty' | 'FeeStructure' | 'Settings'
   resourceId: string
   previousValue?: Record<string, unknown>
   newValue?: Record<string, unknown>
@@ -724,7 +724,7 @@ export interface AuditLogInput {
   schoolId: string
   userId: string
   action: FinanceAuditAction
-  resourceType: 'Payment' | 'Invoice' | 'Receipt' | 'Discount' | 'Penalty' | 'FeeStructure' | 'Settings'
+  resource: "Payment" | 'Invoice' | 'Receipt' | 'Discount' | 'Penalty' | 'FeeStructure' | 'Settings'
   resourceId: string
   previousValue?: Record<string, unknown>
   newValue?: Record<string, unknown>

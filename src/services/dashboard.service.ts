@@ -2,7 +2,7 @@
  * Dashboard Service
  * Provides data aggregation for admin dashboards and staff-centric dashboards
  * Requirements: 1.4, 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4, 7.1, 8.1, 9.1, 10.1, 33.1, 33.2, 33.3, 33.4, 33.5, 39.1, 39.2, 39.3, 39.4, 39.5
- */
+ */  
 import { prisma } from '@/lib/db'
 import { 
   AttendanceStatus, 
@@ -168,7 +168,7 @@ export interface Anomaly {
   schoolId: string
   schoolName: string
   type: 'HIGH_FAILURE_RATE' | 'LOW_ENGAGEMENT' | 'HIGH_ARREARS' | 'LOW_ATTENDANCE'
-  severity: 'WARNING' | 'CRITICAL'
+  severity: ConflictSeverity.WARNING | 'CRITICAL'
   message: string
   value: number
   threshold: number
@@ -2224,17 +2224,6 @@ export class DashboardService {
       }
     }
   }
-        },
-        quickActions: CLASS_TEACHER_QUICK_ACTIONS,
-        alerts: {
-          absentStudents: [],
-          chronicLateness: [],
-          pendingReports: [],
-        },
-        feeDefaulters: [],
-      }
-    }
-  }
 
   /**
    * Get class snapshot for class teacher dashboard
@@ -2494,8 +2483,8 @@ export class DashboardService {
       // Get last payment date
       const lastPayment = await prisma.payment.findFirst({
         where: { studentId: account.studentId },
-        orderBy: { paymentDate: 'desc' },
-        select: { paymentDate: true },
+        orderBy: { receivedAt: 'desc' },
+        select: { receivedAt: true },
       })
 
       // Ensure all fields are properly converted to strings and handle potential null/undefined values
@@ -2509,7 +2498,7 @@ export class DashboardService {
         studentName: fullName || 'Unknown Student',
         admissionNumber: admissionNumber || 'N/A',
         outstandingBalance: Number(account.balance) || 0,
-        lastPaymentDate: lastPayment?.paymentDate,
+        lastPaymentDate: lastPayment?.receivedAt,
       })
     }
 

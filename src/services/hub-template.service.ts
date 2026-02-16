@@ -2,7 +2,7 @@
  * Hub Template Management Service
  * Manages message templates for Super Admin Communication Hub
  * Requirements: 5.1-5.7
- */
+ */  
 
 import { PrismaClient } from '@prisma/client';
 import {
@@ -12,7 +12,6 @@ import {
   UpdateTemplateInput,
   TemplateFilters,
   MessageChannel,
-  HubErrorCode,
 } from '../types/communication-hub';
 
 export class TemplateManagementService {
@@ -42,11 +41,7 @@ export class TemplateManagementService {
           createdBy: 'system', // TODO: Get from auth context
         },
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
       });
 
@@ -61,11 +56,12 @@ export class TemplateManagementService {
       });
 
       return this.mapToHubTemplate(createdTemplate);
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new Error(`Template with name "${template.name}" already exists for ${template.channel} channel`);
       }
-      throw new Error(`Failed to create template: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to create template: ${message}`);
     }
   }
 
@@ -79,11 +75,7 @@ export class TemplateManagementService {
       const currentTemplate = await this.prisma.hubTemplate.findUnique({
         where: { id },
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
       });
 
@@ -92,7 +84,13 @@ export class TemplateManagementService {
       }
 
       // Prepare update data
-      const updateData: any = {};
+      const updateData: {
+        name?: string;
+        content?: string;
+        variables?: string[];
+        version?: number;
+        isMandatory?: boolean;
+      } = {};
       let shouldCreateVersion = false;
 
       if (updates.name && updates.name !== currentTemplate.name) {
@@ -115,11 +113,7 @@ export class TemplateManagementService {
         where: { id },
         data: updateData,
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
       });
 
@@ -136,14 +130,15 @@ export class TemplateManagementService {
       }
 
       return this.mapToHubTemplate(updatedTemplate);
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      if (error.code === 'P2002') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
         throw new Error(`Template with name "${updates.name}" already exists for this channel`);
       }
-      throw new Error(`Failed to update template: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to update template: ${message}`);
     }
   }
 
@@ -156,11 +151,7 @@ export class TemplateManagementService {
       const template = await this.prisma.hubTemplate.findUnique({
         where: { id },
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
       });
 
@@ -169,11 +160,12 @@ export class TemplateManagementService {
       }
 
       return this.mapToHubTemplate(template);
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(`Failed to get template: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get template: ${message}`);
     }
   }
 
@@ -183,7 +175,14 @@ export class TemplateManagementService {
    */
   async listTemplates(filters: TemplateFilters = {}): Promise<HubTemplate[]> {
     try {
-      const where: any = {};
+      const where: {
+        channel?: MessageChannel;
+        isMandatory?: boolean;
+        OR?: Array<{
+          name?: { contains: string; mode: 'insensitive' };
+          content?: { contains: string; mode: 'insensitive' };
+        }>;
+      } = {};
 
       if (filters.channel) {
         where.channel = filters.channel;
@@ -203,11 +202,7 @@ export class TemplateManagementService {
       const templates = await this.prisma.hubTemplate.findMany({
         where,
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
         orderBy: [
           { isMandatory: 'desc' },
@@ -216,8 +211,9 @@ export class TemplateManagementService {
       });
 
       return templates.map(template => this.mapToHubTemplate(template));
-    } catch (error: any) {
-      throw new Error(`Failed to list templates: ${error.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to list templates: ${message}`);
     }
   }
 
@@ -240,8 +236,9 @@ export class TemplateManagementService {
         createdAt: version.createdAt,
         createdBy: version.createdBy,
       }));
-    } catch (error: any) {
-      throw new Error(`Failed to get template versions: ${error.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get template versions: ${message}`);
     }
   }
 
@@ -281,11 +278,7 @@ export class TemplateManagementService {
           version: newVersion,
         },
         include: {
-          assignments: {
-            include: {
-              school: true,
-            },
-          },
+          assignments: true,
         },
       });
 
@@ -300,11 +293,12 @@ export class TemplateManagementService {
       });
 
       return this.mapToHubTemplate(updatedTemplate);
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(`Failed to revert template: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to revert template: ${message}`);
     }
   }
 
@@ -343,11 +337,12 @@ export class TemplateManagementService {
       }
 
       return this.renderTemplate(template.content, sampleData);
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(`Failed to preview template: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to preview template: ${message}`);
     }
   }
 
@@ -381,11 +376,12 @@ export class TemplateManagementService {
           })),
         });
       }
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(`Failed to assign template to schools: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to assign template to schools: ${message}`);
     }
   }
 
@@ -407,11 +403,12 @@ export class TemplateManagementService {
         where: { id: templateId },
         data: { isMandatory: mandatory },
       });
-    } catch (error: any) {
-      if (error.message.includes('not found')) {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
         throw error;
       }
-      throw new Error(`Failed to set template mandatory status: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to set template mandatory status: ${message}`);
     }
   }
 
@@ -434,15 +431,27 @@ export class TemplateManagementService {
   /**
    * Map database model to HubTemplate interface
    */
-  private mapToHubTemplate(template: any): HubTemplate {
+  private mapToHubTemplate(template: {
+    id: string;
+    name: string;
+    channel: string;
+    content: string;
+    variables: unknown;
+    isMandatory: boolean;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: string;
+    assignments?: Array<{ schoolId: string }>;
+  }): HubTemplate {
     return {
       id: template.id,
       name: template.name,
       channel: template.channel as MessageChannel,
       content: template.content,
-      variables: template.variables,
+      variables: Array.isArray(template.variables) ? template.variables : [],
       isMandatory: template.isMandatory,
-      assignedSchools: template.assignments?.map((a: any) => a.schoolId) || [],
+      assignedSchools: template.assignments?.map((a) => a.schoolId) || [],
       version: template.version,
       createdAt: template.createdAt,
       updatedAt: template.updatedAt,

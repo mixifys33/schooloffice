@@ -12,6 +12,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Role } from '@/types/enums'
 import { gradingEngine } from '@/lib/grading-engine'
+import { marksAuditService } from '@/services/marks-audit.service'
 import { z } from 'zod'
 
 // Validation schema for exam entry creation
@@ -207,18 +208,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create exam entry
-    const examEntry = await prisma.examEntry.create({
-      data: {
+    // Create exam entry with audit logging
+    const examEntry = await prisma.$transaction(async (tx) => {
+      const newExamEntry = await tx.examEntry.create({
+        data: {
+          studentId: data.studentId,
+          subjectId: data.subjectId,
+          teacherId: staff.id,
+          termId: currentTerm.id,
+          examScore: data.examScore,
+          maxScore: 100, // Always 100 for exams
+          examDate: new Date(data.examDate),
+          status: 'DRAFT',
+        },
+      })
+
+      // Log audit entry for exam creation
+      // Requirement 32.1: Maintain complete audit trails for all grading activities
+      await marksAuditService.logExamEntryCreated({
+        schoolId,
+        entryId: newExamEntry.id,
         studentId: data.studentId,
         subjectId: data.subjectId,
-        teacherId: staff.id,
+        classId: student.classId,
         termId: currentTerm.id,
-        examScore: data.examScore,
-        maxScore: 100, // Always 100 for exams
-        examDate: new Date(data.examDate),
-        status: 'DRAFT',
-      },
+        teacherId: staff.id,
+        examData: {
+          examScore: data.examScore,
+          maxScore: 100,
+          examDate: data.examDate,
+          examContribution: gradingEngine.calculateExamContribution({
+            ...newExamEntry,
+            status: newExamEntry.status as any,
+            createdAt: newExamEntry.createdAt,
+            updatedAt: newExamEntry.updatedAt,
+          }),
+        },
+      })
+
+      return newExamEntry
     })
 
     console.log('✅ [API] /api/teacher/marks/exam-entry - POST - Successfully created exam entry:', examEntry.id)

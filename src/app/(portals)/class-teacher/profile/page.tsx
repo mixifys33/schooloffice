@@ -209,9 +209,15 @@ export default function ClassTeacherProfilePage() {
     department: profile.department,
     position: profile.position,
     hireDate: profile.hireDate,
-    classTeacherFor: profile.classTeacherFor,
-    subjectsTaught: profile.subjectsTaught,
-    workload: profile.workload,
+    classTeacherFor: Array.isArray(profile.classTeacherFor) ? profile.classTeacherFor : [],
+    subjectsTaught: Array.isArray(profile.subjectsTaught) ? profile.subjectsTaught : [],
+    workload: profile.workload || {
+      totalPeriods: 0,
+      completedPeriods: 0,
+      remainingPeriods: 0,
+      classesTaught: 0,
+      subjectsTaught: 0,
+    },
   }
 
   return (
@@ -307,12 +313,16 @@ export default function ClassTeacherProfilePage() {
                 <div className="pt-4">
                   <h3 className={cn(typography.h3, 'mb-2')}>Qualifications</h3>
                   <div className="space-y-2">
-                    {profile.qualifications.map((qual, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Award className="h-4 w-4 text-[var(--text-muted)]" />
-                        <span className="text-sm">{qual}</span>
-                      </div>
-                    ))}
+                    {profile.qualifications && profile.qualifications.length > 0 ? (
+                      profile.qualifications.map((qual, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-[var(--text-muted)]" />
+                          <span className="text-sm">{qual}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-[var(--text-muted)]">No qualifications listed</p>
+                    )}
                   </div>
                 </div>
 
@@ -385,18 +395,22 @@ export default function ClassTeacherProfilePage() {
                   <div>
                     <h3 className={cn(typography.h3, 'mb-2')}>Teaching Load Distribution</h3>
                     <div className="space-y-2">
-                      {readOnly.subjectsTaught.map((subject, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-sm">{subject.name} - {subject.className}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">6 periods</span>
-                            <Progress 
-                              value={75} 
-                              className="w-20 h-2" 
-                            />
+                      {readOnly.subjectsTaught && readOnly.subjectsTaught.length > 0 ? (
+                        readOnly.subjectsTaught.map((subject, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            <span className="text-sm">{subject.name} - {subject.className}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">6 periods</span>
+                              <Progress 
+                                value={75} 
+                                className="w-20 h-2" 
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-sm text-[var(--text-muted)]">No subjects assigned</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -455,11 +469,12 @@ export default function ClassTeacherProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {readOnly.subjectsTaught.map((subject, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="h-5 w-5 text-[var(--text-muted)]" />
-                      <div>
+                {readOnly.subjectsTaught && readOnly.subjectsTaught.length > 0 ? (
+                  readOnly.subjectsTaught.map((subject, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="h-5 w-5 text-[var(--text-muted)]" />
+                        <div>
                         <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{subject.name}</div>
                         <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                           {subject.className}
@@ -475,7 +490,10 @@ export default function ClassTeacherProfilePage() {
                       </Button>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)] p-3">No subjects assigned</p>
+                )}
               </div>
             </CardContent>
           </Card>

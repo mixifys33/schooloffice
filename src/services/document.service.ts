@@ -9,7 +9,7 @@ import {
   CreateStudentDocumentInput,
 } from '@/types'
 
-/**
+/**     
  * Supported document types for student profiles
  */
 export const SUPPORTED_DOCUMENT_TYPES = [

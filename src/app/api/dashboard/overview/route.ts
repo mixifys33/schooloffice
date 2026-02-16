@@ -65,7 +65,9 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Fetch all data in parallel with error handling
+    // Fetch all data in parallel with error handling and timeouts
+    const queryTimeout = 25000 // 25 second timeout for database queries
+    
     const [
       totalStudents,
       paidStudents,
@@ -74,71 +76,86 @@ export async function GET(request: NextRequest) {
       todayAttendance,
     ] = await Promise.allSettled([
       // Total students
-      prisma.student.count({
-        where: { schoolId, status: 'ACTIVE' },
-      }),
+      Promise.race([
+        prisma.student.count({
+          where: { schoolId, status: 'ACTIVE' },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
       // Paid students (PAID pilot type)
-      prisma.student.count({
-        where: { schoolId, status: 'ACTIVE', pilotType: 'PAID' },
-      }),
+      Promise.race([
+        prisma.student.count({
+          where: { schoolId, status: 'ACTIVE', pilotType: 'PAID' },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
       // School details for SMS budget
-      prisma.school.findUnique({
-        where: { id: schoolId },
-        select: { smsBudgetPerTerm: true, isActive: true, name: true },
-      }),
+      Promise.race([
+        prisma.school.findUnique({
+          where: { id: schoolId },
+          select: { smsBudgetPerTerm: true, isActive: true, name: true },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
       // Current term - First get the active academic year for the school, then find the term
-      (async () => {
-        console.log(`🔍 [Dashboard Overview] Looking for active academic year for school: ${schoolId}`);
-        const activeAcademicYear = await prisma.academicYear.findFirst({
-          where: {
-            schoolId,
-            isActive: true,
-          },
-          select: { id: true, name: true },
-        });
-        
-        if (!activeAcademicYear) {
-          console.log(`⚠️ [Dashboard Overview] No active academic year found for school: ${schoolId}`);
-          return null;
-        }
-        
-        console.log(`✅ [Dashboard Overview] Found active academic year: ${activeAcademicYear.name} (${activeAcademicYear.id})`);
-        console.log(`🔍 [Dashboard Overview] Looking for terms in academic year: ${activeAcademicYear.id}`);
-        
-        const termResult = await prisma.term.findFirst({
-          where: {
-            academicYearId: activeAcademicYear.id,
-          },
-          select: { 
-            id: true, 
-            name: true, 
-            startDate: true, 
-            endDate: true,
-            academicYear: {
-              select: {
-                name: true
+      Promise.race([
+        (async () => {
+          console.log(`🔍 [Dashboard Overview] Looking for active academic year for school: ${schoolId}`);
+          const activeAcademicYear = await prisma.academicYear.findFirst({
+            where: {
+              schoolId,
+              isActive: true,
+            },
+            select: { id: true, name: true },
+          });
+          
+          if (!activeAcademicYear) {
+            console.log(`⚠️ [Dashboard Overview] No active academic year found for school: ${schoolId}`);
+            return null;
+          }
+          
+          console.log(`✅ [Dashboard Overview] Found active academic year: ${activeAcademicYear.name} (${activeAcademicYear.id})`);
+          console.log(`🔍 [Dashboard Overview] Looking for terms in academic year: ${activeAcademicYear.id}`);
+          
+          const termResult = await prisma.term.findFirst({
+            where: {
+              academicYearId: activeAcademicYear.id,
+            },
+            select: { 
+              id: true, 
+              name: true, 
+              startDate: true, 
+              endDate: true,
+              academicYear: {
+                select: {
+                  name: true
+                }
               }
-            }
-          },
-        });
-        
-        if (termResult) {
-          console.log(`✅ [Dashboard Overview] Found current term: ${termResult.name} (${termResult.id})`);
-        } else {
-          console.log(`⚠️ [Dashboard Overview] No terms found in academic year: ${activeAcademicYear.id}`);
-        }
-        
-        return termResult;
-      })(),
+            },
+          });
+          
+          if (termResult) {
+            console.log(`✅ [Dashboard Overview] Found current term: ${termResult.name} (${termResult.id})`);
+          } else {
+            console.log(`⚠️ [Dashboard Overview] No terms found in academic year: ${activeAcademicYear.id}`);
+          }
+          
+          return termResult;
+        })(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
       // Today's attendance
-      prisma.attendance.findMany({
-        where: {
-          date: today,
-          student: { schoolId },
-        },
-        distinct: ['studentId'],
-        select: { studentId: true, status: true },
-      }),
+      Promise.race([
+        prisma.attendance.findMany({
+          where: {
+            date: today,
+            student: { schoolId },
+          },
+          distinct: ['studentId'],
+          select: { studentId: true, status: true },
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
     ])
 
     // Extract values with fallbacks

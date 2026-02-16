@@ -5,7 +5,7 @@
  * 
  * Property 38: Document Categorization - All documents must have proper categorization
  * Property 39: Document Access Control - Permission-based access enforcement
- */
+ */   
 import { prisma } from '@/lib/db'
 import { StaffDocumentCategory, Role, StaffRole } from '@/types/enums'
 import { auditService } from './audit.service'
@@ -165,6 +165,7 @@ export class StaffDocumentService {
     const document = await prisma.staffDocument.create({
       data: {
         staffId: data.staffId,
+        schoolId: staff.schoolId,
         category: data.category,
         fileName: data.fileName.trim(),
         fileUrl: data.fileUrl,
@@ -176,16 +177,13 @@ export class StaffDocumentService {
     })
 
     // Log to audit trail (Requirement 14.3)
-    await auditService.logDocumentAccess({
+    await auditService.log({
       schoolId: staff.schoolId,
-      accessedByUserId: context.userId,
-      accessedByName: context.userName,
-      staffId: data.staffId,
-      staffName: `${staff.firstName} ${staff.lastName}`,
-      documentId: document.id,
-      documentName: data.fileName,
-      documentCategory: data.category,
-      action: 'uploaded',
+      userId: context.userId,
+      action: 'UPLOAD',
+      resource: 'STAFF_DOCUMENT',
+      resourceId: document.id,
+      newValue: JSON.stringify({ fileName: data.fileName, category: data.category }),
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     })
@@ -276,16 +274,12 @@ export class StaffDocumentService {
 
     // Log to audit trail (Requirement 14.3)
     if (logAccess) {
-      await auditService.logDocumentAccess({
+      await auditService.log({
         schoolId: document.staff.schoolId,
-        accessedByUserId: context.userId,
-        accessedByName: context.userName,
-        staffId: document.staffId,
-        staffName: `${document.staff.firstName} ${document.staff.lastName}`,
-        documentId: document.id,
-        documentName: document.fileName,
-        documentCategory: document.category as StaffDocumentCategory,
-        action: 'viewed',
+        userId: context.userId,
+        action: 'VIEW',
+        resource: 'STAFF_DOCUMENT',
+        resourceId: document.id,
         ipAddress: context.ipAddress,
         userAgent: context.userAgent,
       })
@@ -373,16 +367,13 @@ export class StaffDocumentService {
     }
 
     // Log to audit trail before deletion (Requirement 14.3)
-    await auditService.logDocumentAccess({
+    await auditService.log({
       schoolId: document.staff.schoolId,
-      accessedByUserId: context.userId,
-      accessedByName: context.userName,
-      staffId: document.staffId,
-      staffName: `${document.staff.firstName} ${document.staff.lastName}`,
-      documentId: document.id,
-      documentName: document.fileName,
-      documentCategory: document.category as StaffDocumentCategory,
-      action: 'deleted',
+      userId: context.userId,
+      action: 'DELETE',
+      resource: 'STAFF_DOCUMENT',
+      resourceId: document.id,
+      previousValue: JSON.stringify({ fileName: document.fileName, category: document.category }),
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     })

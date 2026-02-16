@@ -38,7 +38,7 @@ interface Term {
 }
 
 const EnhancedAcademicSettings = () => {
-  const { showToast } = useToast();
+  const { toast } = useToast();
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [newYearName, setNewYearName] = useState('');
@@ -282,9 +282,10 @@ const EnhancedAcademicSettings = () => {
         }
 
         // Show user-friendly toast instead of throwing error
-        showToast({
-          type: 'error',
-          message: userFriendlyMessage
+        toast({
+          title: 'Error',
+          description: userFriendlyMessage,
+          variant: 'destructive'
         });
         return;
       }
@@ -292,9 +293,9 @@ const EnhancedAcademicSettings = () => {
       const result = await response.json();
 
       // Show success toast
-      showToast({
-        type: 'success',
-        message: `Academic year "${newYearName}" created successfully!`
+      toast({
+        title: 'Success',
+        description: `Academic year "${newYearName}" created successfully!`
       });
 
       // Refresh the list
@@ -315,9 +316,9 @@ const EnhancedAcademicSettings = () => {
         }
         
         // Show toast instead of throwing error
-        showToast({
-          type: 'warning',
-          message: userFriendlyMessage
+        toast({
+          title: 'Warning',
+          description: userFriendlyMessage
         });
         return;
       }
@@ -335,9 +336,10 @@ const EnhancedAcademicSettings = () => {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while creating the academic year';
       
       // Show user-friendly toast instead of setting error state
-      showToast({
-        type: 'error',
-        message: errorMessage
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
       });
     } finally {
       setSaving(false);
@@ -360,9 +362,10 @@ const EnhancedAcademicSettings = () => {
   // Handle term form submission
   const handleSubmitTerm = async (yearId: string) => {
     if (!termFormData.name || !termFormData.startDate || !termFormData.endDate) {
-      showToast({
-        type: 'error',
-        message: 'Please fill in all required fields'
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive'
       });
       return;
     }
@@ -371,9 +374,10 @@ const EnhancedAcademicSettings = () => {
     const endDate = new Date(termFormData.endDate);
 
     if (startDate >= endDate) {
-      showToast({
-        type: 'error',
-        message: 'Start date must be before end date'
+      toast({
+        title: 'Error',
+        description: 'Start date must be before end date',
+        variant: 'destructive'
       });
       return;
     }
@@ -452,9 +456,10 @@ const EnhancedAcademicSettings = () => {
         }
 
         // Show user-friendly toast instead of throwing error
-        showToast({
-          type: 'error',
-          message: userFriendlyMessage
+        toast({
+          title: 'Error',
+          description: userFriendlyMessage,
+          variant: 'destructive'
         });
         return;
       }
@@ -462,9 +467,9 @@ const EnhancedAcademicSettings = () => {
       console.log('[DEBUG] Term created successfully');
 
       // Show success toast
-      showToast({
-        type: 'success',
-        message: `Term "${termFormData.name}" created successfully!`
+      toast({
+        title: 'Success',
+        description: `Term "${termFormData.name}" created successfully!`
       });
 
       // Refresh the list again after successful creation
@@ -488,9 +493,10 @@ const EnhancedAcademicSettings = () => {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while creating the term';
       
       // Show user-friendly toast instead of setting error state
-      showToast({
-        type: 'error',
-        message: errorMessage
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
       });
     } finally {
       setSaving(false);
@@ -681,9 +687,10 @@ const EnhancedAcademicSettings = () => {
         ?.terms?.find(t => t.id === termId);
 
       if (!term) {
-        showToast({
-          type: 'error',
-          message: 'Term not found. Please refresh the page and try again.'
+        toast({
+          title: 'Error',
+          description: 'Term not found. Please refresh the page and try again.',
+          variant: 'destructive'
         });
         return;
       }
@@ -751,9 +758,10 @@ const EnhancedAcademicSettings = () => {
         }
         
         // Show user-friendly toast instead of throwing error
-        showToast({
-          type: 'error',
-          message: userFriendlyMessage
+        toast({
+          title: 'Error',
+          description: userFriendlyMessage,
+          variant: 'destructive'
         });
         return;
       }
@@ -761,9 +769,9 @@ const EnhancedAcademicSettings = () => {
       console.log('[DEBUG] Term updated successfully');
 
       // Show success toast
-      showToast({
-        type: 'success',
-        message: `Term "${term.name}" updated successfully!`
+      toast({
+        title: 'Success',
+        description: `Term "${term.name}" updated successfully!`
       });
 
       const result = await response.json();
@@ -786,9 +794,9 @@ const EnhancedAcademicSettings = () => {
         }
         
         // Show toast instead of throwing error
-        showToast({
-          type: 'warning',
-          message: userFriendlyMessage
+        toast({
+          title: 'Warning',
+          description: userFriendlyMessage
         });
         return;
       }
@@ -802,9 +810,10 @@ const EnhancedAcademicSettings = () => {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while updating the term';
       
       // Show user-friendly toast instead of setting error state
-      showToast({
-        type: 'error',
-        message: errorMessage
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
       });
     } finally {
       setSaving(false);
@@ -813,7 +822,22 @@ const EnhancedAcademicSettings = () => {
 
   // Delete a term
   const handleDeleteTerm = async (yearId: string, termId: string) => {
-    if (!window.confirm('Are you sure you want to delete this term? This action cannot be undone.')) {
+    // Get term name for better confirmation message
+    const term = academicYears
+      .find(y => y.id === yearId)
+      ?.terms?.find(t => t.id === termId);
+    
+    const termName = term?.name || 'this term';
+    
+    // Professional confirmation dialog
+    const confirmed = window.confirm(
+      `Delete ${termName}?\n\n` +
+      `This will permanently delete the term. If the term has associated records ` +
+      `(CA entries, exam entries, payments, etc.), you'll need to remove those first.\n\n` +
+      `Are you sure you want to continue?`
+    );
+    
+    if (!confirmed) {
       return;
     }
 
@@ -828,23 +852,34 @@ const EnhancedAcademicSettings = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
         
-        // More specific error messages based on status
-        let userFriendlyMessage = 'Failed to delete term. ';
+        // Handle different error scenarios professionally
         if (response.status === 401) {
-          userFriendlyMessage += 'Please log in again.';
+          setErrors({ deleteTerm: 'Your session has expired. Please log in again to continue.' });
+          return;
         } else if (response.status === 403) {
-          userFriendlyMessage += 'You do not have permission to delete terms.';
+          setErrors({ deleteTerm: 'You do not have permission to delete terms. Please contact your administrator.' });
+          return;
         } else if (response.status === 400) {
-          userFriendlyMessage += errorData.error || 'Invalid data provided.';
+          // This is the "has associated data" error - make it user-friendly
+          const errorMsg = errorData.error || 'Invalid data provided.';
+          
+          // Check if it's a dependency error
+          if (errorMsg.includes('associated data')) {
+            setErrors({ 
+              deleteTerm: errorMsg // Use the detailed message from API
+            });
+          } else {
+            setErrors({ deleteTerm: errorMsg });
+          }
+          return;
         } else if (response.status === 500) {
-          userFriendlyMessage += 'Server error. Please contact support.';
+          setErrors({ deleteTerm: 'A server error occurred. Our team has been notified. Please try again later or contact support if the issue persists.' });
+          return;
         } else {
-          userFriendlyMessage += 'Please try again.';
+          setErrors({ deleteTerm: 'Unable to delete term. Please try again or contact support if the issue persists.' });
+          return;
         }
-        
-        throw new Error(userFriendlyMessage);
       }
 
       const result = await response.json();
@@ -852,29 +887,24 @@ const EnhancedAcademicSettings = () => {
       // Refresh the list
       const refreshResponse = await fetch('/api/settings/academic-years');
       if (!refreshResponse.ok) {
-        const errorData = await refreshResponse.json().catch(() => ({}));
-        const errorMessage = errorData.error || `HTTP error! status: ${refreshResponse.status}`;
-        
-        let userFriendlyMessage = 'Failed to refresh academic years. ';
-        if (refreshResponse.status === 401) {
-          userFriendlyMessage += 'Please log in again.';
-        } else if (refreshResponse.status === 403) {
-          userFriendlyMessage += 'You do not have permission to view academic years.';
-        } else if (refreshResponse.status === 500) {
-          userFriendlyMessage += 'Server error. Please contact support.';
-        } else {
-          userFriendlyMessage += 'Please try again.';
-        }
-        
-        throw new Error(userFriendlyMessage);
+        setErrors({ deleteTerm: 'Term deleted, but failed to refresh the list. Please refresh the page manually.' });
+        return;
       }
       
       const data = await refreshResponse.json();
       setAcademicYears(data.academicYears || []);
+      
+      // Show success message
+      toast({
+        title: 'Success',
+        description: 'Term deleted successfully'
+      });
     } catch (error) {
-      console.error('Error deleting term:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      setErrors({ deleteTerm: errorMessage });
+      // Only log to console for debugging, don't show raw error to user
+      console.error('[Academic Settings] Error deleting term:', error);
+      setErrors({ 
+        deleteTerm: 'An unexpected error occurred while deleting the term. Please try again or contact support if the issue persists.' 
+      });
     } finally {
       // Remove from deleting set to hide loading indicator
       setDeletingTermIds(prev => {
@@ -1532,10 +1562,33 @@ const EnhancedAcademicSettings = () => {
       
       {/* Error Messages */}
       {(errors.addYear || errors.addTerm || errors.updateTerm || errors.deleteTerm || errors.setActive) && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {errors.addYear || errors.addTerm || errors.updateTerm || errors.deleteTerm || errors.setActive}
+        <Alert variant="destructive" className="border-l-4">
+          <AlertCircle className="h-5 w-5" />
+          <AlertDescription className="ml-2">
+            <div className="space-y-2">
+              <p className="font-medium">
+                {errors.addYear && 'Unable to Add Academic Year'}
+                {errors.addTerm && 'Unable to Add Term'}
+                {errors.updateTerm && 'Unable to Update Term'}
+                {errors.deleteTerm && 'Unable to Delete Term'}
+                {errors.setActive && 'Unable to Set Active Year'}
+              </p>
+              <p className="text-sm">
+                {errors.addYear || errors.addTerm || errors.updateTerm || errors.deleteTerm || errors.setActive}
+              </p>
+              {errors.deleteTerm && errors.deleteTerm.includes('associated data') && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    💡 What you can do:
+                  </p>
+                  <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                    <li>Delete or move the CA entries to another term first</li>
+                    <li>Or edit the term dates instead of deleting it</li>
+                    <li>Contact your administrator if you need assistance</li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}

@@ -6,7 +6,7 @@
  * 
  * Requirements: 17.1, 17.2, 17.4, 17.5, 17.6
  */
-
+  
 import { prisma } from '../lib/db'
 import {
   AutomationRule,

@@ -10,7 +10,7 @@ import { User, CreateUserInput, UserSession } from '@/types'
 import { Role, LicenseType, AuthEventType, StaffRole, StaffStatus } from '@/types/enums'
 import { roleResolutionService } from './role-resolution.service'
 import { getUserFriendlyError } from '@/lib/error-messages'
-
+  
 // ============================================
 // TYPES
 // ============================================
@@ -834,7 +834,7 @@ export class AuthService {
   private getStaffDashboardPath(role: StaffRole | Role): string {
     const staffDashboardPaths: Record<string, string> = {
       [StaffRole.CLASS_TEACHER]: '/dashboard/classes',
-      [StaffRole.DOS]: '/dashboard/dos',
+      [StaffRole.DOS]: '/dos',
       [StaffRole.HOSTEL_STAFF]: '/dashboard/hostel',
       [StaffRole.SUPPORT_STAFF]: '/dashboard/tasks',
       [StaffRole.BURSAR]: '/dashboard/fees',

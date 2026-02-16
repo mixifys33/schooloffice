@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role, StudentStatus } from '@/types/enums'
+import { Role, StaffRole, StudentStatus } from '@/types/enums'
 
 export interface TeacherClassesResponse {
   classes: {
@@ -41,19 +41,6 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Verify user has appropriate role
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
-      console.log('❌ [API] /api/teacher/marks/classes - Invalid role:', userRole)
-      return NextResponse.json(
-        { 
-          error: 'Access denied. Teacher role required.',
-          details: `Current role: ${userRole}. Teacher access required.`
-        },
-        { status: 403 }
-      )
-    }
-
     const schoolId = session.user.schoolId
     if (!schoolId) {
       console.log('❌ [API] /api/teacher/marks/classes - No school context')
@@ -78,6 +65,7 @@ export async function GET(request: NextRequest) {
         lastName: true,
         role: true,
         primaryRole: true,
+        secondaryRoles: true,
         status: true,
       },
     })
@@ -89,6 +77,24 @@ export async function GET(request: NextRequest) {
           details: 'Your staff profile is not set up. Please contact your school administrator.'
         },
         { status: 404 }
+      )
+    }
+
+    // Verify user has appropriate role
+    const userRole = session.user.activeRole || session.user.role
+    const isAdmin = userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY
+    const isTeacher = userRole === Role.TEACHER || 
+                      staff.primaryRole === StaffRole.CLASS_TEACHER ||
+                      (staff.secondaryRoles as string[] || []).includes(StaffRole.CLASS_TEACHER)
+    
+    if (!isTeacher && !isAdmin) {
+      console.log('❌ [API] /api/teacher/marks/classes - Invalid role:', userRole, 'Staff role:', staff.primaryRole)
+      return NextResponse.json(
+        { 
+          error: 'Access denied. Teacher role required.',
+          details: `Current role: ${userRole}. Teacher access required.`
+        },
+        { status: 403 }
       )
     }
 

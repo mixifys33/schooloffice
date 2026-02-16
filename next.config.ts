@@ -12,11 +12,8 @@ const nextConfig: NextConfig = {
   // Turbopack configuration for Next.js 16 (minimal to avoid warnings)
   turbopack: {},
   
-  // Disable development indicators that cause source map issues
-  devIndicators: {
-    buildActivity: false,
-    buildActivityPosition: 'bottom-right',
-  },
+  // Development indicators configuration (removed in Next.js 16)
+  // devIndicators config is minimal in Next.js 16
   
   // Reduce logging to minimize console noise
   logging: {
@@ -36,6 +33,13 @@ const nextConfig: NextConfig = {
     // Reduce memory usage and potential JSON parsing conflicts
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
+  },
+  
+  // Increase body size limit for file uploads (50MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
   },
 };
 

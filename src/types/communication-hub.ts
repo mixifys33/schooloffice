@@ -381,7 +381,7 @@ export interface UsageReport {
   period: { start: Date; end: Date };
   summary: {
     totalMessages: number;
-    byChannel: Record<MessageChannel, number>;
+    byChannel: Record<string, number>;
     bySchool: SchoolUsageSummary[];
   };
   trends: TrendData[];
@@ -406,14 +406,14 @@ export interface DeliveryReport {
   id: string;
   period: { start: Date; end: Date };
   overall: DeliveryStats;
-  byChannel: Record<MessageChannel, DeliveryStats>;
+  byChannel: Record<string, DeliveryStats>;
   bySchool: SchoolDeliveryStats[];
   generatedAt: Date;
 }
 
 export interface CostSummary {
   totalCost: number;
-  byChannel: Record<MessageChannel, number>;
+  byChannel: Record<string, number>;
 }
 
 export interface SchoolCostSummary {

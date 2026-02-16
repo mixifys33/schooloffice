@@ -2,17 +2,18 @@
  * Teacher Marks Management - Subjects API Route
  * Progressive filtering: Step 3 - Subject Selection
  * 
- * Requirements: 3.1, 3.4
- * - Display only subjects assigned to teacher for selected class
- * - Include subject metadata (name, code, max scores)
+ * Requirements: 1.1, 1.2, 1.3, 11.1, 11.2
+ * - Display subjects for selected class
+ * - Filter subjects based on teacher assignments
+ * - Include subject metadata (code, max scores)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role } from '@/types/enums'
+import { Role, StaffRole } from '@/types/enums'
 
-export interface ClassSubjectsResponse {
+export interface SubjectsResponse {
   subjects: {
     id: string;
     name: string;
@@ -25,43 +26,53 @@ export interface ClassSubjectsResponse {
 
 /**
  * GET /api/teacher/marks/classes/[classId]/subjects
- * Returns subjects available for marks entry in the selected class
+ * Returns subjects for a specific class that the teacher can access
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { classId: string } }
+  { params }: { params: Promise<{ classId: string }> }
 ) {
   try {
-    console.log('🔍 [API] /api/teacher/marks/classes/[classId]/subjects - Starting request for class:', params.classId)
+    console.log('🔍 [API] /api/teacher/marks/classes/[classId]/subjects - Starting request')
     
     const session = await auth()
     if (!session?.user) {
+      console.log('❌ [API] Subjects - No session found')
       return NextResponse.json({ 
         error: 'Authentication required',
         details: 'Please log in to access marks management'
       }, { status: 401 })
     }
 
-    // Verify user has appropriate role
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
-      return NextResponse.json(
-        { 
-          error: 'Access denied. Teacher role required.',
-          details: `Current role: ${userRole}. Teacher access required.`
-        },
-        { status: 403 }
-      )
-    }
-
     const schoolId = session.user.schoolId
     if (!schoolId) {
+      console.log('❌ [API] Subjects - No school context')
       return NextResponse.json(
         { 
           error: 'No school context found',
           details: 'Your account is not linked to a school. Please contact support.'
         },
         { status: 400 }
+      )
+    }
+
+    const { classId } = await params
+
+    // Verify class belongs to school
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        schoolId,
+      },
+    })
+
+    if (!classRecord) {
+      return NextResponse.json(
+        { 
+          error: 'Class not found',
+          details: 'The requested class does not exist or you do not have access to it.'
+        },
+        { status: 404 }
       )
     }
 
@@ -74,6 +85,7 @@ export async function GET(
       select: {
         id: true,
         primaryRole: true,
+        secondaryRoles: true,
       },
     })
 
@@ -87,81 +99,91 @@ export async function GET(
       )
     }
 
-    // Check if teacher is class teacher for this class
+    // Check if user is class teacher for this class
     const isClassTeacher = await prisma.staffClass.findFirst({
       where: {
         staffId: staff.id,
-        classId: params.classId,
+        classId,
       },
     })
 
-    // Get teacher's subject assignments for this class
-    const teacherSubjects = await prisma.staffSubject.findMany({
-      where: {
-        staffId: staff.id,
-        classId: params.classId,
-      },
-      select: {
-        subjectId: true,
-      },
-    })
-
-    const teacherSubjectIds = teacherSubjects.map(ts => ts.subjectId)
-
-    // Get all subjects for the class
-    const classSubjects = await prisma.classSubject.findMany({
-      where: {
-        classId: params.classId,
-      },
-      include: {
-        subject: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
+    // Get subjects based on teacher role
+    let subjectsQuery;
+    
+    if (isClassTeacher) {
+      // Class teachers can access all subjects for their class
+      subjectsQuery = prisma.classSubject.findMany({
+        where: {
+          classId,
+        },
+        include: {
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              isActive: true,
+            },
           },
         },
-      },
-      orderBy: {
-        subject: {
-          name: 'asc',
+      })
+    } else {
+      // Subject teachers can only access subjects they're assigned to
+      const staffSubjects = await prisma.staffSubject.findMany({
+        where: {
+          staffId: staff.id,
+          classId,
         },
-      },
-    })
-
-    // Build subjects response
-    const subjects = classSubjects.map(classSubject => {
-      const canAccess = isClassTeacher || teacherSubjectIds.includes(classSubject.subjectId)
-      
-      return {
-        id: classSubject.subject.id,
-        name: classSubject.subject.name,
-        code: classSubject.subject.code,
-        maxCAScore: 100, // Default CA max score - can be customized per entry
-        maxExamScore: 100, // Standard exam max score
-        teacherCanAccess: canAccess,
-      }
-    }).filter(subject => subject.teacherCanAccess) // Only return accessible subjects
-
-    if (subjects.length === 0) {
-      return NextResponse.json(
-        { 
-          error: 'No subjects assigned',
-          details: 'You do not have any subject assignments for this class. Please contact your school administrator.'
+        select: {
+          subjectId: true,
         },
-        { status: 404 }
-      )
+      })
+
+      const subjectIds = staffSubjects.map(ss => ss.subjectId)
+
+      subjectsQuery = prisma.classSubject.findMany({
+        where: {
+          classId,
+          subjectId: {
+            in: subjectIds,
+          },
+        },
+        include: {
+          subject: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              isActive: true,
+            },
+          },
+        },
+      })
     }
 
-    console.log('✅ [API] /api/teacher/marks/classes/[classId]/subjects - Successfully returning', subjects.length, 'subjects')
-    return NextResponse.json({ subjects })
+    const classSubjects = await subjectsQuery
+
+    // Filter out inactive subjects and map to response format
+    const subjectsResponse = classSubjects
+      .filter(cs => cs.subject.isActive)
+      .map(cs => ({
+        id: cs.subject.id,
+        name: cs.subject.name,
+        code: cs.subject.code,
+        maxCAScore: cs.maxMark * 0.4, // Assuming 40% for CA
+        maxExamScore: cs.maxMark * 0.6, // Assuming 60% for Exam
+        teacherCanAccess: true,
+      }))
+
+    console.log('✅ [API] Subjects - Successfully returning', subjectsResponse.length, 'subjects')
+    return NextResponse.json({ subjects: subjectsResponse })
 
   } catch (error: any) {
-    console.error('❌ [API] /api/teacher/marks/classes/[classId]/subjects - Error:', error)
+    console.error('❌ [API] Subjects - Error:', error)
     
     return NextResponse.json(
       { 
-        error: 'Failed to fetch class subjects',
+        error: 'Failed to fetch subjects',
         details: 'An unexpected error occurred. Please try refreshing the page.'
       },
       { status: 500 }

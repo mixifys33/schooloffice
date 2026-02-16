@@ -2,18 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BarChart3, FileText, TrendingUp, Award, Download, Printer } from 'lucide-react'
+import { ArrowLeft, BarChart3, FileText, TrendingUp, Award, Download, Printer, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import {
   cardStyles,
-  typography,
-  spacing,
-  teacherColors,
-  errorMessages
+  typography
 } from '@/lib/teacher-ui-standards'
 
 /**
@@ -102,7 +100,7 @@ export default function ClassTeacherAssessmentReportsPage() {
     <div className="space-y-6 p-4 sm:p-6">
       {/* Back Navigation */}
       <Link
-        href="/dashboard/class-teacher/assessments"
+        href="/class-teacher/assessments"
         className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
       >
         <ArrowLeft className="h-4 w-4" />

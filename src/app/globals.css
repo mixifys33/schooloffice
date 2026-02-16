@@ -1,4 +1,68 @@
 @import "tailwindcss";
+@import "../styles/teacher-marks-polish.css";
+
+/* 🔧 THEME FIX: Ensure text is visible in all themes */
+/* This fixes the issue where CSS variables don't work with Tailwind arbitrary values */
+
+/* Force text colors with fallbacks */
+[class*="text-[var(--text-primary)]"],
+[class*="text-[var(--white-pure)]"] {
+  color: var(--text-primary, #1a1a1a) !important;
+}
+
+[class*="text-[var(--text-secondary)]"] {
+  color: var(--text-secondary, #475569) !important;
+}
+
+[class*="text-[var(--text-muted)]"] {
+  color: var(--text-muted, #94a3b8) !important;
+}
+
+/* Force background colors with fallbacks */
+[class*="bg-[var(--bg-main)]"] {
+  background-color: var(--bg-main, #ffffff) !important;
+}
+
+[class*="bg-[var(--bg-surface)]"] {
+  background-color: var(--bg-surface, #f8fafc) !important;
+}
+
+[class*="bg-[var(--bg-elevated)]"] {
+  background-color: var(--bg-elevated, #ffffff) !important;
+}
+
+/* Force border colors with fallbacks */
+[class*="border-[var(--border-default)]"] {
+  border-color: var(--border-default, #e2e8f0) !important;
+}
+
+[class*="border-[var(--border-strong)]"] {
+  border-color: var(--border-strong, #cbd5e1) !important;
+}
+
+/* Force input/select text to be visible */
+input, select, textarea {
+  color: var(--text-primary, #1a1a1a) !important;
+  background-color: var(--bg-main, #ffffff) !important;
+}
+
+input::placeholder, select::placeholder, textarea::placeholder {
+  color: var(--text-muted, #94a3b8) !important;
+}
+
+/* Force button text to be visible */
+button {
+  color: inherit;
+}
+
+/* Force link colors */
+a {
+  color: var(--accent-primary, #3b82f6) !important;
+}
+
+a:hover {
+  color: var(--accent-hover, #2563eb) !important;
+}
 
 @theme inline {
   /* Map Tailwind colors to our theme tokens */

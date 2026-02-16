@@ -209,8 +209,8 @@ export default function ClassTeacherReportsPage() {
                   {data.classPerformance.finalAverage}%
                 </p>
               </div>
-              <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                <Award className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+              <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                <Award className={cn('h-5 w-5', teacherColors.info.text)} />
               </div>
             </div>
           </CardContent>
@@ -316,7 +316,7 @@ export default function ClassTeacherReportsPage() {
                       <div className={cn('p-2 rounded-lg', 
                         type.id === 'ca-only' ? teacherColors.success.bg :
                         type.id === 'exam-only' ? teacherColors.info.bg :
-                        teacherColors.chart.blue.bg
+                        teacherColors.info.bg
                       )}>
                         {type.id === 'ca-only' ? <FileText className="h-4 w-4 text-[var(--chart-green)]" /> :
                          type.id === 'exam-only' ? <TrendingUp className="h-4 w-4 text-[var(--chart-blue)]" /> :
@@ -421,8 +421,8 @@ export default function ClassTeacherReportsPage() {
                               {selectedClassData.averageFinal !== null ? `${selectedClassData.averageFinal}%` : 'N/A'}
                             </p>
                           </div>
-                          <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                            <Award className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+                          <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                            <Award className={cn('h-5 w-5', teacherColors.info.text)} />
                           </div>
                         </div>
                         <div className="mt-2">

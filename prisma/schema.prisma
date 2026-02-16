@@ -105,6 +105,12 @@ enum GradeDescriptor {
   FAIL
 }
 
+enum GradingCategory {
+  FINAL // Applied to final marks (Exam + CA)
+  EXAM_ONLY // Applied to exam marks only
+  CA_ONLY // Applied to CA marks only
+}
+
 enum PromotionStatus {
   PROMOTED
   REPEAT
@@ -113,10 +119,12 @@ enum PromotionStatus {
 }
 
 enum ReportCardStatus {
-  DRAFT
-  APPROVED
-  PUBLISHED
-  LOCKED
+  DRAFT       // Being generated
+  GENERATED   // PDF created, awaiting approval
+  APPROVED    // DoS approved
+  PUBLISHED   // Released to guardians
+  REVOKED     // Withdrawn
+  LOCKED      // Legacy status (kept for compatibility)
 }
 
 enum PaymentMethod {
@@ -200,6 +208,11 @@ enum SchoolType {
   PRIMARY
   SECONDARY
   BOTH
+}
+
+enum LevelType {
+  O_LEVEL
+  A_LEVEL
 }
 
 enum Ownership {
@@ -356,6 +369,7 @@ model School {
   dosCurriculumSubjects DoSCurriculumSubject[]
   dosTimetables         DoSTimetable[]
   curriculumSubjects    CurriculumSubject[]
+  timetableConfiguration TimetableConfiguration?
 
   // Support System Relations
   supportRequests SupportRequest[]
@@ -374,6 +388,93 @@ model School {
   // Finance Relations
   studentAccounts StudentAccount[]
   smsLogs         SmsLog[]
+
+  // Competency Relations
+  competencies Competency[]
+
+  // Timetable Preferences Relations
+  timetablePreferences TimetablePreference[]
+  adjustmentPatterns   AdjustmentPattern[]
+
+  // Phase 1 Multi-Tenancy Relations
+  guardians        Guardian[]
+  terms            Term[]
+  streams          Stream[]
+  marks            Mark[]
+  results          Result[]
+  attendances      Attendance[]
+  caEntries        CAEntry[]
+  examEntries      ExamEntry[]
+  disciplineCases  DisciplineCase[]
+  studentDocuments StudentDocument[]
+
+  // Phase 2 Multi-Tenancy Relations
+  classSubjects            ClassSubject[]
+  staffSubjects            StaffSubject[]
+  staffClasses             StaffClass[]
+  studentGuardians         StudentGuardian[]
+  gradeRanges              GradeRange[]
+  feeItems                 FeeItem[]
+  invoiceItems             InvoiceItem[]
+  paymentAllocations       PaymentAllocation[]
+  guardianDocuments        GuardianDocument[]
+  guardianPortalAccesses   GuardianPortalAccess[]
+  guardianAuditLogs        GuardianAuditLog[]
+  staffResponsibilities    StaffResponsibility[]
+  staffHistoryEntries      StaffHistoryEntry[]
+  staffDocuments           StaffDocument[]
+  teacherAlerts            TeacherAlert[]
+  learningEvidences        LearningEvidence[]
+  teacherAssessments       TeacherAssessment[]
+  teacherAssessmentResults TeacherAssessmentResult[]
+  assessmentPlans          AssessmentPlan[]
+  continuousAssessments    ContinuousAssessment[]
+
+  // Phase 3 Multi-Tenancy Relations
+  secureLinks                       SecureLink[]
+  loginAttempts                     LoginAttempt[]
+  shortUrlClicks                    ShortUrlClick[]
+  bulkMessageItems                  BulkMessageItem[]
+  directMessages                    DirectMessage[]
+  automationExecutions              AutomationExecution[]
+  announcementDeliveries            AnnouncementDelivery[]
+  timetableSlots                    TimetableSlot[]
+  timetableConflicts                TimetableConflict[]
+  teacherDocuments                  TeacherDocument[]
+  teacherHistoryEntries             TeacherHistoryEntry[]
+  teacherExaminationRoleAssignments TeacherExaminationRoleAssignment[]
+  assignmentSubmissions             AssignmentSubmission[]
+  doSAssessmentPlans                DoSAssessmentPlan[]
+  doSContinuousAssessments          DoSContinuousAssessment[]
+  doSExams                          DoSExam[]
+  doSExamResults                    DoSExamResult[]
+  doSFinalScores                    DoSFinalScore[]
+  doSTimetableEntries               DoSTimetableEntry[]
+  dosApprovals                      DosApproval[]
+  caResults                         CAResult[]
+  competencyProgresses              CompetencyProgress[]
+  competencyMappings                CompetencyMapping[]
+  competencyAuditTrails             CompetencyAuditTrail[]
+  pdfAccesses                       PDFAccess[]
+  timetableEntries                  TimetableEntry[]
+  studentDiscounts                  StudentDiscount[]
+  studentPenalties                  StudentPenalty[]
+  studentMilestoneStatuses          StudentMilestoneStatus[]
+  
+  // Report System Relations
+  reportHistory ReportHistory[]
+  reportRemarks ReportRemark[]
+  
+  // Report Card System Relations
+  reportCards          ReportCard[]
+  reportTemplates      ReportTemplate[]
+  reportGenerationLogs ReportGenerationLog[]
+  
+  // Subject Combination Relations
+  combinations         Combination[]
+  studentSubjects      StudentSubject[]
+  combinationSubjects  CombinationSubject[]
+  teacherAssignments   TeacherAssignment[]
 
   @@index([isActive])
 }
@@ -404,15 +505,18 @@ model AcademicYear {
 
 model Term {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String   @db.ObjectId
   academicYearId String   @db.ObjectId
   name           String
   startDate      DateTime
   endDate        DateTime
   weekCount      Int      @default(12)
+  isCurrent      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
+  school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   academicYear      AcademicYear             @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   exams             Exam[]
   results           Result[]
@@ -435,20 +539,36 @@ model Term {
   timetableDrafts TimetableDraft[]
 
   // Class Teacher Marks Management Relations
-  caEntries                CAEntry[]
-  examEntries              ExamEntry[]
+  caEntries   CAEntry[]
+  examEntries ExamEntry[]
+
+  // Competency Relations
+  competencyProgress CompetencyProgress[]
+
+  // Grading System Relations
+  gradingSystems GradingSystem[]
+  
+  // Report System Relations
+  reportHistory ReportHistory[]
+  reportRemarks ReportRemark[]
+  
+  // Report Card System Relations
+  reportCards          ReportCard[]
+  reportGenerationLogs ReportGenerationLog[]
 
   @@unique([academicYearId, name])
   @@index([academicYearId])
+  @@index([schoolId])
 }
 
 model Class {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId  String   @db.ObjectId
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String     @db.ObjectId
   name      String
   level     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  levelType LevelType? // O_LEVEL or A_LEVEL (optional for flexibility)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   // Relations
   school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -464,6 +584,7 @@ model Class {
   // DoS Module Relations
   dosCurriculumSubjects DoSCurriculumSubject[] @relation("DoSCurriculumSubjects")
   dosTimetables         DoSTimetable[]
+  dosTimetableEntries   DoSTimetableEntry[] // School-wide timetable entries
   promotionDecisions    DoSPromotionDecision[]
   curriculumSubjects    CurriculumSubject[]
   dosApprovals          DosApproval[]
@@ -476,34 +597,56 @@ model Class {
   subjectPeriodRequirements SubjectPeriodRequirement[]
   timetableSlots            TimetableSlot[]
 
+  // Competency Relations
+  competencies Competency[]
+
+  // Grading System Relations
+  gradingSystems GradingSystem[]
+  
+  // Report System Relations
+  reportHistory ReportHistory[]
+  
+  // Report Card System Relations
+  reportCards          ReportCard[]
+  reportGenerationLogs ReportGenerationLog[]
+  
+  // Teacher Assignment Relations
+  teacherAssignments TeacherAssignment[]
+
   @@unique([schoolId, name])
   @@index([schoolId])
 }
 
 model Stream {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
   classId   String   @db.ObjectId
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class    Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
   students Student[]
+  dosTimetableEntries DoSTimetableEntry[] // School-wide timetable entries
 
   @@unique([classId, name])
   @@index([classId])
+  @@index([schoolId])
 }
 
 model Subject {
-  id             String     @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId       String     @db.ObjectId
-  name           String // e.g. Mathematics
-  code           String // e.g. MTC
-  educationLevel SchoolType // PRIMARY or SECONDARY
-  isActive       Boolean    @default(true)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String      @db.ObjectId
+  name           String      // e.g. Mathematics
+  code           String      // e.g. MTC
+  educationLevel SchoolType  // PRIMARY or SECONDARY
+  levelType      LevelType?  // O_LEVEL or A_LEVEL (for secondary schools)
+  isCompulsory   Boolean     @default(true) // Whether subject is compulsory (for O-Level)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   // Relations
   school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -526,8 +669,23 @@ model Subject {
   timetableSlots            TimetableSlot[]
 
   // Class Teacher Marks Management Relations
-  caEntries                 CAEntry[]
-  examEntries               ExamEntry[]
+  caEntries   CAEntry[]
+  examEntries ExamEntry[]
+
+  // Competency Relations
+  competencies Competency[]
+
+  // Timetable Preferences Relations
+  timetablePreferences TimetablePreference[]
+  adjustmentPatterns   AdjustmentPattern[]
+  
+  // Report System Relations
+  reportHistory ReportHistory[]
+  
+  // Subject Combination Relations
+  teacherAssignments  TeacherAssignment[]
+  studentSubjects     StudentSubject[]
+  combinationSubjects CombinationSubject[]
 
   @@unique([schoolId, code])
   @@index([schoolId])
@@ -535,22 +693,38 @@ model Subject {
 }
 
 model GradingSystem {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId  String   @db.ObjectId
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String          @db.ObjectId
   name      String
+  category  GradingCategory @default(FINAL)
+  isDefault Boolean         @default(false)
+
+  // Optional: Apply to specific class or whole school
+  classId String? @db.ObjectId
+
+  // Optional: Tie to specific term
+  termId String? @db.ObjectId
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   school School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class  Class?       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  term   Term?        @relation(fields: [termId], references: [id], onDelete: Cascade)
   grades GradeRange[]
 
-  @@unique([schoolId, name])
+  @@unique([schoolId, name, category])
   @@index([schoolId])
+  @@index([category])
+  @@index([isDefault])
+  @@index([classId])
+  @@index([termId])
 }
 
 model GradeRange {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String   @db.ObjectId
   gradingSystemId String   @db.ObjectId
   grade           String
   minScore        Float
@@ -560,27 +734,34 @@ model GradeRange {
   createdAt       DateTime @default(now())
 
   // Relations
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   gradingSystem GradingSystem @relation(fields: [gradingSystemId], references: [id], onDelete: Cascade)
 
   @@index([gradingSystemId])
+  @@index([schoolId])
 }
 
 model ClassSubject {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String   @db.ObjectId
   classId         String   @db.ObjectId
   subjectId       String   @db.ObjectId
   maxMark         Float    @default(100)
   appearsOnReport Boolean  @default(true)
   affectsPosition Boolean  @default(true)
+  isCompulsory    Boolean  @default(true) // Whether subject is compulsory for all students
+  minRequired     Int?     // Minimum number required (for O-Level S3/S4 electives)
   createdAt       DateTime @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([classId, subjectId])
   @@index([classId])
   @@index([subjectId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -696,6 +877,7 @@ model Student {
   gender          Gender?
   classId         String        @db.ObjectId
   streamId        String?       @db.ObjectId
+  combinationId   String?       @db.ObjectId // For A-Level subject combinations
   pilotType       PilotType     @default(FREE)
   smsLimitPerTerm Int           @default(2)
   smsSentCount    Int           @default(0)
@@ -710,6 +892,7 @@ model Student {
   school            School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class             Class                    @relation(fields: [classId], references: [id])
   stream            Stream?                  @relation(fields: [streamId], references: [id])
+  combination       Combination?             @relation(fields: [combinationId], references: [id])
   studentGuardians  StudentGuardian[]
   attendance        Attendance[]
   marks             Mark[]
@@ -736,18 +919,34 @@ model Student {
   learningEvidences        LearningEvidence[]
 
   // Class Teacher Marks Management Relations
-  caEntries                CAEntry[]
-  examEntries              ExamEntry[]
+  caEntries   CAEntry[]
+  examEntries ExamEntry[]
+
+  // Competency Relations
+  competencyProgress   CompetencyProgress[]
+  competencyAuditTrail CompetencyAuditTrail[]
+  
+  // Report System Relations
+  reportHistory ReportHistory[]
+  reportRemarks ReportRemark[]
+  
+  // Report Card System Relations
+  reportCards ReportCard[]
+  
+  // Subject Selection Relations
+  studentSubjects StudentSubject[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
   @@index([classId])
   @@index([streamId])
+  @@index([combinationId])
   @@index([status])
 }
 
 model Guardian {
   id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String           @db.ObjectId
   firstName          String
   lastName           String
   phone              String
@@ -772,6 +971,7 @@ model Guardian {
   updatedAt          DateTime         @updatedAt
 
   // Relations
+  school           School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentGuardians StudentGuardian[]
   messages         Message[]
   secureLinks      SecureLink[]
@@ -784,11 +984,13 @@ model Guardian {
   @@index([phone])
   @@index([email])
   @@index([status])
+  @@index([schoolId])
 }
 
 // Guardian Document - Requirements 7.1, 7.2, 7.3
 model GuardianDocument {
   id           String               @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String               @db.ObjectId
   guardianId   String               @db.ObjectId
   documentType GuardianDocumentType
   fileName     String
@@ -799,14 +1001,17 @@ model GuardianDocument {
   uploadedAt   DateTime             @default(now())
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
 
   @@index([guardianId])
+  @@index([schoolId])
 }
 
 // Guardian Portal Access - Requirements 5.1, 5.2
 model GuardianPortalAccess {
   id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String    @db.ObjectId
   guardianId         String    @unique @db.ObjectId
   isEnabled          Boolean   @default(false)
   canViewAttendance  Boolean   @default(true)
@@ -819,12 +1024,16 @@ model GuardianPortalAccess {
   updatedAt          DateTime  @updatedAt
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
 }
 
 // Guardian Audit Log - Requirements 5.5, 6.5
 model GuardianAuditLog {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
   guardianId    String   @db.ObjectId
   action        String
   field         String?
@@ -835,14 +1044,17 @@ model GuardianAuditLog {
   ipAddress     String?
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
 
   @@index([guardianId])
   @@index([performedAt])
+  @@index([schoolId])
 }
 
 model StudentGuardian {
   id                       String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId                 String           @db.ObjectId
   studentId                String           @db.ObjectId
   guardianId               String           @db.ObjectId
   relationshipType         RelationshipType @default(GUARDIAN)
@@ -853,12 +1065,14 @@ model StudentGuardian {
   createdAt                DateTime         @default(now())
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, guardianId])
   @@index([studentId])
   @@index([guardianId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -929,17 +1143,25 @@ model Staff {
   createdPermissionCodes TeacherSmsPermissionCode[] @relation("PermissionCodeCreated")
 
   // Class Teacher Marks Management Relations
-  caEntries                  CAEntry[]
-  examEntries                ExamEntry[]
+  caEntries   CAEntry[]
+  examEntries ExamEntry[]
+  
+  // Report Card System Relations
+  approvedReportCards  ReportCard[]         @relation("ReportCardApprover")
+  publishedReportCards ReportCard[]         @relation("ReportCardPublisher")
+  createdTemplates     ReportTemplate[]     @relation("TemplateCreator")
+  reportLogs           ReportGenerationLog[] @relation("ReportLogStaff")
 
   @@unique([schoolId, employeeNumber])
   @@index([schoolId])
   @@index([primaryRole])
   @@index([status])
+  @@index([teacherCode])
 }
 
 model StaffSubject {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String   @db.ObjectId
   staffId    String   @db.ObjectId
   subjectId  String   @db.ObjectId
   classId    String   @db.ObjectId
@@ -948,6 +1170,7 @@ model StaffSubject {
   createdAt  DateTime @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id])
@@ -956,21 +1179,25 @@ model StaffSubject {
   @@index([staffId])
   @@index([subjectId])
   @@index([classId])
+  @@index([schoolId])
 }
 
 model StaffClass {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
   staffId   String   @db.ObjectId
   classId   String   @db.ObjectId
   createdAt DateTime @default(now())
 
   // Relations
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  class  Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   @@unique([staffId, classId])
   @@index([staffId])
   @@index([classId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -989,6 +1216,7 @@ enum TeacherAlertType {
 
 model TeacherAlert {
   id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String           @db.ObjectId
   staffId         String           @db.ObjectId
   alertType       TeacherAlertType
   message         String
@@ -1000,13 +1228,15 @@ model TeacherAlert {
   updatedAt       DateTime         @updatedAt
 
   // Relations
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([staffId])
   @@index([alertType])
   @@index([isRead])
   @@index([priority])
   @@index([dueDate])
+  @@index([schoolId])
 }
 
 // Learning Evidence Upload for New Curriculum
@@ -1021,6 +1251,7 @@ enum EvidenceType {
 
 model LearningEvidence {
   id                 String       @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String       @db.ObjectId
   staffId            String       @db.ObjectId
   classId            String       @db.ObjectId
   subjectId          String       @db.ObjectId
@@ -1032,12 +1263,14 @@ model LearningEvidence {
   fileName           String
   fileSize           Int
   mimeType           String
+  imagekitFileId     String? // ImageKit file ID for deletion
   competencyRef      String? // Competency being demonstrated
   linkedAssessmentId String?      @db.ObjectId // Link to related assessment
   uploadedAt         DateTime     @default(now())
   uploadedBy         String       @db.ObjectId
 
   // Relations
+  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staff   Staff    @relation(fields: [staffId], references: [id])
   class   Class    @relation(fields: [classId], references: [id])
   subject Subject  @relation(fields: [subjectId], references: [id])
@@ -1049,11 +1282,13 @@ model LearningEvidence {
   @@index([studentId])
   @@index([evidenceType])
   @@index([uploadedAt])
+  @@index([schoolId])
 }
 
 // Teacher Assessment Entry - Supporting multiple CA entries per subject
 model TeacherAssessment {
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String         @db.ObjectId
   staffId          String         @db.ObjectId
   classId          String         @db.ObjectId
   subjectId        String         @db.ObjectId
@@ -1071,6 +1306,7 @@ model TeacherAssessment {
   updatedAt        DateTime       @updatedAt
 
   // Relations
+  school  School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staff   Staff                     @relation(fields: [staffId], references: [id])
   class   Class                     @relation(fields: [classId], references: [id])
   subject Subject                   @relation(fields: [subjectId], references: [id])
@@ -1083,11 +1319,13 @@ model TeacherAssessment {
   @@index([dateAssigned])
   @@index([dueDate])
   @@index([isLocked])
+  @@index([schoolId])
 }
 
 // Teacher Assessment Result for individual students
 model TeacherAssessmentResult {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String   @db.ObjectId
   assessmentId   String   @db.ObjectId
   studentId      String   @db.ObjectId
   score          Float // Raw score out of maxScore
@@ -1097,6 +1335,7 @@ model TeacherAssessmentResult {
   enteredBy      String   @db.ObjectId
 
   // Relations
+  school         School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   assessment     TeacherAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   student        Student           @relation(fields: [studentId], references: [id])
   enteredByStaff Staff             @relation(fields: [enteredBy], references: [id])
@@ -1105,12 +1344,14 @@ model TeacherAssessmentResult {
   @@index([assessmentId])
   @@index([studentId])
   @@index([percentage])
+  @@index([schoolId])
 }
 
 // Staff Responsibility - tracks specific duties assigned to staff
 // Requirements: 3.4 - Responsibility assignment separate from permissions
 model StaffResponsibility {
   id         String             @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String             @db.ObjectId
   staffId    String             @db.ObjectId
   type       ResponsibilityType
   details    Json // Flexible storage for responsibility-specific details (classes, subjects, duty days)
@@ -1120,16 +1361,19 @@ model StaffResponsibility {
   updatedAt  DateTime           @updatedAt
 
   // Relations
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([staffId])
   @@index([type])
+  @@index([schoolId])
 }
 
 // Staff History Entry - tracks promotions, role changes, transfers, exits
 // Requirements: 13.1 - Staff history tracking
 model StaffHistoryEntry {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String         @db.ObjectId
   staffId       String         @db.ObjectId
   eventType     StaffEventType
   previousValue String? // Previous state (e.g., old role, old department)
@@ -1140,17 +1384,20 @@ model StaffHistoryEntry {
   createdAt     DateTime       @default(now())
 
   // Relations
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([staffId])
   @@index([eventType])
   @@index([performedAt])
+  @@index([schoolId])
 }
 
 // Staff Document - stores staff documents with categorization
 // Requirements: 14.1 - Document storage with categorization
 model StaffDocument {
   id         String                @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String                @db.ObjectId
   staffId    String                @db.ObjectId
   category   StaffDocumentCategory
   fileName   String
@@ -1162,10 +1409,12 @@ model StaffDocument {
   createdAt  DateTime              @default(now())
 
   // Relations
-  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([staffId])
   @@index([category])
+  @@index([schoolId])
 }
 
 // Staff Task - tracks tasks assigned to staff members
@@ -1203,6 +1452,7 @@ model StaffTask {
 
 model Attendance {
   id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String           @db.ObjectId
   studentId  String           @db.ObjectId
   classId    String           @db.ObjectId
   date       DateTime
@@ -1215,6 +1465,7 @@ model Attendance {
   updatedAt  DateTime         @updatedAt
 
   // Relations
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   class    Class   @relation(fields: [classId], references: [id])
   recorder Staff   @relation(fields: [recordedBy], references: [id])
@@ -1224,6 +1475,7 @@ model Attendance {
   @@index([classId])
   @@index([date])
   @@index([recordedBy])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -1232,6 +1484,7 @@ model Attendance {
 
 model TimetableEntry {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
   classId   String   @db.ObjectId
   subjectId String   @db.ObjectId
   staffId   String   @db.ObjectId
@@ -1242,6 +1495,7 @@ model TimetableEntry {
   updatedAt DateTime @updatedAt
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id])
   staff   Staff   @relation(fields: [staffId], references: [id])
@@ -1251,6 +1505,7 @@ model TimetableEntry {
   @@index([classId])
   @@index([staffId])
   @@index([subjectId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -1280,6 +1535,7 @@ model Exam {
 
 model Mark {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
   examId    String   @db.ObjectId
   studentId String   @db.ObjectId
   subjectId String   @db.ObjectId
@@ -1292,6 +1548,7 @@ model Mark {
   updatedAt DateTime @updatedAt
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id])
   subject Subject @relation(fields: [subjectId], references: [id])
@@ -1302,10 +1559,12 @@ model Mark {
   @@index([studentId])
   @@index([subjectId])
   @@index([enteredBy])
+  @@index([schoolId])
 }
 
 model Result {
   id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String   @db.ObjectId
   studentId          String   @db.ObjectId
   termId             String   @db.ObjectId
   totalMarks         Float
@@ -1319,6 +1578,7 @@ model Result {
   updatedAt          DateTime @updatedAt
 
   // Relations
+  school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student             Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   term                Term                 @relation(fields: [termId], references: [id])
   publishedReportCard PublishedReportCard?
@@ -1326,6 +1586,7 @@ model Result {
   @@unique([studentId, termId])
   @@index([studentId])
   @@index([termId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -1456,6 +1717,7 @@ model FeeStructure {
 
 model FeeItem {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String      @db.ObjectId
   feeStructureId String      @db.ObjectId
   name           String
   category       FeeCategory @default(OTHER)
@@ -1466,10 +1728,12 @@ model FeeItem {
   createdAt      DateTime    @default(now())
 
   // Relations
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
 
   @@index([feeStructureId])
   @@index([category])
+  @@index([schoolId])
 }
 
 // Student Account - tracks individual student financial status per term
@@ -1532,6 +1796,7 @@ model DiscountRule {
 // Student-specific discounts
 model StudentDiscount {
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String         @db.ObjectId
   studentAccountId String         @db.ObjectId
   discountRuleId   String?        @db.ObjectId
   termId           String         @db.ObjectId
@@ -1550,12 +1815,14 @@ model StudentDiscount {
   rejectionReason  String?
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentAccount StudentAccount @relation(fields: [studentAccountId], references: [id], onDelete: Cascade)
   discountRule   DiscountRule?  @relation(fields: [discountRuleId], references: [id])
 
   @@index([studentAccountId])
   @@index([termId])
   @@index([status])
+  @@index([schoolId])
 }
 
 // Penalty definitions (school-wide penalty rules)
@@ -1583,6 +1850,7 @@ model PenaltyRule {
 // Student-specific penalties
 model StudentPenalty {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String    @db.ObjectId
   studentAccountId String    @db.ObjectId
   penaltyRuleId    String?   @db.ObjectId
   termId           String    @db.ObjectId
@@ -1597,12 +1865,14 @@ model StudentPenalty {
   appliedAt        DateTime  @default(now())
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentAccount StudentAccount @relation(fields: [studentAccountId], references: [id], onDelete: Cascade)
   penaltyRule    PenaltyRule?   @relation(fields: [penaltyRuleId], references: [id])
 
   @@index([studentAccountId])
   @@index([termId])
   @@index([isWaived])
+  @@index([schoolId])
 }
 
 // Invoice for students
@@ -1644,6 +1914,7 @@ model Invoice {
 // Invoice line items
 model InvoiceItem {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String      @db.ObjectId
   invoiceId   String      @db.ObjectId
   description String
   category    FeeCategory
@@ -1652,9 +1923,11 @@ model InvoiceItem {
   createdAt   DateTime    @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+  @@index([schoolId])
 }
 
 // Enhanced Payment model
@@ -1699,17 +1972,20 @@ model Payment {
 // Payment allocation to invoices (supports partial payments)
 model PaymentAllocation {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
   paymentId   String   @db.ObjectId
   invoiceId   String   @db.ObjectId
   amount      Float
   allocatedAt DateTime @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
   @@index([paymentId])
   @@index([invoiceId])
+  @@index([schoolId])
 }
 
 // Immutable Receipt
@@ -1841,6 +2117,7 @@ model FinanceSettings {
 
 model StudentMilestoneStatus {
   id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String        @db.ObjectId
   studentId           String        @db.ObjectId
   termId              String        @db.ObjectId
   milestonePercentage Float
@@ -1853,6 +2130,7 @@ model StudentMilestoneStatus {
   updatedAt           DateTime      @updatedAt
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   term           Term           @relation(fields: [termId], references: [id], onDelete: Cascade)
   studentAccount StudentAccount @relation(fields: [studentId, termId], references: [studentId, termId])
@@ -1861,6 +2139,7 @@ model StudentMilestoneStatus {
   @@index([studentId])
   @@index([termId])
   @@index([status])
+  @@index([schoolId])
 }
 
 // SMS Log for tracking infrastructure
@@ -2220,6 +2499,7 @@ model SMSAuditLog {
 
 model SecureLink {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String    @db.ObjectId
   token        String    @unique
   guardianId   String    @db.ObjectId
   resourceType String
@@ -2232,8 +2512,10 @@ model SecureLink {
   createdAt    DateTime  @default(now())
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([guardianId])
   @@index([expiresAt])
 }
@@ -2244,6 +2526,7 @@ model SecureLink {
 
 model DisciplineCase {
   id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId           String           @db.ObjectId
   studentId          String           @db.ObjectId
   reportedBy         String           @db.ObjectId
   incidentDate       DateTime
@@ -2257,11 +2540,14 @@ model DisciplineCase {
   updatedAt          DateTime         @updatedAt
 
   // Relations
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   reporter Staff   @relation(fields: [reportedBy], references: [id])
 
   @@index([studentId])
   @@index([reportedBy])
+  @@index([incidentDate])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -2364,6 +2650,7 @@ model AuthAuditLog {
 
 model LoginAttempt {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String?   @db.ObjectId
   identifier   String // Email, phone, or IP address
   ipAddress    String
   attempts     Int       @default(1)
@@ -2371,7 +2658,11 @@ model LoginAttempt {
   lastAttempt  DateTime  @default(now())
   lockedUntil  DateTime?
 
+  // Relations
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
   @@unique([identifier, ipAddress])
+  @@index([schoolId])
   @@index([identifier])
   @@index([ipAddress])
   @@index([lockedUntil])
@@ -2383,6 +2674,7 @@ model LoginAttempt {
 
 model StudentDocument {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String   @db.ObjectId
   studentId  String   @db.ObjectId
   name       String
   type       String
@@ -2391,9 +2683,11 @@ model StudentDocument {
   uploadedAt DateTime @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+  @@index([schoolId])
 }
 
 // ============================================
@@ -2426,6 +2720,7 @@ model ShortUrl {
 
 model ShortUrlClick {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String   @db.ObjectId
   shortUrlId String   @db.ObjectId
   ipAddress  String?
   userAgent  String?
@@ -2433,8 +2728,10 @@ model ShortUrlClick {
   clickedAt  DateTime @default(now())
 
   // Relations
+  school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   shortUrl ShortUrl @relation(fields: [shortUrlId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([shortUrlId])
   @@index([clickedAt])
 }
@@ -2476,6 +2773,7 @@ model BulkMessageJob {
 
 model BulkMessageItem {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String        @db.ObjectId
   jobId        String        @db.ObjectId
   studentId    String        @db.ObjectId
   templateType String
@@ -2488,8 +2786,10 @@ model BulkMessageItem {
   createdAt    DateTime      @default(now())
 
   // Relations
-  job BulkMessageJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  school School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  job    BulkMessageJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([jobId])
   @@index([studentId])
   @@index([status])
@@ -2716,6 +3016,7 @@ model Conversation {
 
 model DirectMessage {
   id                  String                      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String                      @db.ObjectId
   conversationId      String                      @db.ObjectId
   senderId            String                      @db.ObjectId // User ID (guardian or staff)
   senderType          ConversationParticipantType
@@ -2729,8 +3030,10 @@ model DirectMessage {
   updatedAt           DateTime                    @updatedAt
 
   // Relations
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([conversationId])
   @@index([senderId])
   @@index([senderType])
@@ -2995,6 +3298,7 @@ model AutomationRule {
 // Automation Execution History
 model AutomationExecution {
   id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String          @db.ObjectId
   ruleId         String          @db.ObjectId
   triggeredAt    DateTime        @default(now())
   completedAt    DateTime?
@@ -3004,8 +3308,10 @@ model AutomationExecution {
   failureCount   Int             @default(0)
   errorMessage   String?
 
-  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  school School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  rule   AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([ruleId])
   @@index([triggeredAt])
   @@index([status])
@@ -3325,6 +3631,7 @@ model TimetableDraft {
 // Timetable Slot - Individual time slots in a timetable
 model TimetableSlot {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String  @db.ObjectId
   timetableId  String  @db.ObjectId
   classId      String  @db.ObjectId
   subjectId    String  @db.ObjectId
@@ -3345,6 +3652,7 @@ model TimetableSlot {
   updatedAt DateTime @updatedAt
 
   // Relations
+  school    School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   timetable TimetableDraft @relation(fields: [timetableId], references: [id], onDelete: Cascade)
   class     Class          @relation(fields: [classId], references: [id])
   subject   Subject        @relation(fields: [subjectId], references: [id])
@@ -3352,6 +3660,7 @@ model TimetableSlot {
   room      Room?          @relation(fields: [roomId], references: [id])
 
   @@unique([timetableId, dayOfWeek, period, classId])
+  @@index([schoolId])
   @@index([timetableId])
   @@index([classId])
   @@index([subjectId])
@@ -3365,6 +3674,7 @@ model TimetableSlot {
 // Timetable Conflict - Conflicts detected in timetables
 model TimetableConflict {
   id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String           @db.ObjectId
   timetableId   String           @db.ObjectId
   conflictType  ConstraintType // TEACHER_CLASH, ROOM_CLASH, CLASS_CLASH, etc.
   severity      ConflictSeverity // INFO, WARNING, CRITICAL
@@ -3381,8 +3691,10 @@ model TimetableConflict {
   updatedAt     DateTime         @updatedAt
 
   // Relations
+  school    School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   timetable TimetableDraft @relation(fields: [timetableId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([timetableId])
   @@index([conflictType])
   @@index([severity])
@@ -3454,6 +3766,7 @@ model EnhancedAnnouncement {
 // Announcement Delivery Tracking
 model AnnouncementDelivery {
   id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String         @db.ObjectId
   announcementId String         @db.ObjectId
   recipientId    String         @db.ObjectId
   recipientType  RecipientType
@@ -3463,8 +3776,10 @@ model AnnouncementDelivery {
   readAt         DateTime?
   createdAt      DateTime       @default(now())
 
+  school       School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   announcement EnhancedAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([announcementId])
   @@index([recipientId])
   @@index([status])
@@ -3908,6 +4223,7 @@ model Teacher {
   performanceMetrics TeacherPerformanceMetric[]
   assignments        Assignment[]
   permissionCodes    TeacherSmsPermissionCode[]
+  teacherAssignments TeacherAssignment[] // Subject-Class assignments
 
   @@unique([schoolId, email])
   @@unique([schoolId, nationalId])
@@ -3921,6 +4237,7 @@ model Teacher {
 // Teacher Document Model - Requirements 7.1-7.7
 model TeacherDocument {
   id           String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String              @db.ObjectId
   teacherId    String              @db.ObjectId
   documentType TeacherDocumentType
   fileName     String
@@ -3931,8 +4248,10 @@ model TeacherDocument {
   uploadedAt   DateTime            @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([teacherId])
   @@index([documentType])
 }
@@ -3940,6 +4259,7 @@ model TeacherDocument {
 // Teacher History Entry Model - Requirement 2.9, 3.9
 model TeacherHistoryEntry {
   id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String           @db.ObjectId
   teacherId     String           @db.ObjectId
   eventType     TeacherEventType
   previousValue String?
@@ -3950,8 +4270,10 @@ model TeacherHistoryEntry {
   createdAt     DateTime         @default(now())
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
+  @@index([schoolId])
   @@index([teacherId])
   @@index([eventType])
   @@index([performedAt])
@@ -3960,6 +4282,7 @@ model TeacherHistoryEntry {
 // Teacher Examination Role Assignment - Requirement 3.5
 model TeacherExaminationRoleAssignment {
   id         String                 @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String                 @db.ObjectId
   teacherId  String                 @db.ObjectId
   examId     String                 @db.ObjectId
   role       TeacherExaminationRole
@@ -3967,9 +4290,11 @@ model TeacherExaminationRoleAssignment {
   assignedBy String                 @db.ObjectId
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@unique([teacherId, examId, role])
+  @@index([schoolId])
   @@index([teacherId])
   @@index([examId])
 }
@@ -4030,8 +4355,8 @@ model DoSCurriculumSubject {
   classId        String    @db.ObjectId
   subjectId      String    @db.ObjectId
   isCore         Boolean   @default(false)
-  caWeight       Float     @default(40)
-  examWeight     Float     @default(60)
+  caWeight       Float     @default(20)
+  examWeight     Float     @default(80)
   minPassMark    Float     @default(50)
   periodsPerWeek Int       @default(4)
   dosApproved    Boolean   @default(false)
@@ -4226,6 +4551,7 @@ model Assignment {
 // Assignment Submission - Student submission tracking
 model AssignmentSubmission {
   id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String           @db.ObjectId
   assignmentId String           @db.ObjectId
   studentId    String           @db.ObjectId
   status       SubmissionStatus @default(NOT_SUBMITTED)
@@ -4239,9 +4565,11 @@ model AssignmentSubmission {
   updatedAt    DateTime         @updatedAt
 
   // Relations
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, studentId])
+  @@index([schoolId])
   @@index([assignmentId])
   @@index([studentId])
   @@index([status])
@@ -4412,6 +4740,7 @@ enum DoSTimetableStatus {
 // 2. ASSESSMENT PLAN - DoS framework for continuous assessment (20%)
 model DoSAssessmentPlan {
   id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String            @db.ObjectId
   curriculumSubjectId String            @db.ObjectId
   termId              String            @db.ObjectId
   assessmentType      DoSAssessmentType
@@ -4430,10 +4759,12 @@ model DoSAssessmentPlan {
   updatedAt           DateTime          @updatedAt
 
   // Relations
+  school            School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   curriculumSubject DoSCurriculumSubject      @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
   term              Term                      @relation("DoSAssessmentPlans", fields: [termId], references: [id])
   assessments       DoSContinuousAssessment[]
 
+  @@index([schoolId])
   @@index([curriculumSubjectId])
   @@index([termId])
   @@index([assessmentType])
@@ -4445,6 +4776,7 @@ model DoSAssessmentPlan {
 // 3. CONTINUOUS ASSESSMENT - Individual CA records (20% stream)
 model DoSContinuousAssessment {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String    @db.ObjectId
   assessmentPlanId String    @db.ObjectId
   studentId        String    @db.ObjectId
   score            Float?
@@ -4459,11 +4791,13 @@ model DoSContinuousAssessment {
   updatedAt        DateTime  @updatedAt
 
   // Relations
+  school         School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   assessmentPlan DoSAssessmentPlan @relation(fields: [assessmentPlanId], references: [id], onDelete: Cascade)
   student        Student           @relation(fields: [studentId], references: [id])
   teacher        Staff             @relation(fields: [teacherId], references: [id])
 
   @@unique([assessmentPlanId, studentId])
+  @@index([schoolId])
   @@index([assessmentPlanId])
   @@index([studentId])
   @@index([teacherId])
@@ -4473,6 +4807,7 @@ model DoSContinuousAssessment {
 // 4. DoS EXAM - Exam management (80% stream)
 model DoSExam {
   id                  String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String      @db.ObjectId
   curriculumSubjectId String      @db.ObjectId
   termId              String      @db.ObjectId
   examType            DoSExamType
@@ -4492,10 +4827,12 @@ model DoSExam {
   updatedAt           DateTime    @updatedAt
 
   // Relations
+  school            School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
   term              Term                 @relation(fields: [termId], references: [id])
   examResults       DoSExamResult[]
 
+  @@index([schoolId])
   @@index([curriculumSubjectId])
   @@index([termId])
   @@index([examType])
@@ -4507,6 +4844,7 @@ model DoSExam {
 // 5. DoS EXAM RESULT - Individual exam scores (80% stream)
 model DoSExamResult {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId   String   @db.ObjectId
   examId     String   @db.ObjectId
   studentId  String   @db.ObjectId
   score      Float?
@@ -4520,11 +4858,13 @@ model DoSExamResult {
   updatedAt  DateTime @updatedAt
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   exam    DoSExam @relation(fields: [examId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id])
   staff   Staff   @relation(fields: [enteredBy], references: [id])
 
   @@unique([examId, studentId])
+  @@index([schoolId])
   @@index([examId])
   @@index([studentId])
   @@index([enteredBy])
@@ -4534,6 +4874,7 @@ model DoSExamResult {
 // 6. FINAL SCORE - Merged CA (20%) + Exam (80%) results (THE HEART)
 model DoSFinalScore {
   id                  String              @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String              @db.ObjectId
   curriculumSubjectId String              @db.ObjectId
   studentId           String              @db.ObjectId
   termId              String              @db.ObjectId
@@ -4552,11 +4893,13 @@ model DoSFinalScore {
   updatedAt           DateTime            @updatedAt
 
   // Relations
+  school            School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id], onDelete: Cascade)
   student           Student              @relation(fields: [studentId], references: [id])
   term              Term                 @relation(fields: [termId], references: [id])
 
   @@unique([curriculumSubjectId, studentId, termId])
+  @@index([schoolId])
   @@index([curriculumSubjectId])
   @@index([studentId])
   @@index([termId])
@@ -4756,11 +5099,81 @@ model DoSReportCard {
   @@index([publishedAt])
 }
 
+// Report History - Track generated reports
+model ReportHistory {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId        String   @db.ObjectId
+  reportType      String // 'ca-only', 'exam-only', 'final'
+  classId         String   @db.ObjectId
+  subjectId       String?  @db.ObjectId
+  termId          String   @db.ObjectId
+  studentId       String   @db.ObjectId
+  generatedBy     String   @db.ObjectId
+  generatedAt     DateTime @default(now())
+  pdfUrl          String? // URL to stored PDF
+  isDraft         Boolean  @default(false)
+  reportData      Json // Snapshot of report data
+  downloadCount   Int      @default(0)
+  lastDownloadAt  DateTime?
+  
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id])
+  subject Subject? @relation(fields: [subjectId], references: [id])
+  term    Term    @relation(fields: [termId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+  
+  @@index([schoolId])
+  @@index([classId])
+  @@index([termId])
+  @@index([studentId])
+  @@index([generatedBy])
+  @@index([generatedAt])
+}
+
+// Report Remarks - Store teacher/DoS/Head remarks
+model ReportRemark {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+  studentId   String   @db.ObjectId
+  termId      String   @db.ObjectId
+  remarkType  String // 'class_teacher', 'dos', 'head_teacher'
+  remarkText  String
+  createdBy   String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id])
+  term    Term    @relation(fields: [termId], references: [id])
+  
+  @@unique([studentId, termId, remarkType])
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([termId])
+}
+
+// 7. TIMETABLE CONFIGURATION - School-wide timetable rules
+model TimetableConfiguration {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId              String   @unique @db.ObjectId
+  startTime             String   // "08:00" - School start time
+  endTime               String   // "16:00" - School end time
+  periodDurationMinutes Int      // 45 - Duration of each period
+  specialPeriods        Json     // Array of {name, startTime, endTime, daysOfWeek[]}
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
 // 8. DoS TIMETABLE - Schedule management
 model DoSTimetable {
   id            String             @id @default(auto()) @map("_id") @db.ObjectId
   schoolId      String             @db.ObjectId
-  classId       String             @db.ObjectId
+  classId       String?            @db.ObjectId // Optional: null = school-wide timetable
   termId        String             @db.ObjectId
   timetableName String
   weekCount     Int                @default(1)
@@ -4769,47 +5182,69 @@ model DoSTimetable {
   dosApprovedBy String?            @db.ObjectId
   dosApprovedAt DateTime?
   isLocked      Boolean            @default(false)
+  isTimeBased   Boolean            @default(false) // true = time-based, false = period-based (legacy)
+  isArchived    Boolean            @default(false) // true = archived (read-only), false = active
+  isSchoolWide  Boolean            @default(false) // true = school-wide (all classes), false = single class
   createdBy     String             @db.ObjectId
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
   // Relations
   school  School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  class   Class               @relation(fields: [classId], references: [id])
+  class   Class?              @relation(fields: [classId], references: [id])
   term    Term                @relation(fields: [termId], references: [id])
   entries DoSTimetableEntry[]
 
-  @@unique([schoolId, classId, termId])
   @@index([schoolId])
   @@index([classId])
   @@index([termId])
   @@index([status])
   @@index([dosApproved])
+  @@index([isTimeBased])
+  @@index([isArchived])
+  @@index([isSchoolWide])
 }
 
 // 9. DoS TIMETABLE ENTRY - Individual timetable slots
 model DoSTimetableEntry {
   id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String   @db.ObjectId
   timetableId         String   @db.ObjectId
+  classId             String?  @db.ObjectId // For school-wide timetables: which class this entry belongs to
+  streamId            String?  @db.ObjectId // For school-wide timetables: which stream this entry belongs to
   curriculumSubjectId String   @db.ObjectId
   teacherId           String   @db.ObjectId
   dayOfWeek           Int // 1-7 (Monday-Sunday)
-  period              Int // Period number
+  period              Int // Period number (for legacy period-based timetables)
+  
+  // Time-based fields (for new time-based timetables)
+  startTime           String? // "08:00"
+  endTime             String? // "08:45"
+  isSpecialPeriod     Boolean  @default(false)
+  specialPeriodName   String? // "Assembly", "Break", "Lunch"
+  
   room                String?
   isDoubleLesson      Boolean  @default(false)
   notes               String?
   createdAt           DateTime @default(now())
 
   // Relations
+  school            School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   timetable         DoSTimetable         @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  class             Class?               @relation(fields: [classId], references: [id])
+  stream            Stream?              @relation(fields: [streamId], references: [id])
   curriculumSubject DoSCurriculumSubject @relation(fields: [curriculumSubjectId], references: [id])
   teacher           Staff                @relation(fields: [teacherId], references: [id])
 
-  @@unique([timetableId, dayOfWeek, period])
-  @@unique([teacherId, dayOfWeek, period, timetableId])
+  @@index([schoolId])
   @@index([timetableId])
+  @@index([timetableId, classId, streamId])
+  @@index([timetableId, startTime])
   @@index([curriculumSubjectId])
   @@index([teacherId])
+  @@index([isSpecialPeriod])
+  @@index([classId])
+  @@index([streamId])
 }
 
 // 10. PROMOTION DECISION - Academic progression records
@@ -4880,6 +5315,7 @@ model DoSAuditLog {
 // 12. DoS APPROVAL - Track approvals of subject results
 model DosApproval {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String    @db.ObjectId
   classId      String    @db.ObjectId
   subjectId    String    @db.ObjectId
   caApproved   Boolean   @default(false)
@@ -4891,10 +5327,12 @@ model DosApproval {
   updatedAt    DateTime  @updatedAt
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([classId, subjectId])
+  @@index([schoolId])
   @@index([classId])
   @@index([subjectId])
   @@index([locked])
@@ -5023,6 +5461,7 @@ model SuperAdminAuditLog {
 // Assessment Planning - 20% CA structure
 model AssessmentPlan {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId            String    @db.ObjectId
   curriculumSubjectId String    @db.ObjectId
   termId              String    @db.ObjectId
   teacherId           String    @db.ObjectId
@@ -5035,6 +5474,7 @@ model AssessmentPlan {
   updatedAt           DateTime  @updatedAt
 
   // Relations
+  school            School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   curriculumSubject CurriculumSubject      @relation(fields: [curriculumSubjectId], references: [id])
   term              Term                   @relation(fields: [termId], references: [id])
   teacher           Staff                  @relation(fields: [teacherId], references: [id])
@@ -5045,11 +5485,13 @@ model AssessmentPlan {
   @@index([termId])
   @@index([teacherId])
   @@index([dosApproved])
+  @@index([schoolId])
 }
 
 // Individual Continuous Assessments
 model ContinuousAssessment {
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId         String         @db.ObjectId
   assessmentPlanId String         @db.ObjectId
   name             String
   type             AssessmentType
@@ -5062,17 +5504,20 @@ model ContinuousAssessment {
   updatedAt        DateTime       @updatedAt
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   assessmentPlan AssessmentPlan @relation(fields: [assessmentPlanId], references: [id], onDelete: Cascade)
   results        CAResult[]
 
   @@index([assessmentPlanId])
   @@index([type])
   @@index([dueDate])
+  @@index([schoolId])
 }
 
 // CA Results per student
 model CAResult {
   id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId               String   @db.ObjectId
   continuousAssessmentId String   @db.ObjectId
   studentId              String   @db.ObjectId
   score                  Float
@@ -5084,11 +5529,13 @@ model CAResult {
   updatedAt              DateTime @updatedAt
 
   // Relations
+  school               School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   continuousAssessment ContinuousAssessment @relation(fields: [continuousAssessmentId], references: [id])
   student              Student              @relation(fields: [studentId], references: [id])
   enteredByStaff       Staff                @relation(fields: [enteredBy], references: [id])
 
   @@unique([continuousAssessmentId, studentId])
+  @@index([schoolId])
   @@index([continuousAssessmentId])
   @@index([studentId])
   @@index([enteredBy])
@@ -5118,24 +5565,26 @@ enum MarksSubmissionStatus {
 
 // CA Entry Model - Multiple CA entries per subject per term
 model CAEntry {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
 
   // Relations
-  student     Student  @relation(fields: [studentId], references: [id])
-  studentId   String   @db.ObjectId
-  subject     Subject  @relation(fields: [subjectId], references: [id])
-  subjectId   String   @db.ObjectId
-  teacher     Staff    @relation(fields: [teacherId], references: [id])
-  teacherId   String   @db.ObjectId
-  term        Term     @relation(fields: [termId], references: [id])
-  termId      String   @db.ObjectId
+  school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String  @db.ObjectId
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId String  @db.ObjectId
+  teacher   Staff   @relation(fields: [teacherId], references: [id])
+  teacherId String  @db.ObjectId
+  term      Term    @relation(fields: [termId], references: [id])
+  termId    String  @db.ObjectId
 
   // CA Entry Details
-  name        String   // e.g., "Assignment 1 - Algebra"
-  type        CAType
-  maxScore    Float
-  rawScore    Float
-  date        DateTime
+  name     String // e.g., "Assignment 1 - Algebra"
+  type     CAType
+  maxScore Float
+  rawScore Float
+  date     DateTime
 
   // Curriculum Integration
   competencyId      String?
@@ -5148,36 +5597,43 @@ model CAEntry {
   approvedBy  String?
 
   // Audit
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  // Competency Relations
+  competencyMappings CompetencyMapping[]
+
+  @@unique([studentId, name, type, termId, subjectId])
   @@index([studentId])
   @@index([subjectId])
   @@index([teacherId])
   @@index([termId])
   @@index([type])
   @@index([status])
+  @@index([schoolId])
   @@map("ca_entries")
 }
 
 // Exam Entry Model - One exam per student per subject per term
 model ExamEntry {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
 
   // Relations
-  student     Student  @relation(fields: [studentId], references: [id])
-  studentId   String   @db.ObjectId
-  subject     Subject  @relation(fields: [subjectId], references: [id])
-  subjectId   String   @db.ObjectId
-  teacher     Staff    @relation(fields: [teacherId], references: [id])
-  teacherId   String   @db.ObjectId
-  term        Term     @relation(fields: [termId], references: [id])
-  termId      String   @db.ObjectId
+  school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String  @db.ObjectId
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId String  @db.ObjectId
+  teacher   Staff   @relation(fields: [teacherId], references: [id])
+  teacherId String  @db.ObjectId
+  term      Term    @relation(fields: [termId], references: [id])
+  termId    String  @db.ObjectId
 
   // Exam Details
-  examScore   Float    // Out of 100
-  maxScore    Float    @default(100) // Always 100
-  examDate    DateTime
+  examScore Float // Out of 100
+  maxScore  Float    @default(100) // Always 100
+  examDate  DateTime
 
   // Workflow
   status      MarksSubmissionStatus @default(DRAFT)
@@ -5186,8 +5642,8 @@ model ExamEntry {
   approvedBy  String?
 
   // Audit
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Ensure one exam per student per subject per term
   @@unique([studentId, subjectId, termId])
@@ -5196,7 +5652,156 @@ model ExamEntry {
   @@index([teacherId])
   @@index([termId])
   @@index([status])
+  @@index([schoolId])
   @@map("exam_entries")
+}
+
+// ============================================
+// COMPETENCY-BASED ASSESSMENT MODELS
+// Requirements: 31.1, 31.2, 31.3, 31.4, 31.5, 31.6, 31.7
+// ============================================
+
+enum CompetencyLevel {
+  EMERGING
+  DEVELOPING
+  PROFICIENT
+  ADVANCED
+}
+
+enum CompetencyType {
+  KNOWLEDGE
+  SKILLS
+  VALUES_ATTITUDES
+  GENERIC_SKILLS
+}
+
+// Competency Definition Model
+model Competency {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String          @db.ObjectId
+  subjectId   String          @db.ObjectId
+  classId     String          @db.ObjectId
+  code        String // e.g., "M1.1", "E2.3"
+  title       String
+  description String
+  type        CompetencyType
+  level       CompetencyLevel @default(DEVELOPING)
+
+  // Hierarchical structure
+  parentCompetencyId String?      @db.ObjectId
+  parentCompetency   Competency?  @relation("CompetencyHierarchy", fields: [parentCompetencyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subCompetencies    Competency[] @relation("CompetencyHierarchy")
+
+  // Metadata
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String   @db.ObjectId
+
+  // Relations
+  school          School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject         Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class           Class                  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  progressRecords CompetencyProgress[]
+  mappings        CompetencyMapping[]
+  auditTrail      CompetencyAuditTrail[]
+
+  @@unique([schoolId, subjectId, classId, code])
+  @@index([schoolId])
+  @@index([subjectId])
+  @@index([classId])
+  @@index([type])
+  @@index([level])
+  @@index([isActive])
+  @@map("competencies")
+}
+
+// Student Competency Progress Tracking
+model CompetencyProgress {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId          String          @db.ObjectId
+  studentId         String          @db.ObjectId
+  competencyId      String          @db.ObjectId
+  termId            String          @db.ObjectId
+  currentLevel      CompetencyLevel @default(EMERGING)
+  evidenceCount     Int             @default(0)
+  averageScore      Float           @default(0)
+  masteryPercentage Float           @default(0)
+  lastAssessedAt    DateTime?
+  teacherComment    String?
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastUpdatedBy String   @db.ObjectId
+
+  // Relations
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  term       Term       @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, competencyId, termId])
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([competencyId])
+  @@index([termId])
+  @@index([currentLevel])
+  @@index([masteryPercentage])
+  @@map("competency_progress")
+}
+
+// CA Entry to Competency Mapping
+model CompetencyMapping {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId       String  @db.ObjectId
+  caEntryId      String  @db.ObjectId
+  competencyId   String  @db.ObjectId
+  evidenceType   String // Type of evidence this CA provides
+  weight         Float   @default(1.0) // How much this CA contributes to competency mastery
+  teacherComment String?
+
+  // Metadata
+  createdAt DateTime @default(now())
+  createdBy String   @db.ObjectId
+
+  // Relations
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  caEntry    CAEntry    @relation(fields: [caEntryId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([caEntryId, competencyId])
+  @@index([schoolId])
+  @@index([caEntryId])
+  @@index([competencyId])
+  @@index([evidenceType])
+  @@map("competency_mappings")
+}
+
+// Competency Audit Trail
+model CompetencyAuditTrail {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  competencyId  String   @db.ObjectId
+  studentId     String?  @db.ObjectId
+  action        String // LINKED, UNLINKED, LEVEL_CHANGED, COMMENT_ADDED, PROGRESS_UPDATED
+  previousValue Json?
+  newValue      Json?
+  performedBy   String   @db.ObjectId
+  performedAt   DateTime @default(now())
+  reason        String?
+
+  // Relations
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  student    Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([competencyId])
+  @@index([studentId])
+  @@index([action])
+  @@index([performedAt])
+  @@map("competency_audit_trail")
 }
 
 // ============================================
@@ -5378,27 +5983,28 @@ model TimetablePublicationLog {
   @@index([performedAt])
   @@map("timetable_publication_logs")
 }
+
 // Marks Audit Log - Complete audit trail for marks approval workflow
 model MarksAuditLog {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId    String   @db.ObjectId
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String @db.ObjectId
 
   // Entry details
-  entryType   String   // 'CA' or 'EXAM'
-  entryId     String   @db.ObjectId
-  studentId   String   @db.ObjectId
-  subjectId   String   @db.ObjectId
-  classId     String   @db.ObjectId
-  termId      String   @db.ObjectId
+  entryType String // 'CA' or 'EXAM'
+  entryId   String @db.ObjectId
+  studentId String @db.ObjectId
+  subjectId String @db.ObjectId
+  classId   String @db.ObjectId
+  termId    String @db.ObjectId
 
   // Action details
-  action      String   // 'APPROVED', 'REJECTED', 'SUBMITTED', 'MODIFIED'
+  action      String // 'APPROVED', 'REJECTED', 'SUBMITTED', 'MODIFIED'
   performedBy String   @db.ObjectId // Staff ID who performed the action
   performedAt DateTime @default(now())
 
   // Additional context
-  comments    String?  // Approval/rejection comments
-  metadata    Json?    // Additional data (scores, names, etc.)
+  comments String? // Approval/rejection comments
+  metadata Json? // Additional data (scores, names, etc.)
 
   @@index([schoolId])
   @@index([entryType])
@@ -5411,4 +6017,359 @@ model MarksAuditLog {
   @@index([performedBy])
   @@index([performedAt])
   @@map("marks_audit_logs")
+}
+
+// ============================================
+// TIMETABLE LEARNING SYSTEM
+// Auto-generation learning and optimization
+// ============================================
+
+// Timetable Preference - Learned preferences for subject slot placement
+model TimetablePreference {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String @db.ObjectId
+  subjectId String @db.ObjectId
+
+  // Learned preferences
+  preferredSlots Json @default("[]") // Array of {dayOfWeek, period, weight}
+  avoidSlots     Json @default("[]") // Array of {dayOfWeek, period, weight}
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, subjectId])
+  @@index([schoolId])
+  @@index([subjectId])
+  @@map("timetable_preferences")
+}
+
+// Adjustment Pattern - Pattern recognition for manual adjustments
+model AdjustmentPattern {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String @db.ObjectId
+  subjectId String @db.ObjectId
+
+  // Pattern details
+  fromDayOfWeek Int // 1-7 (Monday-Sunday)
+  fromPeriod    Int // Period number
+  toDayOfWeek   Int // 1-7
+  toPeriod      Int // Period number
+
+  // Pattern frequency
+  frequency      Int      @default(1) // How many times this pattern occurred
+  lastOccurrence DateTime @default(now())
+
+  // Metadata
+  createdAt DateTime @default(now())
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, subjectId, fromDayOfWeek, fromPeriod, toDayOfWeek, toPeriod])
+  @@index([schoolId])
+  @@index([subjectId])
+  @@index([frequency])
+  @@index([lastOccurrence])
+  @@map("adjustment_patterns")
+}
+
+// ============================================
+// PDF STORAGE & ACCESS TRACKING
+// ============================================
+
+// PDF Storage - Store generated report card PDFs
+model PDFStorage {
+  id        String   @id @map("_id") // Custom ID format: schoolId-termId-studentId-timestamp
+  studentId String   @db.ObjectId
+  termId    String   @db.ObjectId
+  schoolId  String   @db.ObjectId
+  pdfData   String // Base64 encoded PDF
+  fileSize  Int // File size in bytes
+  createdAt DateTime @default(now())
+
+  // Relations
+  accesses PDFAccess[]
+
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([createdAt])
+  @@map("pdf_storage")
+}
+
+// PDF Access - Track who accessed PDFs (analytics)
+model PDFAccess {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String   @db.ObjectId
+  pdfStorageId String // Reference to PDFStorage.id
+  accessedAt   DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+
+  // Relations
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  pdfStorage PDFStorage @relation(fields: [pdfStorageId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([pdfStorageId])
+  @@index([accessedAt])
+  @@map("pdf_access")
+}
+
+// Published Report - Enhanced with PDF URLs
+model PublishedReport {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String   @db.ObjectId
+  termId       String   @db.ObjectId
+  schoolId     String   @db.ObjectId
+  publishedBy  String   @db.ObjectId
+  publishedAt  DateTime @default(now())
+  htmlContent  String // HTML version of report card
+  pdfUrl       String? // Full URL to PDF (e.g., https://example.com/api/reports/pdf/xyz)
+  shortUrl     String? // Shortened URL (e.g., https://tama.ri/ABC1)
+  isAccessible Boolean  @default(true) // Can be toggled to revoke access
+
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([termId])
+  @@index([schoolId])
+  @@index([publishedAt])
+  @@map("published_reports")
+}
+
+// ============================================
+// REPORT CARD SYSTEM
+// Complete report card generation, approval, and publishing workflow
+// ============================================
+
+// Report Card - Main report card record
+model ReportCard {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+  studentId   String   @db.ObjectId
+  classId     String   @db.ObjectId
+  termId      String   @db.ObjectId
+  
+  // PDF Storage
+  pdfUrl      String?  // URL to stored PDF (Cloudinary/S3)
+  pdfSize     Int?     // File size in bytes
+  
+  // Status tracking
+  status      ReportCardStatus @default(DRAFT)
+  generatedAt DateTime?
+  approvedAt  DateTime?
+  approvedBy  String?  @db.ObjectId // Staff ID
+  publishedAt DateTime?
+  publishedBy String?  @db.ObjectId // Staff ID
+  
+  // Download tracking
+  downloadCount Int @default(0)
+  lastDownloadAt DateTime?
+  
+  // Secure link
+  secureToken String?  @unique
+  linkExpiresAt DateTime?
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  term        Term     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  approver    Staff?   @relation("ReportCardApprover", fields: [approvedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publisher   Staff?   @relation("ReportCardPublisher", fields: [publishedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  @@unique([studentId, termId])
+  @@index([schoolId, termId, status])
+  @@index([classId, termId])
+  @@index([status])
+  @@map("report_cards")
+}
+
+// Template Type Enum
+enum TemplateType {
+  NEW_CURRICULUM
+  LEGACY
+  CUSTOM
+}
+
+// Report Template - Report card templates
+model ReportTemplate {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+  name        String
+  type        TemplateType
+  
+  // Template content (Handlebars HTML)
+  content     String?  // Template markup (null for system default)
+  variables   Json     // Available variables
+  
+  // Status
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  isSystemTemplate Boolean @default(false) // Cannot be deleted/edited
+  
+  // Usage tracking
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String   @db.ObjectId
+  
+  // Relations
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  creator     Staff    @relation("TemplateCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  @@unique([schoolId, name])
+  @@index([schoolId, type, isDefault])
+  @@index([isActive])
+  @@map("report_templates")
+}
+
+// Report Action Enum
+enum ReportAction {
+  GENERATED
+  APPROVED
+  PUBLISHED
+  REGENERATED
+  REVOKED
+  DOWNLOADED
+}
+
+// Report Generation Log - Audit trail for report operations
+model ReportGenerationLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId    String   @db.ObjectId
+  classId     String   @db.ObjectId
+  termId      String   @db.ObjectId
+  
+  // Generation details
+  action      ReportAction
+  status      String   // SUCCESS, FAILED, PARTIAL
+  
+  // Stats
+  totalStudents    Int
+  successCount     Int
+  failureCount     Int
+  generationTime   Float  // seconds
+  
+  // Error tracking
+  errors      Json?    // Array of errors
+  
+  // Metadata
+  performedBy String   @db.ObjectId
+  performedAt DateTime @default(now())
+  
+  // Relations
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  term        Term     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  staff       Staff    @relation("ReportLogStaff", fields: [performedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  @@index([schoolId, termId])
+  @@index([classId, termId])
+  @@index([action])
+  @@index([performedAt])
+  @@map("report_generation_logs")
+}
+
+// ============================================
+// END OF REPORT CARD SYSTEM
+// ============================================
+
+
+// ============================================
+// SUBJECT COMBINATIONS & STUDENT SUBJECT SELECTION
+// For A-Level students who choose subject combinations
+// ============================================
+
+model Combination {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  name      String   // e.g., "PCM" (Physics, Chemistry, Math), "BCM", "MEG"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school              School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  combinationSubjects CombinationSubject[]
+  students            Student[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model CombinationSubject {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  combinationId String   @db.ObjectId
+  subjectId     String   @db.ObjectId
+  createdAt     DateTime @default(now())
+
+  // Relations
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  subject     Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, subjectId])
+  @@index([combinationId])
+  @@index([subjectId])
+  @@index([schoolId])
+}
+
+model StudentSubject {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  studentId String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([schoolId])
+}
+
+// ============================================
+// TEACHER ASSIGNMENTS
+// Tracks which teacher teaches which subject in which class
+// ============================================
+
+model TeacherAssignment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  teacherId String   @db.ObjectId
+  classId   String   @db.ObjectId
+  subjectId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId, subjectId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([schoolId])
 }

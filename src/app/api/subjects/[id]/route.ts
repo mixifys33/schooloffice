@@ -104,10 +104,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { name, code } = body
+    const { name, code, levelType, isCompulsory } = body
 
-    if (!name || !code) {
-      return NextResponse.json({ error: 'Name and code are required' }, { status: 400 })
+    if (!name || !code || !levelType) {
+      return NextResponse.json({ error: 'Name, code, and level type are required' }, { status: 400 })
+    }
+
+    // Validate levelType
+    if (!['O_LEVEL', 'A_LEVEL'].includes(levelType)) {
+      return NextResponse.json(
+        { error: 'Invalid level type. Must be O_LEVEL or A_LEVEL' },
+        { status: 400 }
+      )
     }
 
     // Check for duplicate code (excluding current subject)
@@ -131,6 +139,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: {
         name: name.trim(),
         code: code.toUpperCase().trim(),
+        levelType: levelType,
+        isCompulsory: levelType === 'O_LEVEL' ? (isCompulsory ?? true) : false,
       }
     })
 

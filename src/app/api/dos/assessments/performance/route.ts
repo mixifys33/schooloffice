@@ -282,7 +282,7 @@ export async function GET(request: NextRequest) {
       totalClasses: mockPerformanceData.length,
       totalSubjects: allSubjects.length,
       overallAverage: allSubjects.length > 0 
-        ? allSubjects.reduce((sum, s) => sum + s.overallAverage, 0) / allSubjects.length
+        ? allSubjects.reduce((sum, s) => sum + (s.overallAverage ?? 0), 0) / allSubjects.length
         : 0,
       overallPassRate: allSubjects.length > 0 
         ? allSubjects.reduce((sum, s) => sum + s.overallPassRate, 0) / allSubjects.length

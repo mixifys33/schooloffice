@@ -212,7 +212,7 @@ export class ExamService {
       schoolId: user.schoolId!,
       userId: validatedData.dosUserId,
       action: 'APPLY_EXAM_MODERATION',
-      resourceType: 'DoSExam',
+      resource: "DoSExam",
       resourceId: validatedData.dosExamId,
       newValue: {
         moderationApplied: true,
@@ -255,7 +255,7 @@ export class ExamService {
       schoolId,
       userId: dosUserId,
       action: 'LOCK_EXAM',
-      resourceType: 'DoSExam',
+      resource: "DoSExam",
       resourceId: dosExamId,
       newValue: { isLocked: true },
     });
@@ -294,7 +294,7 @@ export class ExamService {
       schoolId,
       userId: dosUserId,
       action: 'APPROVE_EXAM',
-      resourceType: 'DoSExam',
+      resource: "DoSExam",
       resourceId: dosExamId,
       newValue: { dosApproved: true },
     });

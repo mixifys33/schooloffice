@@ -5,7 +5,7 @@
  * Supports class, stream, staff role targeting and combined criteria logic.
  * 
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8
- */
+ */   
 
 import { prisma } from '@/lib/db'
 import { Role } from '@/types/enums'
@@ -198,7 +198,7 @@ export class TargetingService implements ITargetingService {
           name: `${guardian.firstName} ${guardian.lastName}`,
           phone: guardian.phone,
           email: guardian.email || undefined,
-          whatsappNumber: guardian.whatsappNumber || undefined,
+          whatsappNumber: undefined,
           preferredChannel: guardian.preferredChannel
         })
       }
@@ -256,7 +256,7 @@ export class TargetingService implements ITargetingService {
           name: `${guardian.firstName} ${guardian.lastName}`,
           phone: guardian.phone,
           email: guardian.email || undefined,
-          whatsappNumber: guardian.whatsappNumber || undefined,
+          whatsappNumber: undefined,
           preferredChannel: guardian.preferredChannel
         })
       }
@@ -375,7 +375,7 @@ export class TargetingService implements ITargetingService {
             name: `${guardian.firstName} ${guardian.lastName}`,
             phone: guardian.phone,
             email: guardian.email || undefined,
-            whatsappNumber: guardian.whatsappNumber || undefined,
+            whatsappNumber: undefined,
             preferredChannel: guardian.preferredChannel
           })
         }
@@ -460,7 +460,7 @@ export class TargetingService implements ITargetingService {
             name: `${guardian.firstName} ${guardian.lastName}`,
             phone: guardian.phone,
             email: guardian.email || undefined,
-            whatsappNumber: guardian.whatsappNumber || undefined,
+            whatsappNumber: undefined,
             preferredChannel: guardian.preferredChannel
           })
         }
@@ -515,7 +515,7 @@ export class TargetingService implements ITargetingService {
           name: `${guardian.firstName} ${guardian.lastName}`,
           phone: guardian.phone,
           email: guardian.email || undefined,
-          whatsappNumber: guardian.whatsappNumber || undefined,
+          whatsappNumber: undefined,
           preferredChannel: guardian.preferredChannel
         })
       }
@@ -597,7 +597,7 @@ export class TargetingService implements ITargetingService {
           name: `${guardian.firstName} ${guardian.lastName}`,
           phone: guardian.phone,
           email: guardian.email || undefined,
-          whatsappNumber: guardian.whatsappNumber || undefined,
+          whatsappNumber: undefined,
           preferredChannel: guardian.preferredChannel
         })
       }
@@ -644,7 +644,7 @@ export class TargetingService implements ITargetingService {
           name: `${guardian.firstName} ${guardian.lastName}`,
           phone: guardian.phone,
           email: guardian.email || undefined,
-          whatsappNumber: guardian.whatsappNumber || undefined,
+          whatsappNumber: undefined,
           preferredChannel: guardian.preferredChannel
         }
       })

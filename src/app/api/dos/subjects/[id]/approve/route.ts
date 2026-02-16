@@ -5,9 +5,10 @@ import { prisma } from '@/lib/db';
 // POST /api/dos/subjects/[id]/approve - Approve a subject
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     
     if (!session?.user?.id) {
@@ -31,9 +32,9 @@ export async function POST(
     }
 
     // Update the curriculum subject approval status
-    const updatedSubject = await db.doSCurriculumSubject.update({
+    const updatedSubject = await prisma.doSCurriculumSubject.update({
       where: {
-        id: params.id,
+        id: id,
         schoolId: schoolId
       },
       data: {
@@ -70,7 +71,7 @@ export async function POST(
     });
 
     // Count students enrolled in this class
-    const studentsCount = await db.student.count({
+    const studentsCount = await prisma.student.count({
       where: {
         classId: updatedSubject.classId,
         status: 'ACTIVE'

@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/db'
 import { documentService } from './document.service'
 import { Student, School, Class, Stream } from '@/types'
-
+   
 /**
  * Document types that can be generated
  */

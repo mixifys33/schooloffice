@@ -7,7 +7,7 @@
  * - Proper balance calculation with decimal precision
  * - Atomic operations with transaction safety
  * - Term-based milestone tracking
- */
+ */   
 
 import { prisma } from '@/lib/db'
 import { FinanceAuditService } from './finance-audit.service'
@@ -213,7 +213,7 @@ export async function getOrCreateStudentAccount(
           schoolId,
           userId: 'SYSTEM',
           action: 'ACCOUNT_CREATED',
-          resourceType: 'StudentAccount',
+          resource: "StudentAccount",
           resourceId: account!.id,
           newValue: { studentId, schoolId, termId },
         })
@@ -303,7 +303,7 @@ export async function updateBalance(
             schoolId,
             userId,
             action: 'BALANCE_UPDATED',
-            resourceType: 'StudentAccount',
+            resource: "StudentAccount",
             resourceId: updatedAccount.id,
             previousValue: {
               balance: currentAccount.balance,

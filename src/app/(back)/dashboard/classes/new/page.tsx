@@ -14,15 +14,14 @@ import { Toast, useLocalToast } from '@/components/ui/toast'
  * Requirements: 4.3 - Validate class name uniqueness and create via POST to /api/classes
  */
 
-// Predefined class levels for Uganda education system
+// Level types matching Prisma schema
+const LEVEL_TYPES = [
+  { value: 'O_LEVEL', label: 'O-Level (S1-S4)' },
+  { value: 'A_LEVEL', label: 'A-Level (S5-S6)' },
+]
+
+// Secondary class levels only (S1-S6)
 const CLASS_LEVELS = [
-  { value: '1', label: 'P1 (Primary 1)' },
-  { value: '2', label: 'P2 (Primary 2)' },
-  { value: '3', label: 'P3 (Primary 3)' },
-  { value: '4', label: 'P4 (Primary 4)' },
-  { value: '5', label: 'P5 (Primary 5)' },
-  { value: '6', label: 'P6 (Primary 6)' },
-  { value: '7', label: 'P7 (Primary 7)' },
   { value: '8', label: 'S1 (Senior 1)' },
   { value: '9', label: 'S2 (Senior 2)' },
   { value: '10', label: 'S3 (Senior 3)' },
@@ -34,11 +33,13 @@ const CLASS_LEVELS = [
 interface FormData {
   name: string
   level: string
+  levelType: string
 }
 
 interface FormErrors {
   name?: string
   level?: string
+  levelType?: string
 }
 
 export default function NewClassPage() {
@@ -48,6 +49,7 @@ export default function NewClassPage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     level: '',
+    levelType: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
@@ -66,6 +68,10 @@ export default function NewClassPage() {
 
     if (!formData.level) {
       newErrors.level = 'Class level is required'
+    }
+
+    if (!formData.levelType) {
+      newErrors.levelType = 'Level type is required'
     }
 
     setErrors(newErrors)
@@ -91,6 +97,7 @@ export default function NewClassPage() {
         body: JSON.stringify({
           name: formData.name.trim(),
           level: parseInt(formData.level, 10),
+          levelType: formData.levelType,
         }),
       })
 
@@ -200,6 +207,18 @@ export default function NewClassPage() {
               error={errors.level}
               required
               helpText="Select the academic level for this class"
+            />
+
+            <SelectField
+              label="Level Type"
+              name="levelType"
+              options={LEVEL_TYPES}
+              placeholder="Select level type"
+              value={formData.levelType}
+              onChange={handleInputChange('levelType')}
+              error={errors.levelType}
+              required
+              helpText="Select O-Level (S1-S4) or A-Level (S5-S6)"
             />
 
             <div className="flex gap-3 pt-4">

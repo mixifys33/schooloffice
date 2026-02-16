@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { Toast, useToast } from '@/hooks/use-toast'
+import { useToast } from '@/hooks/use-toast'
 
 /**
  * Super Admin SMS Monitoring Page

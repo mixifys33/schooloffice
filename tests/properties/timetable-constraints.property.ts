@@ -1,6 +1,6 @@
 /**
  * PROPERTY-BASED TESTS FOR TIMETABLE CONSTRAINTS
- * 
+ *   
  * These tests verify that the timetable constraint engine maintains
  * mathematical invariants under all possible inputs.
  * 

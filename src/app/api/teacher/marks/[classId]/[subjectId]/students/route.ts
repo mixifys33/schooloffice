@@ -13,6 +13,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Role, StudentStatus } from '@/types/enums'
 import { gradingEngine, type CAEntry, type ExamEntry, type GradeCalculation } from '@/lib/grading-engine'
+import { studentsCache, marksCache, generateCacheKey } from '@/lib/performance-cache'
+import { optimizedStudentMarksQuery, queryMonitor } from '@/lib/query-optimizer'
 
 export interface StudentsMarksResponse {
   students: {
@@ -41,14 +43,29 @@ export interface StudentsMarksResponse {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { classId: string; subjectId: string } }
+  { params }: { params: Promise<{ classId: string; subjectId: string }> }
 ) {
+  const endQueryTimer = queryMonitor.startQuery('students-marks-data');
+  
   try {
     console.log('🔍 [API] /api/teacher/marks/[classId]/[subjectId]/students - Starting request')
-    console.log('📋 Parameters:', { classId: params.classId, subjectId: params.subjectId })
+    
+    const { classId, subjectId } = await params
+    console.log('📋 Parameters:', { classId, subjectId })
+    
+    // Check cache first
+    const cacheKey = generateCacheKey('marks', classId, subjectId);
+    const cachedData = marksCache.get<StudentsMarksResponse>(cacheKey);
+    
+    if (cachedData) {
+      console.log('✅ [API] Cache hit - Returning cached data');
+      endQueryTimer();
+      return NextResponse.json(cachedData);
+    }
     
     const session = await auth()
     if (!session?.user) {
+      endQueryTimer();
       return NextResponse.json({ 
         error: 'Authentication required',
         details: 'Please log in to access marks management'
@@ -58,6 +75,7 @@ export async function GET(
     // Verify user has appropriate role
     const userRole = session.user.activeRole || session.user.role
     if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'Access denied. Teacher role required.',
@@ -69,6 +87,7 @@ export async function GET(
 
     const schoolId = session.user.schoolId
     if (!schoolId) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'No school context found',
@@ -90,6 +109,7 @@ export async function GET(
     })
 
     if (!staff) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'No staff profile found',
@@ -114,6 +134,7 @@ export async function GET(
     })
 
     if (!hasAccess) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'Access denied',
@@ -144,6 +165,7 @@ export async function GET(
     })
 
     if (!currentTerm) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'No active term found',
@@ -166,6 +188,7 @@ export async function GET(
     })
 
     if (!subject) {
+      endQueryTimer();
       return NextResponse.json(
         { 
           error: 'Subject not found',
@@ -175,57 +198,69 @@ export async function GET(
       )
     }
 
-    // Get students in the class
+    // Get students in the class with optimized query
     const students = await prisma.student.findMany({
       where: {
         classId: params.classId,
         status: StudentStatus.ACTIVE,
       },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        admissionNumber: true,
-      },
+      select: optimizedStudentMarksQuery.studentSelect,
       orderBy: [
         { firstName: 'asc' },
         { lastName: 'asc' },
       ],
     })
 
-    // Get CA entries for all students in this subject and term
+    // Optimize: Batch fetch CA and Exam entries for all students at once
+    const studentIds = students.map(s => s.id);
+    
+    // Get CA entries for all students in this subject and term (optimized query)
     const caEntries = await prisma.cAEntry.findMany({
       where: {
         subjectId: params.subjectId,
         termId: currentTerm.id,
         studentId: {
-          in: students.map(s => s.id),
+          in: studentIds,
         },
       },
+      select: optimizedStudentMarksQuery.caEntrySelect,
       orderBy: {
         date: 'asc',
       },
     })
 
-    // Get exam entries for all students in this subject and term
+    // Get exam entries for all students in this subject and term (optimized query)
     const examEntries = await prisma.examEntry.findMany({
       where: {
         subjectId: params.subjectId,
         termId: currentTerm.id,
         studentId: {
-          in: students.map(s => s.id),
+          in: studentIds,
         },
       },
+      select: optimizedStudentMarksQuery.examEntrySelect,
     })
 
-    // Build response with grade calculations
+    // Build lookup maps for O(1) access instead of O(n) filtering
+    const caEntriesByStudent = new Map<string, typeof caEntries>();
+    caEntries.forEach(ca => {
+      if (!caEntriesByStudent.has(ca.studentId)) {
+        caEntriesByStudent.set(ca.studentId, []);
+      }
+      caEntriesByStudent.get(ca.studentId)!.push(ca);
+    });
+
+    const examEntriesByStudent = new Map<string, typeof examEntries[0]>();
+    examEntries.forEach(exam => {
+      examEntriesByStudent.set(exam.studentId, exam);
+    });
+
+    // Build response with grade calculations (optimized with lookup maps)
     const studentsWithMarks = students.map(student => {
       const studentName = `${student.firstName} ${student.lastName}`
       
-      // Get CA entries for this student
-      const studentCAEntries = caEntries
-        .filter(ca => ca.studentId === student.id)
-        .map(ca => ({
+      // Get CA entries for this student using O(1) lookup
+      const studentCAEntries = (caEntriesByStudent.get(student.id) || []).map(ca => ({
           id: ca.id,
           subjectId: ca.subjectId,
           studentId: ca.studentId,
@@ -246,8 +281,8 @@ export async function GET(
           updatedAt: ca.updatedAt,
         }))
 
-      // Get exam entry for this student
-      const studentExamEntry = examEntries.find(exam => exam.studentId === student.id)
+      // Get exam entry for this student using O(1) lookup
+      const studentExamEntry = examEntriesByStudent.get(student.id);
       const examEntry: ExamEntry | undefined = studentExamEntry ? {
         id: studentExamEntry.id,
         subjectId: studentExamEntry.subjectId,
@@ -298,11 +333,16 @@ export async function GET(
       },
     }
 
+    // Cache the response for 2 minutes
+    marksCache.set(cacheKey, response);
+
     console.log('✅ [API] /api/teacher/marks/[classId]/[subjectId]/students - Successfully returning', studentsWithMarks.length, 'students')
+    endQueryTimer();
     return NextResponse.json(response)
 
   } catch (error: any) {
     console.error('❌ [API] /api/teacher/marks/[classId]/[subjectId]/students - Error:', error)
+    endQueryTimer();
     
     return NextResponse.json(
       { 

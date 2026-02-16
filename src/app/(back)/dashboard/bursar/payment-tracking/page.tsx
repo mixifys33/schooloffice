@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   DollarSign,
   Users,
@@ -19,7 +20,8 @@ import {
   Plus,
   Receipt,
   Send,
-  ChevronLeft
+  ChevronLeft,
+  X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -182,6 +184,7 @@ function PaymentTable({ payments, onPaymentClick }: PaymentTableProps) {
 // ============================================
 
 export default function PaymentTrackingPage() {
+  const router = useRouter()
   const [payments, setPayments] = useState<Payment[]>([])
   const [summary, setSummary] = useState<PaymentSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -284,7 +287,7 @@ export default function PaymentTrackingPage() {
             Track all student payments and financial transactions
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/dashboard/bursar/students')}>
           <Plus className="h-4 w-4 mr-2" />
           Record Payment
         </Button>

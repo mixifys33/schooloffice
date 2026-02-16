@@ -1,0 +1,19 @@
+/**
+ * Teacher Marks Management System - Animations and Transitions
+ * 
+ * Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6
+ * - Fine-tune animations and transitions
+ * - Optimize color schemes and visual hierarchy
+ * - Ensure consistent spacing and typography
+ * - Add final touches to micro-interactions
+ * - Verify responsive design across all devices
+ */
+
+/* ===== Smooth Transitions ===== */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-smooth-slow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

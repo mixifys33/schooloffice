@@ -5,7 +5,7 @@
  * 
  * Property 8: Receipt Immutability
  * For any receipt, modification or deletion attempts by non-admin users SHALL be rejected.
- * 
+ *    
  * Property 9: Receipt Content Completeness
  * For any receipt, the record SHALL contain: school name, student name, amount, date, 
  * method, reference, and receipt number.
@@ -753,7 +753,7 @@ export async function requestCancellation(
       schoolId: receipt.schoolId,
       userId,
       action: 'RECEIPT_CANCELLED',
-      resourceType: 'Receipt',
+      resource: "Receipt",
       resourceId: receiptId,
       previousValue: {
         receiptNumber: receipt.receiptNumber,

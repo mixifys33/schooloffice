@@ -3,9 +3,9 @@
  * Handles template variable replacement with actual student/guardian data
  * Ensures messages look professional and contain real information
  */
-
+    
 import { prisma } from '@/lib/db'
-import { MessageTemplateType, MessageChannel, RecipientType } from '@/types/enums'
+import { MessageTemplateType, RecipientType } from '@/types/enums'
 import { Recipient } from '@/types/entities'
 
 export interface TemplateRenderData {
@@ -41,7 +41,7 @@ export class TemplateRendererService {
     templateType: MessageTemplateType,
     recipient: Recipient,
     schoolId: string,
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, unknown>
   ): Promise<RenderResult> {
     try {
       // Get school information
@@ -126,7 +126,7 @@ export class TemplateRendererService {
           break
 
         case MessageTemplateType.REPORT_READY:
-          const reportData = await this.getReportData(studentId)
+          const reportData = await this.getReportData()
           Object.assign(data, reportData)
           break
 
@@ -149,30 +149,36 @@ export class TemplateRendererService {
    */
   private async getFeeData(studentId: string): Promise<Partial<TemplateRenderData>> {
     try {
-      // Get outstanding balance
-      const feeRecords = await prisma.feeRecord.findMany({
-        where: {
-          studentId,
-          isPaid: false
-        },
+      // Get student account to check balance
+      const studentAccount = await prisma.studentAccount.findFirst({
+        where: { studentId },
         select: {
-          amount: true,
-          dueDate: true
+          balance: true,
         }
       })
 
-      const totalBalance = feeRecords.reduce((sum: number, record: any) => sum + record.amount, 0)
-      const nextDueDate = feeRecords
-        .map((r: any) => r.dueDate)
-        .filter(Boolean)
-        .sort((a: any, b: any) => a!.getTime() - b!.getTime())[0]
+      // Get recent payments to find next due date
+      const recentPayments = await prisma.payment.findMany({
+        where: { studentId },
+        orderBy: { receivedAt: 'desc' },
+        take: 1,
+        select: {
+          amount: true,
+          receivedAt: true,
+        }
+      })
+
+      const balance = studentAccount?.balance || 0
+      const nextDueDate = recentPayments.length > 0 
+        ? new Date(recentPayments[0].receivedAt.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days after last payment
+        : new Date()
 
       return {
-        balance: `${totalBalance.toLocaleString()}`,
-        amount: `${totalBalance.toLocaleString()}`,
-        dueDate: nextDueDate ? nextDueDate.toLocaleDateString('en-GB') : 'Not set'
+        balance: `${Math.abs(balance).toLocaleString()}`,
+        amount: `${Math.abs(balance).toLocaleString()}`,
+        dueDate: nextDueDate.toLocaleDateString('en-GB')
       }
-    } catch (error) {
+    } catch {
       return {
         balance: 'Contact school',
         amount: 'Contact school',
@@ -184,7 +190,7 @@ export class TemplateRendererService {
   /**
    * Get attendance data for the student
    */
-  private async getAttendanceData(studentId: string): Promise<Partial<TemplateRenderData>> {
+  private async getAttendanceData(_studentId: string): Promise<Partial<TemplateRenderData>> {
     try {
       // Get today's attendance
       const today = new Date()
@@ -192,22 +198,22 @@ export class TemplateRendererService {
 
       const attendance = await prisma.attendance.findFirst({
         where: {
-          studentId,
+          studentId: _studentId,
           date: {
             gte: today,
             lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
           }
         },
-        include: {
-          period: true
+        select: {
+          period: true,
         }
       })
 
       return {
         date: today.toLocaleDateString('en-GB'),
-        periods: attendance?.period?.name || 'All day'
+        periods: attendance?.period ? `Period ${attendance.period}` : 'All day'
       }
-    } catch (error) {
+    } catch {
       return {
         date: new Date().toLocaleDateString('en-GB'),
         periods: 'All day'
@@ -218,14 +224,14 @@ export class TemplateRendererService {
   /**
    * Get report data for the student
    */
-  private async getReportData(studentId: string): Promise<Partial<TemplateRenderData>> {
+  private async getReportData(): Promise<Partial<TemplateRenderData>> {
     try {
       // This would typically generate a secure link to the report
       // For now, we'll use a placeholder
       return {
         link: 'Visit school office for report'
       }
-    } catch (error) {
+    } catch {
       return {
         link: 'Visit school office for report'
       }
@@ -242,7 +248,7 @@ export class TemplateRendererService {
         where: { studentId },
         orderBy: { createdAt: 'desc' },
         take: 10,
-        select: { value: true }
+        select: { score: true }
       })
 
       if (marks.length === 0) {
@@ -252,13 +258,13 @@ export class TemplateRendererService {
         }
       }
 
-      const average = marks.reduce((sum: number, mark: any) => sum + mark.value, 0) / marks.length
+      const average = marks.reduce((sum, mark) => sum + mark.score, 0) / marks.length
       
       return {
         average: Math.round(average).toString(),
         position: 'Contact school' // Position calculation would be more complex
       }
-    } catch (error) {
+    } catch {
       return {
         average: 'Not available',
         position: 'Not available'

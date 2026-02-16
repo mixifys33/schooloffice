@@ -2,7 +2,7 @@
  * Finance Audit Service
  * Provides immutable audit logging for all finance operations
  * Requirements: 7.1, 7.2, 7.3, 7.4
- * 
+ *     
  * Property 7: Reversal Audit Trail
  * For any payment reversal, the system SHALL create an audit entry containing the original
  * payment details, reversal reason, and user who performed the reversal.
@@ -68,21 +68,20 @@ export async function logAction(input: LogActionInput): Promise<FinanceAuditEntr
   }
 
   // Determine school ID if not provided
-  const schoolId = input.schoolId || user.schoolId
+  const schoolId = input.schoolId || user.schoolId || ''
 
   // Create audit entry
   const auditEntry = await prisma.financeAuditLog.create({
     data: {
       action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      details: input.details,
+      resourceType: input.entityType,
+      resourceId: input.entityId,
+      previousValue: input.details.previousValue || null,
+      newValue: input.details.newValue || null,
+      reason: (input.details.reason as string) || null,
       userId: input.userId,
-      userName: user.staff ? `${user.staff.firstName} ${user.staff.lastName}` : user.email,
-      userRole: user.role,
       schoolId,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
+      ipAddress: input.ipAddress || null,
       timestamp: new Date(),
     },
   })
@@ -90,15 +89,15 @@ export async function logAction(input: LogActionInput): Promise<FinanceAuditEntr
   return {
     id: auditEntry.id,
     action: auditEntry.action as FinanceAuditAction,
-    entityType: auditEntry.entityType,
-    entityId: auditEntry.entityId,
-    details: auditEntry.details as Record<string, unknown>,
+    resource: auditEntry.resourceType as FinanceAuditEntry['resource'],
+    resourceId: auditEntry.resourceId,
+    previousValue: auditEntry.previousValue as Record<string, unknown> | undefined,
+    newValue: auditEntry.newValue as Record<string, unknown> | undefined,
+    reason: auditEntry.reason || undefined,
     userId: auditEntry.userId,
-    userName: auditEntry.userName,
-    userRole: auditEntry.userRole,
+    userName: user.staff ? `${user.staff.firstName} ${user.staff.lastName}` : user.email,
     schoolId: auditEntry.schoolId,
-    ipAddress: auditEntry.ipAddress,
-    userAgent: auditEntry.userAgent,
+    ipAddress: auditEntry.ipAddress || undefined,
     timestamp: auditEntry.timestamp.toISOString(),
   }
 }
@@ -113,25 +112,32 @@ export async function getEntityAuditTrail(
 ): Promise<FinanceAuditEntry[]> {
   const entries = await prisma.financeAuditLog.findMany({
     where: {
-      entityType,
-      entityId,
+      resourceType: entityType,
+      resourceId: entityId,
     },
     orderBy: { timestamp: 'desc' },
     take: limit,
+    include: {
+      user: {
+        include: {
+          staff: true,
+        },
+      },
+    },
   })
 
   return entries.map(entry => ({
     id: entry.id,
     action: entry.action as FinanceAuditAction,
-    entityType: entry.entityType,
-    entityId: entry.entityId,
-    details: entry.details as Record<string, unknown>,
+    resource: entry.resourceType as FinanceAuditEntry['resource'],
+    resourceId: entry.resourceId,
+    previousValue: entry.previousValue as Record<string, unknown> | undefined,
+    newValue: entry.newValue as Record<string, unknown> | undefined,
+    reason: entry.reason || undefined,
     userId: entry.userId,
-    userName: entry.userName,
-    userRole: entry.userRole,
+    userName: entry.user.staff ? `${entry.user.staff.firstName} ${entry.user.staff.lastName}` : entry.user.email,
     schoolId: entry.schoolId,
-    ipAddress: entry.ipAddress,
-    userAgent: entry.userAgent,
+    ipAddress: entry.ipAddress || undefined,
     timestamp: entry.timestamp.toISOString(),
   }))
 }
@@ -144,7 +150,7 @@ export async function getUserAuditTrail(
   schoolId?: string,
   limit: number = 100
 ): Promise<FinanceAuditEntry[]> {
-  const where: any = { userId }
+  const where: { userId: string; schoolId?: string } = { userId }
   
   if (schoolId) {
     where.schoolId = schoolId
@@ -154,20 +160,27 @@ export async function getUserAuditTrail(
     where,
     orderBy: { timestamp: 'desc' },
     take: limit,
+    include: {
+      user: {
+        include: {
+          staff: true,
+        },
+      },
+    },
   })
 
   return entries.map(entry => ({
     id: entry.id,
     action: entry.action as FinanceAuditAction,
-    entityType: entry.entityType,
-    entityId: entry.entityId,
-    details: entry.details as Record<string, unknown>,
+    resource: entry.resourceType as FinanceAuditEntry['resource'],
+    resourceId: entry.resourceId,
+    previousValue: entry.previousValue as Record<string, unknown> | undefined,
+    newValue: entry.newValue as Record<string, unknown> | undefined,
+    reason: entry.reason || undefined,
     userId: entry.userId,
-    userName: entry.userName,
-    userRole: entry.userRole,
+    userName: entry.user.staff ? `${entry.user.staff.firstName} ${entry.user.staff.lastName}` : entry.user.email,
     schoolId: entry.schoolId,
-    ipAddress: entry.ipAddress,
-    userAgent: entry.userAgent,
+    ipAddress: entry.ipAddress || undefined,
     timestamp: entry.timestamp.toISOString(),
   }))
 }
@@ -199,14 +212,21 @@ export async function searchAuditTrail(
   const offset = (page - 1) * limit
 
   // Build where clause
-  const where: any = { schoolId }
+  const where: {
+    schoolId: string
+    action?: { in: FinanceAuditAction[] }
+    resourceType?: { in: string[] }
+    userId?: { in: string[] }
+    timestamp?: { gte?: Date; lte?: Date }
+    OR?: Array<{ resourceType?: { contains: string; mode: 'insensitive' }; resourceId?: { contains: string; mode: 'insensitive' } }>
+  } = { schoolId }
 
   if (filters.actions && filters.actions.length > 0) {
     where.action = { in: filters.actions }
   }
 
   if (filters.entityTypes && filters.entityTypes.length > 0) {
-    where.entityType = { in: filters.entityTypes }
+    where.resourceType = { in: filters.entityTypes }
   }
 
   if (filters.userIds && filters.userIds.length > 0) {
@@ -225,9 +245,8 @@ export async function searchAuditTrail(
 
   if (filters.searchTerm) {
     where.OR = [
-      { userName: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { entityType: { contains: filters.searchTerm, mode: 'insensitive' } },
-      { entityId: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { resourceType: { contains: filters.searchTerm, mode: 'insensitive' } },
+      { resourceId: { contains: filters.searchTerm, mode: 'insensitive' } },
     ]
   }
 
@@ -240,21 +259,28 @@ export async function searchAuditTrail(
     orderBy: { timestamp: 'desc' },
     skip: offset,
     take: limit,
+    include: {
+      user: {
+        include: {
+          staff: true,
+        },
+      },
+    },
   })
 
   return {
     entries: entries.map(entry => ({
       id: entry.id,
       action: entry.action as FinanceAuditAction,
-      entityType: entry.entityType,
-      entityId: entry.entityId,
-      details: entry.details as Record<string, unknown>,
+      resource: entry.resourceType as FinanceAuditEntry['resource'],
+      resourceId: entry.resourceId,
+      previousValue: entry.previousValue as Record<string, unknown> | undefined,
+      newValue: entry.newValue as Record<string, unknown> | undefined,
+      reason: entry.reason || undefined,
       userId: entry.userId,
-      userName: entry.userName,
-      userRole: entry.userRole,
+      userName: entry.user.staff ? `${entry.user.staff.firstName} ${entry.user.staff.lastName}` : entry.user.email,
       schoolId: entry.schoolId,
-      ipAddress: entry.ipAddress,
-      userAgent: entry.userAgent,
+      ipAddress: entry.ipAddress || undefined,
       timestamp: entry.timestamp.toISOString(),
     })),
     pagination: {
@@ -276,10 +302,10 @@ export async function getAuditStatistics(
 ): Promise<{
   totalActions: number
   actionBreakdown: Array<{ action: string; count: number }>
-  userBreakdown: Array<{ userId: string; userName: string; count: number }>
+  userBreakdown: Array<{ userId: string; count: number }>
   dailyActivity: Array<{ date: string; count: number }>
 }> {
-  const where: any = { schoolId }
+  const where: { schoolId: string; timestamp?: { gte?: Date; lte?: Date } } = { schoolId }
 
   if (startDate || endDate) {
     where.timestamp = {}
@@ -304,27 +330,33 @@ export async function getAuditStatistics(
 
   // Get user breakdown
   const userBreakdown = await prisma.financeAuditLog.groupBy({
-    by: ['userId', 'userName'],
+    by: ['userId'],
     where,
     _count: { userId: true },
     orderBy: { _count: { userId: 'desc' } },
     take: 10,
   })
 
-  // Get daily activity (last 30 days)
+  // Get daily activity (last 30 days) - simplified without raw SQL
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const dailyActivity = await prisma.$queryRaw<Array<{ date: string; count: bigint }>>`
-    SELECT 
-      DATE(timestamp) as date,
-      COUNT(*) as count
-    FROM FinanceAuditLog
-    WHERE schoolId = ${schoolId}
-      AND timestamp >= ${thirtyDaysAgo}
-    GROUP BY DATE(timestamp)
-    ORDER BY date DESC
-  `
+  const recentWhere = { ...where, timestamp: { gte: thirtyDaysAgo } }
+  const recentEntries = await prisma.financeAuditLog.findMany({
+    where: recentWhere,
+    select: { timestamp: true },
+  })
+
+  // Group by date manually
+  const dailyMap = new Map<string, number>()
+  recentEntries.forEach(entry => {
+    const date = entry.timestamp.toISOString().split('T')[0]
+    dailyMap.set(date, (dailyMap.get(date) || 0) + 1)
+  })
+
+  const dailyActivity = Array.from(dailyMap.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => b.date.localeCompare(a.date))
 
   return {
     totalActions,
@@ -334,13 +366,9 @@ export async function getAuditStatistics(
     })),
     userBreakdown: userBreakdown.map(item => ({
       userId: item.userId,
-      userName: item.userName,
-      count: item._count.userId,
+      count: item._count?.userId || 0,
     })),
-    dailyActivity: dailyActivity.map(item => ({
-      date: item.date,
-      count: Number(item.count),
-    })),
+    dailyActivity,
   }
 }
 

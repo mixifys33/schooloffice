@@ -94,6 +94,7 @@ export default function RegisterPage() {
     available: null,
     message: '',
   })
+  const [logoUploading, setLogoUploading] = useState(false)
 
   // Restore form data and step from sessionStorage on mount
   useEffect(() => {
@@ -101,17 +102,52 @@ export default function RegisterPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData)
-        if (parsed.formData) setFormData(parsed.formData)
+        if (parsed.formData) {
+          // Restore form data and regenerate preview from logo URL if available
+          const restoredData = {
+            ...parsed.formData,
+            schoolLogoPreview: parsed.formData.schoolLogo || '', // Use logo URL as preview
+          }
+          setFormData(restoredData)
+        }
         if (parsed.step) setStep(parsed.step as RegistrationStep)
-      } catch {
-        // Ignore parse errors
+      } catch (error) {
+        // If parse fails, clear corrupted data
+        console.warn('Failed to restore registration data:', error)
+        sessionStorage.removeItem(STORAGE_KEY)
       }
     }
   }, [])
 
   // Save form data and step to sessionStorage whenever they change
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ formData, step }))
+    try {
+      // Create a copy without the large base64 preview to avoid quota errors
+      const dataToSave = {
+        formData: {
+          ...formData,
+          schoolLogoPreview: '', // Don't save preview (can be large base64)
+        },
+        step,
+      }
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+    } catch (error) {
+      // If quota exceeded, clear old data and try again with minimal data
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.warn('SessionStorage quota exceeded, clearing old data')
+        sessionStorage.removeItem(STORAGE_KEY)
+        // Save only essential data (no logo preview)
+        try {
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ 
+            formData: { ...formData, schoolLogo: '', schoolLogoPreview: '' }, 
+            step 
+          }))
+        } catch {
+          // If still fails, just continue without saving
+          console.error('Unable to save to sessionStorage')
+        }
+      }
+    }
   }, [formData, step])
 
   const updateField = (field: keyof FormData, value: string | boolean) => {
@@ -344,8 +380,16 @@ export default function RegisterPage() {
                 
                 {/* Logo Preview */}
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg border-2 border-dashed border-[var(--border-default)] dark:border-[var(--border-strong)] flex items-center justify-center bg-[var(--bg-surface)] dark:bg-[var(--bg-surface)]">
-                    {formData.schoolLogoPreview ? (
+                  <div className="w-16 h-16 rounded-lg border-2 border-dashed border-[var(--border-default)] dark:border-[var(--border-strong)] flex items-center justify-center bg-[var(--bg-surface)] dark:bg-[var(--bg-surface)] relative">
+                    {logoUploading ? (
+                      // Loading animation
+                      <div className="flex flex-col items-center justify-center">
+                        <svg className="animate-spin h-8 w-8 text-[var(--text-primary)] dark:text-[var(--text-muted)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      </div>
+                    ) : formData.schoolLogoPreview ? (
                       <img 
                         src={formData.schoolLogoPreview} 
                         alt="School logo preview" 
@@ -366,14 +410,29 @@ export default function RegisterPage() {
                       placeholder="Enter logo URL or upload file" 
                       value={formData.schoolLogo} 
                       onChange={(e) => {
+                        const url = e.target.value.trim();
                         updateField('schoolLogo', e.target.value);
+                        
                         // Update preview when URL changes
-                        if (e.target.value.trim()) {
-                          updateField('schoolLogoPreview', e.target.value.trim());
+                        if (url) {
+                          setLogoUploading(true);
+                          // Simulate loading for URL (check if image loads)
+                          const img = new Image();
+                          img.onload = () => {
+                            updateField('schoolLogoPreview', url);
+                            setLogoUploading(false);
+                          };
+                          img.onerror = () => {
+                            setLogoUploading(false);
+                            setToast({ type: 'error', message: 'Failed to load image from URL' });
+                          };
+                          img.src = url;
                         } else {
                           updateField('schoolLogoPreview', '');
+                          setLogoUploading(false);
                         }
                       }} 
+                      disabled={logoUploading}
                       touchFriendly 
                     />
                     
@@ -382,31 +441,75 @@ export default function RegisterPage() {
                       <input
                         type="file"
                         accept="image/*"
+                        disabled={logoUploading}
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            // Check file size (max 2MB)
+                            if (file.size > 2 * 1024 * 1024) {
+                              setToast({ type: 'error', message: 'Image size must be less than 2MB' });
+                              e.target.value = ''; // Clear input
+                              return;
+                            }
+                            
+                            setLogoUploading(true);
+                            
                             // Create preview URL
                             const reader = new FileReader();
                             reader.onload = (event) => {
                               const result = event.target?.result as string;
                               updateField('schoolLogoPreview', result);
                               updateField('schoolLogo', result);
+                              setLogoUploading(false);
+                            };
+                            reader.onerror = () => {
+                              setLogoUploading(false);
+                              setToast({ type: 'error', message: 'Failed to read image file' });
                             };
                             reader.readAsDataURL(file);
                           }
                         }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                       />
-                      <div className="flex items-center justify-center px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--bg-surface)] text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] cursor-pointer">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Choose File
+                      <div className={`flex items-center justify-center px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--bg-surface)] text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] ${logoUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] cursor-pointer'}`}>
+                        {logoUploading ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Choose File
+                          </>
+                        )}
                       </div>
                     </div>
                     
+                    {/* Clear button when logo is uploaded */}
+                    {formData.schoolLogoPreview && !logoUploading && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateField('schoolLogo', '');
+                          updateField('schoolLogoPreview', '');
+                        }}
+                        className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)] hover:underline"
+                      >
+                        Remove logo
+                      </button>
+                    )}
+                    
                     <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-                      Upload your school logo or badge. Recommended size: 200x200px
+                      {logoUploading 
+                        ? 'Processing image...' 
+                        : 'Upload your school logo or badge. Max size: 2MB, Recommended: 200x200px'
+                      }
                     </p>
                   </div>
                 </div>
@@ -482,7 +585,12 @@ export default function RegisterPage() {
 
               <div className="flex gap-3 mt-6">
                 <Button type="button" variant="outline" onClick={handleBack} size="touch" className="flex-1">Back</Button>
-                <Button type="submit" disabled={isPending} size="touch" className="flex-1">
+                <Button 
+                  type="submit" 
+                  disabled={isPending || !formData.termsAccepted || !formData.dataResponsibilityAcknowledged} 
+                  size="touch" 
+                  className="flex-1"
+                >
                   {isPending ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

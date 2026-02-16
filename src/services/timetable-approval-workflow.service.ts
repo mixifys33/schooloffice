@@ -3,7 +3,7 @@
  * 
  * Integrates the constraint engine with DoS authority structure.
  * Handles the complete workflow from draft to publication.
- * 
+ *     
  * Authority Structure:
  * - DoS: Absolute authority over timetables
  * - Head Teacher: Final oversight (view only)
@@ -15,12 +15,8 @@
  */
 
 import { db } from '@/lib/db';
-import { timetableConstraintEngine } from './timetable-constraint-engine.service';
-import type {
-  TimetableStatus,
-  GenerationStatus,
-  ConflictSeverity
-} from '@/types/timetable';
+import { timetableConstraintEngine, ConstraintViolation } from './timetable-constraint-engine.service';
+import { TimetableStatus, ConflictSeverity } from '@/types/timetable';
 import type {
   TimetableDraft,
   TimetableSlot,
@@ -96,7 +92,7 @@ export class TimetableApprovalWorkflowService {
         generationStatus: 'RUNNING',
         generationStarted: new Date(),
         status: 'DRAFT',
-        createdBy: request.dosUserId
+        generatedBy: request.dosUserId
       }
     });
 
@@ -109,7 +105,7 @@ export class TimetableApprovalWorkflowService {
       );
 
       // Save slots to database
-      const slots = await this.saveSolutionSlots(draft.id, solution.slots);
+      await this.saveSolutionSlots(draft.id, solution.slots);
       
       // Calculate analytics
       const analytics = await this.calculateAnalytics(draft.id, solution);
@@ -126,12 +122,12 @@ export class TimetableApprovalWorkflowService {
           qualityScore: analytics.qualityScore,
           hardConstraintViolations: solution.violations.filter(v => v.severity === 'CRITICAL').length,
           softConstraintViolations: solution.violations.filter(v => v.severity !== 'CRITICAL').length,
-          generationLog: {
+          generationLog: JSON.parse(JSON.stringify({
             settings: request.settings,
-            analytics,
+            analytics: analytics,
             violations: solution.violations,
-            generatedAt: new Date()
-          }
+            generatedAt: new Date().toISOString()
+          }))
         }
       });
 
@@ -180,7 +176,7 @@ export class TimetableApprovalWorkflowService {
 
     // Update slot
     const updatedSlot = await db.timetableSlot.update({
-      where: { id: slotId, draftId },
+      where: { id: slotId },
       data: {
         ...updates,
         updatedAt: new Date()
@@ -251,9 +247,9 @@ export class TimetableApprovalWorkflowService {
   // CONFLICT DETECTION & RESOLUTION
   // ============================================
   
-  async detectAllConflicts(draftId: string): Promise<any[]> {
+  async detectAllConflicts(draftId: string): Promise<ConstraintViolation[]> {
     const slots = await db.timetableSlot.findMany({
-      where: { draftId },
+      where: { timetableId: draftId },
       include: {
         class: true,
         subject: true,
@@ -262,10 +258,16 @@ export class TimetableApprovalWorkflowService {
       }
     });
 
+    // Get draft to get schoolId and termId
+    const draft = await db.timetableDraft.findUnique({
+      where: { id: draftId },
+      select: { schoolId: true, termId: true }
+    });
+
     const solution = {
       slots,
-      schoolId: slots[0]?.draft?.schoolId || '',
-      termId: slots[0]?.draft?.termId || '',
+      schoolId: draft?.schoolId || '',
+      termId: draft?.termId || '',
       violations: []
     };
 
@@ -334,8 +336,8 @@ export class TimetableApprovalWorkflowService {
     // Check if draft has critical conflicts
     const criticalConflicts = await db.timetableConflictLog.count({
       where: {
-        draftId,
-        severity: 'CRITICAL',
+        timetableId: draftId,
+        severity: ConflictSeverity.CRITICAL,
         isResolved: false
       }
     });
@@ -375,7 +377,12 @@ export class TimetableApprovalWorkflowService {
       throw new Error('Approval record not found');
     }
 
-    const updateData: any = {
+    const updateData: {
+      reviewedBy: string;
+      reviewedAt: Date;
+      reviewStatus: string;
+      reviewNotes?: string;
+    } = {
       reviewedBy: request.dosUserId,
       reviewedAt: new Date(),
       reviewStatus: request.action,
@@ -386,13 +393,13 @@ export class TimetableApprovalWorkflowService {
     let draftStatus: TimetableStatus;
     switch (request.action) {
       case 'APPROVE':
-        draftStatus = 'APPROVED';
+        draftStatus = TimetableStatus.APPROVED;
         break;
       case 'REJECT':
-        draftStatus = 'DRAFT';
+        draftStatus = TimetableStatus.DRAFT;
         break;
       case 'REQUEST_CHANGES':
-        draftStatus = 'DRAFT';
+        draftStatus = TimetableStatus.DRAFT;
         break;
     }
 
@@ -556,7 +563,7 @@ export class TimetableApprovalWorkflowService {
         termId: originalDraft.termId,
         name: `${originalDraft.name} v${existingVersions + 2}`,
         status: 'DRAFT',
-        createdBy: dosUserId,
+        generatedBy: dosUserId,
         generationStatus: 'IDLE'
       }
     });
@@ -568,16 +575,16 @@ export class TimetableApprovalWorkflowService {
 
     if (originalSlots.length > 0) {
       await db.timetableSlot.createMany({
-        data: originalSlots.map((slot: any) => ({
+        data: originalSlots.map((slot) => ({
           timetableId: newDraft.id,
+          schoolId: originalDraft.schoolId,
           dayOfWeek: slot.dayOfWeek,
           period: slot.period,
           classId: slot.classId,
           subjectId: slot.subjectId,
           teacherId: slot.teacherId,
           roomId: slot.roomId,
-          isDouble: slot.isDouble,
-          isPractical: slot.isPractical,
+          isDoubleSlot: slot.isDoubleSlot || false,
           notes: slot.notes
         }))
       });
@@ -594,7 +601,7 @@ export class TimetableApprovalWorkflowService {
     draftId: string,
     userId: string,
     role: string
-  ): Promise<any> {
+  ): Promise<TimetableDraft & { slots: TimetableSlot[] }> {
     const user = await db.user.findUnique({
       where: { id: userId },
       include: { staff: true }
@@ -607,14 +614,7 @@ export class TimetableApprovalWorkflowService {
     const draft = await db.timetableDraft.findUnique({
       where: { id: draftId },
       include: {
-        slots: {
-          include: {
-            class: true,
-            subject: true,
-            teacher: true,
-            room: true
-          }
-        }
+        slots: true
       }
     });
 
@@ -636,7 +636,7 @@ export class TimetableApprovalWorkflowService {
         
         return {
           ...draft,
-          slots: draft.slots.filter((slot: any) => slot.teacherId === user.staff!.id)
+          slots: draft.slots.filter((slot) => slot.teacherId === user.staff!.id)
         };
         
       case 'CLASS_TEACHER':
@@ -649,11 +649,11 @@ export class TimetableApprovalWorkflowService {
           where: { staffId: user.staff.id }
         });
         
-        const classIds = staffClasses.map((sc: any) => sc.classId);
+        const classIds = staffClasses.map((sc) => sc.classId);
         
         return {
           ...draft,
-          slots: draft.slots.filter((slot: any) => classIds.includes(slot.classId))
+          slots: draft.slots.filter((slot) => classIds.includes(slot.classId))
         };
         
       case 'SCHOOL_ADMIN':
@@ -674,14 +674,7 @@ export class TimetableApprovalWorkflowService {
     const draft = await db.timetableDraft.findUnique({
       where: { id: draftId },
       include: {
-        slots: {
-          include: {
-            teacher: true,
-            room: true,
-            class: true,
-            subject: true
-          }
-        }
+        slots: true
       }
     });
 
@@ -691,8 +684,6 @@ export class TimetableApprovalWorkflowService {
 
     return this.calculateAnalytics(draftId, { 
       slots: draft.slots,
-      schoolId: draft.schoolId,
-      termId: draft.termId,
       violations: []
     });
   }
@@ -734,9 +725,20 @@ export class TimetableApprovalWorkflowService {
     return draft;
   }
 
-  private async saveSolutionSlots(draftId: string, slots: any[]): Promise<TimetableSlot[]> {
+  private async saveSolutionSlots(draftId: string, slots: TimetableSlot[]): Promise<TimetableSlot[]> {
+    // Get draft to get schoolId
+    const draft = await db.timetableDraft.findUnique({
+      where: { id: draftId },
+      select: { schoolId: true }
+    });
+
+    if (!draft) {
+      throw new Error('Draft not found');
+    }
+
     const slotData = slots.map(slot => ({
-      draftId,
+      timetableId: draftId,
+      schoolId: draft.schoolId,
       dayOfWeek: slot.dayOfWeek,
       period: slot.period,
       classId: slot.classId,
@@ -752,18 +754,19 @@ export class TimetableApprovalWorkflowService {
     });
 
     return db.timetableSlot.findMany({
-      where: { draftId }
+      where: { timetableId: draftId }
     });
   }
 
-  private async calculateAnalytics(draftId: string, solution: any): Promise<TimetableAnalytics> {
+  private async calculateAnalytics(_draftId: string, solution: { slots: TimetableSlot[]; violations?: ConstraintViolation[]; qualityScore?: number }): Promise<TimetableAnalytics> {
     const slots = solution.slots;
     
     // Teacher workload analysis
     const teacherLoads = new Map<string, number>();
-    slots.forEach((slot: any) => {
-      const current = teacherLoads.get(slot.teacherId) || 0;
-      teacherLoads.set(slot.teacherId, current + 1);
+    slots.forEach((slot) => {
+      const teacherId = (slot as unknown as { teacherId: string }).teacherId;
+      const current = teacherLoads.get(teacherId) || 0;
+      teacherLoads.set(teacherId, current + 1);
     });
 
     const loads = Array.from(teacherLoads.values());
@@ -773,10 +776,11 @@ export class TimetableApprovalWorkflowService {
 
     // Room utilization
     const roomUsage = new Map<string, number>();
-    slots.forEach((slot: any) => {
-      if (slot.roomId) {
-        const current = roomUsage.get(slot.roomId) || 0;
-        roomUsage.set(slot.roomId, current + 1);
+    slots.forEach((slot) => {
+      const roomId = (slot as unknown as { roomId?: string }).roomId;
+      if (roomId) {
+        const current = roomUsage.get(roomId) || 0;
+        roomUsage.set(roomId, current + 1);
       }
     });
 
@@ -805,18 +809,8 @@ export class TimetableApprovalWorkflowService {
     };
   }
 
-  private async logConflicts(draftId: string, violations: any[]): Promise<void> {
+  private async logConflicts(draftId: string, violations: ConstraintViolation[]): Promise<void> {
     if (violations.length === 0) return;
-
-    const conflictData = violations.map(violation => ({
-      schoolId: '', // Will be filled from draft
-      draftId,
-      conflictType: violation.constraintId,
-      severity: violation.severity as ConflictSeverity,
-      description: violation.description,
-      affectedSlots: violation.affectedSlots,
-      suggestedFixes: violation.suggestedFixes
-    }));
 
     // Get school ID from draft
     const draft = await db.timetableDraft.findUnique({
@@ -824,15 +818,22 @@ export class TimetableApprovalWorkflowService {
       select: { schoolId: true }
     });
 
-    if (draft) {
-      conflictData.forEach(conflict => {
-        conflict.schoolId = draft.schoolId;
-      });
+    if (!draft) return;
 
-      await db.timetableConflictLog.createMany({
-        data: conflictData
-      });
-    }
+    const conflictData = violations.map(violation => ({
+      schoolId: draft.schoolId,
+      timetableId: draftId,
+      title: violation.description.substring(0, 100), // Use first 100 chars as title
+      conflictType: violation.constraintId,
+      severity: violation.severity,
+      description: violation.description,
+      affectedSlots: violation.affectedSlots,
+      suggestedFixes: violation.suggestedFixes
+    }));
+
+    await db.timetableConflictLog.createMany({
+      data: conflictData
+    });
   }
 
   private async recheckSlotConflicts(draftId: string, slotId: string): Promise<void> {
@@ -865,11 +866,11 @@ export class TimetableApprovalWorkflowService {
     if (!draft) return;
 
     // Get all class IDs involved to clean up old entries
-    const classIds = [...new Set(draft.slots.map((s: any) => s.classId))];
+    const classIds = [...new Set(draft.slots.map((s) => (s as unknown as { classId: string }).classId))];
 
     if (classIds.length === 0) return;
 
-    await db.$transaction(async (tx: any) => {
+    await db.$transaction(async (tx) => {
       // 1. Delete existing entries for these classes
       await tx.timetableEntry.deleteMany({
         where: {
@@ -880,16 +881,27 @@ export class TimetableApprovalWorkflowService {
       // 2. Create new entries
       if (draft.slots.length > 0) {
         await tx.timetableEntry.createMany({
-          data: draft.slots.map((slot: any) => ({
-            classId: slot.classId,
-            subjectId: slot.subjectId,
-            staffId: slot.teacherId,
-            dayOfWeek: slot.dayOfWeek,
-            period: slot.period,
-            room: slot.room?.name || null,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }))
+          data: draft.slots.map((slot) => {
+            const s = slot as unknown as {
+              classId: string;
+              subjectId: string;
+              teacherId: string;
+              dayOfWeek: number;
+              period: number;
+              room?: { name: string } | null;
+            };
+            return {
+              schoolId: draft.schoolId,
+              classId: s.classId,
+              subjectId: s.subjectId,
+              staffId: s.teacherId,
+              dayOfWeek: s.dayOfWeek,
+              period: s.period,
+              room: s.room?.name || null,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+          })
         });
       }
     });
@@ -943,12 +955,25 @@ export class TimetableApprovalWorkflowService {
       });
 
       // Group slots by teacher
-      const slotsByTeacher = new Map<string, any[]>();
-      teacherSlots.forEach((slot: any) => {
-        if (!slotsByTeacher.has(slot.teacherId)) {
-          slotsByTeacher.set(slot.teacherId, []);
+      const slotsByTeacher = new Map<string, Array<{
+        teacherId: string;
+        subjectId: string;
+        classId: string;
+        subject?: { name: string };
+        class?: { name: string };
+      }>>();
+      teacherSlots.forEach((slot) => {
+        const teacherId = (slot as unknown as { teacherId: string }).teacherId;
+        if (!slotsByTeacher.has(teacherId)) {
+          slotsByTeacher.set(teacherId, []);
         }
-        slotsByTeacher.get(slot.teacherId)!.push(slot);
+        slotsByTeacher.get(teacherId)!.push(slot as unknown as {
+          teacherId: string;
+          subjectId: string;
+          classId: string;
+          subject?: { name: string };
+          class?: { name: string };
+        });
       });
 
       // Create notifications for each teacher with slots
@@ -958,8 +983,8 @@ export class TimetableApprovalWorkflowService {
         if (slots.length === 0) continue;
 
         const periodCount = slots.length;
-        const uniqueSubjects = new Set(slots.map((s: any) => s.subjectId)).size;
-        const uniqueClasses = new Set(slots.map((s: any) => s.classId)).size;
+        const uniqueSubjects = new Set(slots.map((s) => s.subjectId)).size;
+        const uniqueClasses = new Set(slots.map((s) => s.classId)).size;
 
         const message = `Dear ${teacher.firstName} ${teacher.lastName},
 
@@ -974,7 +999,7 @@ Please review your personal timetable in the staff portal.
 
 Published on ${new Date().toLocaleDateString()}
 
-${timetable.school?.name || 'School'}`;
+School`;
 
         // Use teacher's preferred channel (SMS if they have phone, EMAIL if they have email)
         const channel = teacher.email ? 'EMAIL' : 'SMS';
@@ -1063,12 +1088,13 @@ ${timetable.school?.name || 'School'}`;
       });
 
       // Group slots by class
-      const slotsByClass = new Map<string, any[]>();
-      classSlots.forEach((slot: any) => {
-        if (!slotsByClass.has(slot.classId)) {
-          slotsByClass.set(slot.classId, []);
+      const slotsByClass = new Map<string, typeof classSlots>();
+      classSlots.forEach((slot) => {
+        const classId = (slot as unknown as { classId: string }).classId;
+        if (!slotsByClass.has(classId)) {
+          slotsByClass.set(classId, []);
         }
-        slotsByClass.get(slot.classId)!.push(slot);
+        slotsByClass.get(classId)!.push(slot);
       });
 
       // Create notifications for each student's guardians
@@ -1091,7 +1117,7 @@ You can view the class timetable in the parent portal.
 
 Published on ${new Date().toLocaleDateString()}
 
-${timetable.school?.name || 'School'}`;
+School`;
 
           // Use guardian's preferred channel
           const channel = guardian.preferredChannel;

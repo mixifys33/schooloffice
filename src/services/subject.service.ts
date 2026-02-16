@@ -11,7 +11,7 @@ import {
   GradeRange,
   CreateGradingSystemInput,
 } from '@/types'
-
+   
 /**
  * Map Prisma Subject to domain Subject type
  */

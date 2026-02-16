@@ -14,7 +14,7 @@ import type { Student, CreateStudentInput } from '../../src/types/entities'
 // ============================================
 // STUDENT PROFILE VALIDATION UTILITIES
 // ============================================
-
+  
 /**
  * Required fields for a valid student profile
  * Based on Requirements 4.1: bio data, assigned class, and stream

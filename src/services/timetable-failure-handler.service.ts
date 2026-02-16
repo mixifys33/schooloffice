@@ -1,6 +1,6 @@
 /**
  * TIMETABLE FAILURE MODE HANDLER
- * 
+ *   
  * Handles emergency scenarios that require immediate timetable intervention:
  * - Teacher resignation mid-term
  * - Teacher medical leave
@@ -26,7 +26,7 @@ interface FailureContext {
   termId: string;
   timetableId: string;
   failureType: FailureType;
-  metadata: any;
+  metadata: Record<string, unknown>;
   requestedBy: string; // DoS user ID
 }
 
@@ -39,8 +39,19 @@ enum FailureType {
   EMERGENCY_CHANGE = 'EMERGENCY_CHANGE'
 }
 
+interface TimetableSlot {
+  id: string;
+  classId: string;
+  subjectId: string;
+  teacherId: string;
+  roomId?: string | null;
+  subject: { id: string; name: string };
+  class: { id: string; name: string };
+  teacher: { id: string; firstName: string; lastName: string };
+}
+
 interface ImpactAnalysis {
-  affectedSlots: any[];
+  affectedSlots: TimetableSlot[];
   affectedClasses: string[];
   affectedTeachers: string[];
   affectedStudents: number;
@@ -57,7 +68,7 @@ export class TimetableFailureModeHandler {
   async handleTeacherResignation(context: FailureContext): Promise<ImpactAnalysis> {
     console.log(`Handling teacher resignation for teacher: ${context.metadata.teacherId}`);
     
-    const { teacherId, resignationDate, lastWorkingDay } = context.metadata;
+    const { teacherId } = context.metadata as { teacherId: string };
     
     // Analyze impact
     const impact = await this.analyzeTeacherRemovalImpact(
@@ -139,7 +150,12 @@ export class TimetableFailureModeHandler {
   async handleTeacherLeave(context: FailureContext): Promise<ImpactAnalysis> {
     console.log(`Handling teacher leave for teacher: ${context.metadata.teacherId}`);
     
-    const { teacherId, leaveStart, leaveEnd, isEmergency } = context.metadata;
+    const { teacherId, leaveStart, leaveEnd } = context.metadata as {
+      teacherId: string;
+      leaveStart: Date;
+      leaveEnd: Date;
+      isEmergency?: boolean;
+    };
     
     // Analyze impact
     const impact = await this.analyzeTeacherRemovalImpact(
@@ -151,8 +167,7 @@ export class TimetableFailureModeHandler {
     const replacements = await this.findReplacementTeachers(
       context.schoolId,
       teacherId,
-      impact.affectedSlots,
-      { temporary: true, startDate: leaveStart, endDate: leaveEnd }
+      impact.affectedSlots
     );
     
     // Create temporary reassignment records (not a new version)
@@ -177,7 +192,7 @@ export class TimetableFailureModeHandler {
       timetableId: context.timetableId,
       impact,
       handledBy: context.requestedBy,
-      metadata: { leaveStart, leaveEnd, isEmergency }
+      metadata: { leaveStart: leaveStart.toISOString(), leaveEnd: leaveEnd.toISOString() }
     });
     
     return {
@@ -197,7 +212,12 @@ export class TimetableFailureModeHandler {
   async handleClassSuspension(context: FailureContext): Promise<ImpactAnalysis> {
     console.log(`Handling class suspension for classes: ${context.metadata.classIds}`);
     
-    const { classIds, suspensionStart, suspensionEnd, reason } = context.metadata;
+    const { classIds, suspensionStart, suspensionEnd, reason } = context.metadata as {
+      classIds: string[];
+      suspensionStart: Date;
+      suspensionEnd: Date;
+      reason: string;
+    };
     
     // Analyze impact
     const impact = await this.analyzeClassRemovalImpact(
@@ -227,7 +247,11 @@ export class TimetableFailureModeHandler {
       newVersion: newVersion.id,
       impact,
       handledBy: context.requestedBy,
-      metadata: { suspensionStart, suspensionEnd, reason }
+      metadata: { 
+        suspensionStart: suspensionStart.toISOString(), 
+        suspensionEnd: suspensionEnd.toISOString(), 
+        reason 
+      }
     });
     
     // Notify teachers and parents
@@ -254,12 +278,16 @@ export class TimetableFailureModeHandler {
   async handleSubjectChange(context: FailureContext): Promise<ImpactAnalysis> {
     console.log(`Handling subject change: ${context.metadata.action}`);
     
-    const { action, subjectId, classIds } = context.metadata; // action: 'ADD' | 'REMOVE'
+    const { action, subjectId, classIds } = context.metadata as {
+      action: 'ADD' | 'REMOVE';
+      subjectId: string;
+      classIds: string[];
+    };
     
     if (action === 'REMOVE') {
       return await this.handleSubjectRemoval(context, subjectId, classIds);
     } else {
-      return await this.handleSubjectAddition(context, subjectId, classIds);
+      return await this.handleSubjectAddition();
     }
   }
 
@@ -270,7 +298,12 @@ export class TimetableFailureModeHandler {
   async handleRoomUnavailability(context: FailureContext): Promise<ImpactAnalysis> {
     console.log(`Handling room unavailability for room: ${context.metadata.roomId}`);
     
-    const { roomId, unavailableStart, unavailableEnd, reason } = context.metadata;
+    const { roomId, unavailableStart, unavailableEnd, reason } = context.metadata as {
+      roomId: string;
+      unavailableStart: Date;
+      unavailableEnd: Date;
+      reason: string;
+    };
     
     // Find all slots using this room
     const affectedSlots = await db.timetableSlot.findMany({
@@ -310,8 +343,8 @@ export class TimetableFailureModeHandler {
     
     const impact: ImpactAnalysis = {
       affectedSlots,
-      affectedClasses: [...new Set(affectedSlots.map((s: any) => s.classId))] as string[],
-      affectedTeachers: [...new Set(affectedSlots.map((s: any) => s.teacherId))] as string[],
+      affectedClasses: [...new Set(affectedSlots.map(s => s.classId))] as string[],
+      affectedTeachers: [...new Set(affectedSlots.map(s => s.teacherId))] as string[],
       affectedStudents: 0, // Would calculate from classes
       criticalPeriods: affectedSlots.length - alternatives.size,
       proposedSolutions: [
@@ -325,7 +358,11 @@ export class TimetableFailureModeHandler {
       timetableId: context.timetableId,
       impact,
       handledBy: context.requestedBy,
-      metadata: { unavailableStart, unavailableEnd, reason }
+      metadata: { 
+        unavailableStart: unavailableStart.toISOString(), 
+        unavailableEnd: unavailableEnd.toISOString(), 
+        reason 
+      }
     });
     
     return impact;
@@ -335,10 +372,18 @@ export class TimetableFailureModeHandler {
    * SCENARIO 6: Emergency Regeneration
    * Force regenerate timetable with teacher overrides
    */
-  async handleEmergencyRegeneration(context: FailureContext): Promise<any> {
+  async handleEmergencyRegeneration(context: FailureContext): Promise<{
+    newVersionId: string;
+    qualityScore: number;
+    conflicts: number;
+    message: string;
+  }> {
     console.log(`Handling emergency timetable regeneration`);
     
-    const { reason, overrides } = context.metadata;
+    const { reason, overrides } = context.metadata as {
+      reason: string;
+      overrides: Record<string, unknown>;
+    };
     
     // Create new version
     const newVersion = await timetableApprovalWorkflow.createNewVersion(
@@ -360,14 +405,23 @@ export class TimetableFailureModeHandler {
     );
     
     // Save new slots
-    const slotData = solution.slots.map(slot => ({
+    const slotData = (solution.slots as Array<{
+      dayOfWeek: number;
+      period: number;
+      classId: string;
+      subjectId: string;
+      teacherId: string;
+      roomId?: string | null;
+      isDoubleSlot?: boolean;
+    }>).map(slot => ({
       timetableId: newVersion.id,
+      schoolId: context.schoolId,
       dayOfWeek: slot.dayOfWeek,
       period: slot.period,
       classId: slot.classId,
       subjectId: slot.subjectId,
       teacherId: slot.teacherId,
-      roomId: slot.roomId,
+      roomId: slot.roomId || null,
       isDoubleSlot: slot.isDoubleSlot || false,
       notes: 'Emergency regeneration'
     }));
@@ -378,7 +432,7 @@ export class TimetableFailureModeHandler {
     await db.timetableDraft.update({
       where: { id: newVersion.id },
       data: {
-        qualityScore: solution.qualityScore,
+        qualityScore: solution.qualityScore || 0,
         conflictCount: solution.violations.length,
         hardConstraintViolations: solution.violations.filter(v => v.severity === 'CRITICAL').length
       }
@@ -395,7 +449,7 @@ export class TimetableFailureModeHandler {
     
     return {
       newVersionId: newVersion.id,
-      qualityScore: solution.qualityScore,
+      qualityScore: solution.qualityScore || 0,
       conflicts: solution.violations.length,
       message: 'Emergency regeneration completed - review and approve'
     };
@@ -421,7 +475,7 @@ export class TimetableFailureModeHandler {
       }
     });
     
-    const affectedClasses = [...new Set(affectedSlots.map((s: any) => s.classId))] as string[];
+    const affectedClasses = [...new Set(affectedSlots.map(s => s.classId))] as string[];
     const affectedStudents = await db.student.count({
       where: {
         classId: { in: affectedClasses },
@@ -455,7 +509,7 @@ export class TimetableFailureModeHandler {
       }
     });
     
-    const affectedTeachers = [...new Set(affectedSlots.map((s: any) => s.teacherId))] as string[];
+    const affectedTeachers = [...new Set(affectedSlots.map(s => s.teacherId))] as string[];
     const affectedStudents = await db.student.count({
       where: {
         classId: { in: classIds },
@@ -476,13 +530,12 @@ export class TimetableFailureModeHandler {
   private async findReplacementTeachers(
     schoolId: string,
     resignedTeacherId: string,
-    affectedSlots: any[],
-    options?: { temporary?: boolean; startDate?: Date; endDate?: Date }
-  ): Promise<Map<string, any>> {
-    const replacements = new Map<string, any>();
+    affectedSlots: TimetableSlot[]
+  ): Promise<Map<string, { id: string; firstName: string; lastName: string }>> {
+    const replacements = new Map<string, { id: string; firstName: string; lastName: string }>();
     
     // Group slots by subject
-    const slotsBySubject = new Map<string, any[]>();
+    const slotsBySubject = new Map<string, TimetableSlot[]>();
     affectedSlots.forEach(slot => {
       if (!slotsBySubject.has(slot.subjectId)) {
         slotsBySubject.set(slot.subjectId, []);
@@ -491,7 +544,7 @@ export class TimetableFailureModeHandler {
     });
     
     // Find replacement teacher for each subject
-    for (const [subjectId, slots] of slotsBySubject) {
+    for (const [subjectId] of slotsBySubject) {
       // Get qualified teachers for this subject
       const qualifiedTeachers = await db.staff.findMany({
         where: {
@@ -510,7 +563,7 @@ export class TimetableFailureModeHandler {
       if (qualifiedTeachers.length > 0) {
         // Pick teacher with least current workload
         const teacherWorkloads = await Promise.all(
-          qualifiedTeachers.map(async (teacher: any) => ({
+          qualifiedTeachers.map(async (teacher: { id: string; firstName: string; lastName: string }) => ({
             teacher,
             workload: await this.calculateTeacherWorkload(teacher.id)
           }))
@@ -527,9 +580,9 @@ export class TimetableFailureModeHandler {
   private async findAlternativeRooms(
     schoolId: string,
     unavailableRoomId: string,
-    affectedSlots: any[]
-  ): Promise<Map<string, any>> {
-    const alternatives = new Map<string, any>();
+    affectedSlots: TimetableSlot[]
+  ): Promise<Map<string, { id: string; name: string }>> {
+    const alternatives = new Map<string, { id: string; name: string }>();
     
     // Get all available rooms
     const availableRooms = await db.room.findMany({
@@ -542,9 +595,10 @@ export class TimetableFailureModeHandler {
     
     for (const slot of affectedSlots) {
       // Find suitable room based on subject requirements
-      const suitableRoom = availableRooms.find((room: any) => {
+      const suitableRoom = availableRooms.find((room: { id: string; name: string; hasLab?: boolean }) => {
         // Check if room meets subject requirements
-        if (slot.subject.requiresLab && !room.hasLab) {
+        const subjectRequiresLab = (slot.subject as { requiresLab?: boolean }).requiresLab;
+        if (subjectRequiresLab && !room.hasLab) {
           return false;
         }
         // Add more criteria as needed
@@ -603,24 +657,20 @@ export class TimetableFailureModeHandler {
     return {
       affectedSlots,
       affectedClasses: classIds,
-      affectedTeachers: [...new Set(affectedSlots.map((s: any) => s.teacherId))] as string[],
+      affectedTeachers: [...new Set(affectedSlots.map(s => s.teacherId))] as string[],
       affectedStudents: 0,
       criticalPeriods: 0,
       proposedSolutions: [`${affectedSlots.length} slots removed`]
     };
   }
 
-  private async handleSubjectAddition(
-    context: FailureContext,
-    subjectId: string,
-    classIds: string[]
-  ): Promise<ImpactAnalysis> {
+  private async handleSubjectAddition(): Promise<ImpactAnalysis> {
     // Would need to regenerate timetable with new subject
     // This is complex and would require calling generation engine
     throw new Error('Subject addition requires full regeneration');
   }
 
-  private async logFailureHandling(data: any): Promise<void> {
+  private async logFailureHandling(data: Record<string, unknown>): Promise<void> {
     console.log('Failure mode handled:', data);
     
     // You might want to create a FailureModeLog model
@@ -635,9 +685,9 @@ export class TimetableFailureModeHandler {
     console.log(`Notifying about failure handling: ${message}`);
     
     // Notify affected teachers
-    for (const teacherId of impact.affectedTeachers) {
-      // Create notification
-    }
+    // for (const teacherId of impact.affectedTeachers) {
+    //   // Create notification
+    // }
     
     // Notify DoS
     // Notify parents if needed

@@ -37,7 +37,7 @@ export default function AddSubjectPage() {
   const [saving, setSaving] = useState(false);
 
   const handleBack = () => {
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   const handleSave = async () => {
@@ -46,7 +46,7 @@ export default function AddSubjectPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaving(false);
     // Redirect back to management page
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   const handleSubjectChange = (key: keyof NewSubject, value: any) => {

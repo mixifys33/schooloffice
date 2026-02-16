@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db'
 // ============================================
 // CONFIGURATION
 // ============================================
-
+    
 /**
  * Rate limiting configuration
  * Requirements: 7.1, 7.2

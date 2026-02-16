@@ -5,7 +5,7 @@
  * 
  * For any data entity (student, payment, result, etc.), serializing to JSON 
  * and deserializing back SHALL produce an equivalent object with no data loss.
- */
+ */  
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import {

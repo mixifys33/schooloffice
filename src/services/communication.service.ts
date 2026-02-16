@@ -5,7 +5,7 @@
  * Requirements: 29.1, 29.2, 29.3, 29.4, 29.5 (Bulk Messaging)
  * 
  * FOCUS: SMS as primary, Email as fallback. No WhatsApp complexity.
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   Message,
@@ -1540,7 +1540,7 @@ export class CommunicationService {
     delivered: number
     failed: number
     read: number
-    byChannel: Record<MessageChannel, number>
+    byChannel: Record<string, number>
   }> {
     const messages = await prisma.message.findMany({
       where: {
@@ -1552,7 +1552,7 @@ export class CommunicationService {
       },
     })
 
-    const byChannel: Record<MessageChannel, number> = {
+    const byChannel: Record<string, number> = {
       [MessageChannel.SMS]: 0,
       [MessageChannel.WHATSAPP]: 0,
       [MessageChannel.EMAIL]: 0,

@@ -301,3 +301,52 @@
 .theme-transitioning * {
   transition: none !important;
 }
+
+/* 🔧 CRITICAL FIX: Force text visibility across all themes */
+/* This overrides Tailwind arbitrary values that don't work properly */
+
+/* Force all text to be visible */
+* {
+  color: var(--text-primary) !important;
+}
+
+/* Override specific text color classes */
+[class*="text-"] {
+  color: inherit !important;
+}
+
+/* Force primary text */
+h1, h2, h3, h4, h5, h6, p, span, div, label, td, th {
+  color: var(--text-primary) !important;
+}
+
+/* Force input/select/textarea text */
+input, select, textarea, button {
+  color: var(--text-primary) !important;
+}
+
+/* Force placeholder text */
+input::placeholder, select::placeholder, textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+/* Force link colors */
+a {
+  color: var(--accent-primary) !important;
+}
+
+/* Force muted text where needed */
+.text-muted, [class*="text-muted"], [class*="text-secondary"] {
+  color: var(--text-secondary) !important;
+}
+
+/* Force backgrounds */
+body, [class*="bg-"] {
+  background-color: var(--bg-main) !important;
+}
+
+/* Force borders */
+[class*="border-"] {
+  border-color: var(--border-default) !important;
+}

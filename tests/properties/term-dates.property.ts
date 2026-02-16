@@ -5,7 +5,7 @@
  * 
  * For any academic year, all terms within that year SHALL have 
  * non-overlapping date ranges (no term's date range intersects with another).
- */
+ */  
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 

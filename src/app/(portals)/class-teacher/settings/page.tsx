@@ -48,6 +48,17 @@ export default function ClassTeacherSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <Link href="/class-teacher/profile" className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] hover:bg-[var(--bg-main)] dark:hover:bg-[var(--border-strong)] transition-colors">
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-[var(--text-muted)]" />
+                  <div>
+                    <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">My Profile</div>
+                    <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">View and edit your profile</div>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline">View</Button>
+              </Link>
+
               <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-[var(--text-muted)]" />
@@ -84,38 +95,6 @@ export default function ClassTeacherSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className={cn(cardStyles.base, cardStyles.normal)}>
-          <CardHeader>
-            <CardTitle className={cn(typography.sectionTitle)}>Preferences</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Dark Mode</div>
-                  <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Toggle dark/light theme</div>
-                </div>
-                <Switch />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Notifications</div>
-                  <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Email alerts for updates</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Auto-save</div>
-                  <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">Automatically save changes</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card className={cn(cardStyles.base, cardStyles.normal, 'mt-6')}>

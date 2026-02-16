@@ -3,7 +3,7 @@
  * Core business logic for finance operations
  * 
  * Requirements: 4.1, 4.3, 4.4, 4.5, 4.6, 4.7
- * 
+ *     
  * Property 4: Payment Recording Completeness
  * For any successfully recorded payment, the system SHALL have created:
  * (1) a Payment record, (2) an immutable Receipt with unique number,
@@ -366,7 +366,7 @@ export async function recordPayment(data: RecordPaymentInput): Promise<PaymentRe
     schoolId,
     userId: receivedBy,
     action: 'PAYMENT_RECORDED',
-    resourceType: 'Payment',
+    resource: "Payment",
     resourceId: payment.id,
     newValue: {
       amount: data.amount,
@@ -520,7 +520,7 @@ export async function reversePayment(
     schoolId,
     userId,
     action: 'PAYMENT_REVERSED',
-    resourceType: 'Payment',
+    resource: "Payment",
     resourceId: paymentId,
     previousValue,
     newValue: {

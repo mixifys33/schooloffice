@@ -29,11 +29,18 @@
  * - Show exam contribution (out of 80) clearly
  * - Display final score with proper formatting
  * - Add calculation breakdown on demand
+ * 
+ * Requirements: 22.1, 22.2, 22.3, 22.4, 22.5, 22.6, 22.7
+ * - Implement lazy loading for large student lists
+ * - Provide optimistic UI updates for immediate user feedback
+ * - Cache frequently accessed data to reduce server requests
+ * - Implement efficient pagination for large datasets
+ * - Optimize performance for smooth interactions
  */
 
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { 
   Plus, 
   Edit3, 
@@ -86,6 +93,22 @@ import {
   statusBadgeStyles
 } from '@/lib/teacher-ui-standards'
 import { cn } from '@/lib/utils'
+import { 
+  useDebounce, 
+  useOptimisticUpdate, 
+  useVirtualScroll, 
+  usePagination,
+  usePerformanceMonitor,
+  createMemoComponent
+} from '@/lib/performance'
+import { 
+  focusStyles, 
+  keyboardNavigation, 
+  tableAccessibility,
+  a11yUtils,
+  ariaStates,
+  statusAccessibility
+} from '@/lib/accessibility'
 
 // Types and Interfaces
 export interface CAEntry {
@@ -254,6 +277,9 @@ export default function MarksEntryTable({
   readOnly = false,
   loading = false,
 }: MarksEntryTableProps) {
+  // Performance monitoring
+  usePerformanceMonitor('MarksEntryTable')
+  
   // State management
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' })
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set())
@@ -264,6 +290,11 @@ export default function MarksEntryTable({
   const [showCAEntryForm, setShowCAEntryForm] = useState<{ studentId: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ type: 'ca' | 'exam'; id: string; studentName: string } | null>(null)
 
+  // Performance optimizations
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+  const [pageSize, setPageSize] = useState(20)
+  
   // CA Entry form state
   const [caEntryForm, setCAEntryForm] = useState<{
     name: string;
@@ -279,9 +310,34 @@ export default function MarksEntryTable({
     competencyComment: '',
   })
 
-  // Memoized sorted students
-  const sortedStudents = useMemo(() => {
-    return [...students].sort((a, b) => {
+  // Optimistic updates for better UX
+  const { data: optimisticStudents, update: updateOptimistically } = useOptimisticUpdate(
+    students,
+    async (currentStudents, update) => {
+      // This would be called after successful API update
+      return currentStudents.map(student => 
+        student.id === update.studentId 
+          ? { ...student, ...update.changes }
+          : student
+      )
+    }
+  )
+
+  // Memoized filtered and sorted students with search
+  const filteredAndSortedStudents = useMemo(() => {
+    let filtered = optimisticStudents
+
+    // Apply search filter
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase()
+      filtered = filtered.filter(student => 
+        student.name.toLowerCase().includes(searchLower) ||
+        student.admissionNumber.toLowerCase().includes(searchLower)
+      )
+    }
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
@@ -315,18 +371,56 @@ export default function MarksEntryTable({
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [students, sortConfig]);
+  }, [optimisticStudents, sortConfig, debouncedSearchTerm]);
 
-  // Handle sorting
-  const handleSort = (field: SortField) => {
+  // Pagination for large datasets
+  const {
+    currentData: paginatedStudents,
+    currentPage,
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
+    goToPage,
+    nextPage,
+    prevPage,
+  } = usePagination({
+    data: filteredAndSortedStudents,
+    pageSize,
+  })
+
+  // Virtual scrolling for very large lists (when pagination is disabled)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const [useVirtualization, setUseVirtualization] = useState(false)
+  
+  useEffect(() => {
+    // Enable virtualization for very large datasets
+    setUseVirtualization(filteredAndSortedStudents.length > 100)
+  }, [filteredAndSortedStudents.length])
+
+  const virtualScroll = useVirtualScroll({
+    items: useVirtualization ? filteredAndSortedStudents : [],
+    itemHeight: 80, // Approximate row height
+    containerHeight: 600, // Container height
+    overscan: 5,
+  })
+
+  const displayStudents = useVirtualization ? virtualScroll.visibleItems : paginatedStudents
+
+  // Optimized event handlers with useCallback
+  const handleSort = useCallback((field: SortField) => {
     setSortConfig(prev => ({
       field,
       direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
-  };
+    
+    // Announce sort change to screen readers
+    a11yUtils.announce(
+      `Table sorted by ${field} in ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'} order`,
+      'polite'
+    )
+  }, [sortConfig.direction]);
 
-  // Handle student selection
-  const handleStudentSelect = (studentId: string, selected: boolean) => {
+  const handleStudentSelect = useCallback((studentId: string, selected: boolean) => {
     setSelectedStudents(prev => {
       const newSet = new Set(prev);
       if (selected) {
@@ -336,18 +430,19 @@ export default function MarksEntryTable({
       }
       return newSet;
     });
-  };
+  }, []);
 
-  // Handle select all
-  const handleSelectAll = (selected: boolean) => {
+  const handleSelectAll = useCallback((selected: boolean) => {
     if (selected) {
-      setSelectedStudents(new Set(students.map(s => s.id)));
+      setSelectedStudents(new Set(displayStudents.map(s => s.id)));
+      a11yUtils.announce(`Selected all ${displayStudents.length} students`, 'polite')
     } else {
       setSelectedStudents(new Set());
+      a11yUtils.announce('Deselected all students', 'polite')
     }
-  };
-  // Handle calculation breakdown toggle
-  const toggleCalculationBreakdown = (studentId: string) => {
+  }, [displayStudents]);
+
+  const toggleCalculationBreakdown = useCallback((studentId: string) => {
     setShowCalculationBreakdown(prev => {
       const newSet = new Set(prev);
       if (newSet.has(studentId)) {
@@ -357,10 +452,10 @@ export default function MarksEntryTable({
       }
       return newSet;
     });
-  };
+  }, []);
 
-  // Validate mark entry
-  const validateMarkEntry = (value: number, maxScore: number, type: 'ca' | 'exam'): string | null => {
+  // Optimized validation with debouncing
+  const validateMarkEntry = useCallback((value: number, maxScore: number, type: 'ca' | 'exam'): string | null => {
     if (isNaN(value) || value < 0) {
       return 'Score must be a non-negative number';
     }
@@ -371,10 +466,10 @@ export default function MarksEntryTable({
       return 'Exam score cannot exceed 100';
     }
     return null;
-  };
+  }, []);
 
-  // Handle CA entry creation
-  const handleCAEntryCreate = async () => {
+  // Optimistic CA entry creation with immediate UI feedback
+  const handleCAEntryCreate = useCallback(async () => {
     if (!showCAEntryForm) return;
 
     const maxScore = parseFloat(caEntryForm.maxScore);
@@ -392,18 +487,30 @@ export default function MarksEntryTable({
       return;
     }
 
+    const newEntry = {
+      studentId: showCAEntryForm.studentId,
+      subjectId: subject.id,
+      name: caEntryForm.name.trim(),
+      type: caEntryForm.type,
+      maxScore,
+      rawScore,
+      competencyComment: caEntryForm.competencyComment.trim() || undefined,
+    };
+
     try {
-      await onCAEntryCreate({
+      // Apply optimistic update immediately
+      await updateOptimistically({
         studentId: showCAEntryForm.studentId,
-        subjectId: subject.id,
-        name: caEntryForm.name.trim(),
-        type: caEntryForm.type,
-        maxScore,
-        rawScore,
-        competencyComment: caEntryForm.competencyComment.trim() || undefined,
+        changes: {
+          // This would add the new CA entry optimistically
+          caEntries: [...(optimisticStudents.find(s => s.id === showCAEntryForm.studentId)?.caEntries || []), newEntry]
+        }
       });
 
-      // Reset form
+      // Perform actual API call
+      await onCAEntryCreate(newEntry);
+
+      // Reset form on success
       setCAEntryForm({
         name: '',
         type: CAType.ASSIGNMENT,
@@ -413,55 +520,104 @@ export default function MarksEntryTable({
       });
       setShowCAEntryForm(null);
       setValidationErrors(new Map());
+      
+      // Announce success
+      a11yUtils.announce(`CA entry "${newEntry.name}" created successfully`, 'polite');
     } catch (error) {
       console.error('Error creating CA entry:', error);
       setValidationErrors(new Map([['caForm', 'Failed to create CA entry. Please try again.']]));
     }
-  };
+  }, [showCAEntryForm, caEntryForm, subject.id, onCAEntryCreate, updateOptimistically, optimisticStudents]);
 
-  // Handle exam entry update
-  const handleExamEntryUpdate = async (studentId: string, examScore: number) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
+  // Optimized exam entry update with debouncing
+  const debouncedExamUpdate = useDebounce(
+    useCallback(async (studentId: string, examScore: number) => {
+      const student = optimisticStudents.find(s => s.id === studentId);
+      if (!student) return;
 
-    const validationError = validateMarkEntry(examScore, 100, 'exam');
-    if (validationError) {
-      setValidationErrors(new Map([[`exam-${studentId}`, validationError]]));
-      return;
-    }
-
-    try {
-      if (student.examEntry) {
-        await onExamEntryUpdate(student.examEntry.id, { examScore });
-      } else {
-        await onExamEntryCreate({
-          studentId,
-          subjectId: subject.id,
-          examScore,
-          examDate: new Date().toISOString(),
-        });
+      const validationError = validateMarkEntry(examScore, 100, 'exam');
+      if (validationError) {
+        setValidationErrors(new Map([[`exam-${studentId}`, validationError]]));
+        return;
       }
-      setValidationErrors(new Map());
-    } catch (error) {
-      console.error('Error updating exam entry:', error);
-      setValidationErrors(new Map([[`exam-${studentId}`, 'Failed to update exam score. Please try again.']]));
+
+      try {
+        // Apply optimistic update
+        await updateOptimistically({
+          studentId,
+          changes: {
+            examEntry: student.examEntry 
+              ? { ...student.examEntry, examScore }
+              : { examScore, examDate: new Date().toISOString() }
+          }
+        });
+
+        // Perform actual API call
+        if (student.examEntry) {
+          await onExamEntryUpdate(student.examEntry.id, { examScore });
+        } else {
+          await onExamEntryCreate({
+            studentId,
+            subjectId: subject.id,
+            examScore,
+            examDate: new Date().toISOString(),
+          });
+        }
+        
+        setValidationErrors(new Map());
+        a11yUtils.announce(`Exam score ${examScore} recorded successfully`, 'polite');
+      } catch (error) {
+        console.error('Error updating exam entry:', error);
+        setValidationErrors(new Map([[`exam-${studentId}`, 'Failed to update exam score. Please try again.']]));
+      }
+    }, [optimisticStudents, validateMarkEntry, updateOptimistically, onExamEntryUpdate, onExamEntryCreate, subject.id]),
+    500 // 500ms debounce
+  );
+
+  const handleExamEntryUpdate = useCallback((studentId: string, examScore: number) => {
+    debouncedExamUpdate(studentId, examScore);
+  }, [debouncedExamUpdate]);
+  // Memoized components for performance
+  const MemoizedCAEntries = useMemo(() => createMemoComponent<{ student: StudentWithMarks }>(
+    ({ student }) => renderCAEntries(student),
+    (prevProps, nextProps) => {
+      // Only re-render if CA entries actually changed
+      return JSON.stringify(prevProps.student.caEntries) === JSON.stringify(nextProps.student.caEntries)
     }
-  };
+  ), []);
+
+  const MemoizedCalculationBreakdown = useMemo(() => createMemoComponent<{ student: StudentWithMarks }>(
+    ({ student }) => renderCalculationBreakdown(student),
+    (prevProps, nextProps) => {
+      // Only re-render if grade calculation changed
+      return JSON.stringify(prevProps.student.gradeCalculation) === JSON.stringify(nextProps.student.gradeCalculation)
+    }
+  ), []);
+
   // Handle CA entry deletion
-  const handleCAEntryDelete = async (caId: string) => {
+  const handleCAEntryDelete = useCallback(async (caId: string) => {
     try {
       await onCAEntryDelete(caId);
       setShowDeleteConfirm(null);
+      a11yUtils.announce('CA entry deleted successfully', 'polite');
     } catch (error) {
       console.error('Error deleting CA entry:', error);
+      a11yUtils.announce('Failed to delete CA entry', 'assertive');
     }
-  };
+  }, [onCAEntryDelete]);
 
-  // Render sortable header
-  const renderSortableHeader = (field: SortField, label: string) => (
+  // Render sortable header with accessibility
+  const renderSortableHeader = useCallback((field: SortField, label: string) => (
     <TableHead 
-      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      className={cn(
+        "cursor-pointer select-none hover:bg-muted/50 transition-colors",
+        focusStyles.ring
+      )}
       onClick={() => handleSort(field)}
+      onKeyDown={keyboardNavigation.handleEnterSpace(() => handleSort(field))}
+      tabIndex={0}
+      {...tableAccessibility.columnHeaderProps(true, sortConfig.field === field ? sortConfig.direction : undefined)}
+      aria-label={`Sort by ${label}. Currently ${sortConfig.field === field ? `sorted ${sortConfig.direction}ending` : 'not sorted'}`}
     >
       <div className="flex items-center gap-2">
         <span className={cn(typography.label, 'text-[var(--text-primary)]')}>{label}</span>
@@ -473,6 +629,7 @@ export default function MarksEntryTable({
                 ? 'text-[var(--accent-primary)]' 
                 : 'text-[var(--text-muted)]'
             )} 
+            aria-hidden="true"
           />
           <ChevronDown 
             className={cn(
@@ -481,17 +638,18 @@ export default function MarksEntryTable({
                 ? 'text-[var(--accent-primary)]' 
                 : 'text-[var(--text-muted)]'
             )} 
+            aria-hidden="true"
           />
         </div>
       </div>
     </TableHead>
-  );
+  ), [handleSort, sortConfig]);
 
-  // Render CA entries for a student
-  const renderCAEntries = (student: StudentWithMarks) => {
+  // Render CA entries for a student (memoized)
+  const renderCAEntries = useCallback((student: StudentWithMarks) => {
     if (student.caEntries.length === 0) {
       return (
-        <div className="text-center py-2">
+        <div className="text-center py-2" role="status">
           <span className={cn(typography.caption, 'text-[var(--text-muted)]')}>
             No CA entries
           </span>
@@ -500,7 +658,7 @@ export default function MarksEntryTable({
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" role="group" aria-label={`CA entries for ${student.name}`}>
         {student.caEntries.map((ca) => {
           const config = CA_TYPE_CONFIG[ca.type];
           const Icon = config.icon;
@@ -514,9 +672,10 @@ export default function MarksEntryTable({
                 config.color.bg,
                 config.color.border
               )}
+              role="listitem"
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Icon className={cn('h-4 w-4 flex-shrink-0', config.color.text)} />
+                <Icon className={cn('h-4 w-4 flex-shrink-0', config.color.text)} aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <div className={cn('font-medium text-sm truncate', config.color.text)}>
                     {ca.name}
@@ -530,8 +689,13 @@ export default function MarksEntryTable({
               {!readOnly && ca.status === SubmissionStatus.DRAFT && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <MoreHorizontal className="h-3 w-3" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn("h-6 w-6 p-0", focusStyles.ring)}
+                      aria-label={`Actions for ${ca.name}`}
+                    >
+                      <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -543,7 +707,7 @@ export default function MarksEntryTable({
                       })}
                       className="text-red-600"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -554,7 +718,7 @@ export default function MarksEntryTable({
         })}
       </div>
     );
-  };
+  }, [readOnly]);
   // Render calculation breakdown
   const renderCalculationBreakdown = (student: StudentWithMarks) => {
     const calc = student.gradeCalculation;
@@ -630,11 +794,56 @@ export default function MarksEntryTable({
   };
   return (
     <div className={spacing.section}>
-      {/* Table Actions */}
+      {/* Performance and Search Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          {/* Search Input */}
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search students..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={cn("w-64", focusStyles.ring)}
+              aria-label="Search students by name or admission number"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          
+          {/* Page Size Selector */}
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => setPageSize(parseInt(value))}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 per page</SelectItem>
+              <SelectItem value="20">20 per page</SelectItem>
+              <SelectItem value="50">50 per page</SelectItem>
+              <SelectItem value="100">100 per page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
         <div className="flex items-center gap-2">
           <span className={cn(typography.body, 'text-[var(--text-secondary)]')}>
-            {selectedStudents.size > 0 ? `${selectedStudents.size} selected` : `${students.length} students`}
+            {selectedStudents.size > 0 
+              ? `${selectedStudents.size} selected` 
+              : `${filteredAndSortedStudents.length} students`
+            }
+            {debouncedSearchTerm && ` (filtered from ${optimisticStudents.length})`}
           </span>
           {selectedStudents.size > 0 && !readOnly && (
             <Button
@@ -644,43 +853,63 @@ export default function MarksEntryTable({
                 // Handle batch operations
                 console.log('Batch operations for:', Array.from(selectedStudents));
               }}
+              className={focusStyles.ring}
+              aria-label={`Perform batch actions on ${selectedStudents.size} selected students`}
             >
               Batch Actions
             </Button>
           )}
         </div>
-        
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Handle batch save
-                onBatchSave([]);
-              }}
-              disabled={loading}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save All Changes
-            </Button>
-          </div>
-        )}
+      </div>
+
+      {/* Table Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          {!readOnly && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Handle batch save
+                  onBatchSave([]);
+                }}
+                disabled={loading}
+                className={focusStyles.ring}
+                aria-label="Save all pending changes"
+              >
+                <Save className="h-4 w-4 mr-2" aria-hidden="true" />
+                Save All Changes
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Table */}
       <Card className={cn(cardStyles.base, 'overflow-hidden')}>
-        <div className="overflow-x-auto">
-          <Table>
+        <div 
+          className="overflow-x-auto"
+          ref={containerRef}
+          style={useVirtualization ? { height: '600px', overflowY: 'auto' } : undefined}
+          onScroll={useVirtualization ? virtualScroll.handleScroll : undefined}
+        >
+          <Table {...tableAccessibility.tableProps(`Student marks for ${subject.name}`)}>
+            <caption className="sr-only">
+              Student marks table for {subject.name}. 
+              {filteredAndSortedStudents.length} students shown.
+              Use arrow keys to navigate, Enter or Space to interact with controls.
+            </caption>
             <TableHeader className="sticky top-0 bg-[var(--bg-main)] z-10">
               <TableRow>
                 {!readOnly && (
                   <TableHead className="w-12">
                     <input
                       type="checkbox"
-                      checked={selectedStudents.size === students.length && students.length > 0}
+                      checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded border-[var(--border-default)]"
+                      className={cn("rounded border-[var(--border-default)]", focusStyles.ring)}
+                      aria-label={`Select all ${displayStudents.length} visible students`}
                     />
                   </TableHead>
                 )}
@@ -713,13 +942,19 @@ export default function MarksEntryTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedStudents.map((student, index) => (
+              {useVirtualization && (
+                <tr style={{ height: virtualScroll.offsetY }} aria-hidden="true">
+                  <td colSpan={readOnly ? 8 : 9} />
+                </tr>
+              )}
+              {displayStudents.map((student, index) => (
                 <React.Fragment key={student.id}>
                   <TableRow 
                     className={cn(
                       'hover:bg-muted/50 transition-colors',
                       index % 2 === 0 ? 'bg-[var(--bg-main)]' : 'bg-[var(--bg-surface)]'
                     )}
+                    {...tableAccessibility.cellProps()}
                   >
                     {!readOnly && (
                       <TableCell>
@@ -727,13 +962,14 @@ export default function MarksEntryTable({
                           type="checkbox"
                           checked={selectedStudents.has(student.id)}
                           onChange={(e) => handleStudentSelect(student.id, e.target.checked)}
-                          className="rounded border-[var(--border-default)]"
+                          className={cn("rounded border-[var(--border-default)]", focusStyles.ring)}
+                          aria-label={`Select ${student.name}`}
                         />
                       </TableCell>
                     )}
                     
                     {/* Student Info */}
-                    <TableCell>
+                    <TableCell {...tableAccessibility.rowHeaderProps()}>
                       <div>
                         <div className={cn('font-medium', typography.body, 'text-[var(--text-primary)]')}>
                           {student.name}
@@ -753,15 +989,16 @@ export default function MarksEntryTable({
                     {/* CA Entries */}
                     <TableCell className="min-w-[300px]">
                       <div className="space-y-2">
-                        {renderCAEntries(student)}
+                        <MemoizedCAEntries student={student} />
                         {!readOnly && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setShowCAEntryForm({ studentId: student.id })}
-                            className="w-full"
+                            className={cn("w-full", focusStyles.ring)}
+                            aria-label={`Add CA entry for ${student.name}`}
                           >
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
                             Add CA Entry
                           </Button>
                         )}
@@ -903,6 +1140,66 @@ export default function MarksEntryTable({
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination Controls */}
+        {!useVirtualization && totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--text-secondary)]">
+                Page {currentPage} of {totalPages}
+              </span>
+              <span className="text-sm text-[var(--text-muted)]">
+                ({filteredAndSortedStudents.length} total students)
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={prevPage}
+                disabled={!hasPrevPage}
+                className={focusStyles.ring}
+                aria-label="Go to previous page"
+              >
+                Previous
+              </Button>
+              
+              {/* Page numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, currentPage - 2) + i;
+                  if (pageNum > totalPages) return null;
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(pageNum)}
+                      className={cn("w-8 h-8 p-0", focusStyles.ring)}
+                      aria-label={`Go to page ${pageNum}`}
+                      aria-current={pageNum === currentPage ? "page" : undefined}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={nextPage}
+                disabled={!hasNextPage}
+                className={focusStyles.ring}
+                aria-label="Go to next page"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
       {/* CA Entry Form Modal */}
       {showCAEntryForm && (

@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           schoolId: session.user.schoolId,
-          eventType: 'PASSWORD_CHANGED',
+          eventType: 'PASSWORD_CHANGE',
           identifier: session.user.email,
           ipAddress: 'unknown', // In production, extract from request headers
           success: true,

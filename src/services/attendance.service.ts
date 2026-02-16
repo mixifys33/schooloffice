@@ -3,7 +3,7 @@
  * Handles attendance recording, tracking, and absence detection
  * Requirements: 3.7, 5.1, 5.2, 5.3, 5.4, 38.1, 38.2, 38.3, 38.4, 38.5
  * Teacher Dashboard Requirements: 4.3, 4.4, 4.5 - Time-based locking
- */
+ */  
 import { prisma } from '@/lib/db'
 import {
   Attendance,

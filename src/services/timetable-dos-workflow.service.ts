@@ -2,17 +2,14 @@
 // TIMETABLE DoS WORKFLOW SERVICE
 // Integrates timetable generation with DoS authority structure
 // ============================================
-
+   
 import { db } from '@/lib/db';
 import { TimetableService } from './timetable.service';
-import { 
-  TimetableDraft, 
+import type { 
   TimetableStatus, 
-  GenerateTimetableRequest,
-  GenerateTimetableResponse,
-  TimetableConflict,
   ConflictSeverity
 } from '@/types/timetable';
+import type { TimetableDraft } from '@prisma/client';
 
 export class TimetableDosWorkflowService {
   
@@ -402,8 +399,8 @@ export class TimetableDosWorkflowService {
         data: {
           isResolved: true,
           resolvedAt: new Date(),
-          resolvedBy,
-          resolutionMethod
+          resolvedBy
+          // Note: resolutionMethod field doesn't exist in schema
         }
       });
 
@@ -454,8 +451,8 @@ export class TimetableDosWorkflowService {
         where: { id: conflictId },
         data: {
           dismissedAt: new Date(),
-          dismissedBy,
-          dismissalReason
+          dismissedBy
+          // Note: dismissalReason field doesn't exist in schema
         }
       });
 
@@ -483,7 +480,7 @@ export class TimetableDosWorkflowService {
     timetableId: string,
     userId: string,
     role: string
-  ): Promise<{ success: boolean; data?: any; message: string }> {
+  ): Promise<{ success: boolean; data?: Record<string, unknown>; message: string }> {
     try {
       const user = await db.user.findUnique({
         where: { id: userId },
@@ -607,7 +604,7 @@ export class TimetableDosWorkflowService {
           schoolId: data.schoolId,
           userId: data.performedBy,
           action: `TIMETABLE_${data.action}`,
-          resourceType: 'Timetable',
+          resource: "Timetable",
           resourceId: data.timetableId,
           newValue: data.details ? JSON.stringify(data.details) : null,
           timestamp: new Date()

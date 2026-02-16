@@ -1,13 +1,17 @@
 /**
- * DOS Context API Route
- * Returns context data for Director of Studies operations
+ * DoS Context API Route
+ * 
+ * Provides critical academic context for the DoS portal:
+ * - Current term and academic year status
+ * - School academic operations mode
+ * - DoS permissions
  */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role, StaffRole } from '@/types/enums'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth()
     
@@ -15,76 +19,109 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user has DoS role
-    const userRoles = Array.isArray(session.user.roles) ? session.user.roles : [session.user.role]
-    const hasDoSRole = userRoles.includes('DOS') || userRoles.includes('SCHOOL_ADMIN')
-
-    if (!hasDoSRole) {
-      return NextResponse.json({ error: 'Forbidden - DoS access required' }, { status: 403 })
-    }
-
-    const schoolId = session.user.schoolId
+    const schoolId = session.user.schoolId;
     
     if (!schoolId) {
-      return NextResponse.json({ error: 'School ID not found' }, { status: 400 })
+      return NextResponse.json({ error: 'School context required' }, { status: 400 })
     }
 
-    // Fetch current term
+    // Validate DoS access - check both user role and staff role
+    const userRole = session.user.activeRole || session.user.role;
+    const isAdmin = userRole === 'SCHOOL_ADMIN' || userRole === 'DEPUTY' || userRole === 'SUPER_ADMIN';
+    
+    let isDoS = userRole === 'DOS';
+    
+    // If not admin and not DoS user role, check staff role
+    if (!isAdmin && !isDoS) {
+      const staffCheck = await prisma.staff.findFirst({
+        where: { 
+          schoolId,
+          userId: session.user.id 
+        },
+        select: { 
+          primaryRole: true,
+          secondaryRoles: true
+        }
+      });
+
+      isDoS = staffCheck && (
+        staffCheck.primaryRole === 'DOS' ||
+        ((staffCheck.secondaryRoles as string[]) || []).includes('DOS')
+      );
+    }
+
+    if (!isAdmin && !isDoS) {
+      return NextResponse.json(
+        { error: 'Director of Studies access required' },
+        { status: 403 }
+      )
+    }
+
+    // Get current term and academic year
     const currentTerm = await prisma.term.findFirst({
       where: {
-        academicYear: {
-          schoolId,
-          isActive: true
-        },
+        schoolId,
         startDate: { lte: new Date() },
         endDate: { gte: new Date() }
       },
-      select: {
-        id: true,
-        name: true,
-        academicYear: true,
-        startDate: true,
-        endDate: true
+      include: {
+        academicYear: true
       }
     })
 
-    // Get school status
+    // Get school information
     const school = await prisma.school.findUnique({
       where: { id: schoolId },
-      select: { 
-        status: true,
-        schoolType: true
+      select: {
+        name: true,
+        isActive: true
       }
     })
 
-    // Determine school status based on current date and term
+    // Determine school status
+    const now = new Date()
     let schoolStatus: 'OPEN' | 'EXAM_PERIOD' | 'REPORTING' | 'CLOSED' = 'OPEN'
-    
-    if (school?.status === 'SUSPENDED' || school?.status === 'INACTIVE') {
-      schoolStatus = 'CLOSED'
-    } else if (currentTerm) {
-      const now = new Date()
-      const termEnd = new Date(currentTerm.endDate)
-      const daysToEnd = Math.ceil((termEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (currentTerm) {
+      const termProgress = (now.getTime() - currentTerm.startDate.getTime()) / 
+                          (currentTerm.endDate.getTime() - currentTerm.startDate.getTime())
       
-      if (daysToEnd <= 14 && daysToEnd > 0) {
-        schoolStatus = 'EXAM_PERIOD'
-      } else if (daysToEnd <= 0) {
+      if (termProgress > 0.9) {
         schoolStatus = 'REPORTING'
+      } else if (termProgress > 0.8) {
+        schoolStatus = 'EXAM_PERIOD'
       }
     }
 
-    // DoS permissions (all true for now, can be made dynamic later)
+    // Check if term is closed
+    if (currentTerm && now > currentTerm.endDate) {
+      schoolStatus = 'CLOSED'
+    }
+
+    // DoS permissions based on role
     const permissions = {
-      canApproveCurriculum: true,
-      canLockAssessments: true,
-      canApproveExams: true,
-      canGenerateReports: true,
-      canMakePromotionDecisions: true,
+      canApproveCurriculum: isDoS || isAdmin,
+      canLockAssessments: isDoS || isAdmin,
+      canApproveExams: isDoS || isAdmin,
+      canGenerateReports: isDoS || isAdmin,
+      canMakePromotionDecisions: isDoS || isAdmin
     }
 
     return NextResponse.json({
-      currentTerm,
+      currentTerm: currentTerm ? {
+        id: currentTerm.id,
+        name: currentTerm.name,
+        academicYear: currentTerm.academicYear.name,
+        startDate: currentTerm.startDate.toISOString(),
+        endDate: currentTerm.endDate.toISOString()
+      } : null,
+      academicYear: currentTerm?.academicYear ? {
+        id: currentTerm.academicYear.id,
+        name: currentTerm.academicYear.name,
+        startDate: currentTerm.academicYear.startDate.toISOString(),
+        endDate: currentTerm.academicYear.endDate.toISOString(),
+        isCurrent: currentTerm.academicYear.isCurrent
+      } : null,
       schoolStatus,
       permissions
     })
@@ -92,7 +129,10 @@ export async function GET(_request: NextRequest) {
   } catch (error) {
     console.error('Error fetching DoS context:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Failed to fetch DoS context',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

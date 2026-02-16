@@ -1,202 +1,165 @@
-/**
- * Teacher Dashboard API Route
- * Requirements: New Curriculum Support - Dashboard with teaching load, alerts, and obligations
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
-import { Role } from '@/types/enums'
-
-/**
- * Teacher dashboard data structure
- */
-export interface TeacherDashboardData {
-  teachingLoad: {
-    classes: number
-    subjects: number
-    periodsPerWeek: number
-    curriculumSyllabus: string
-  }
-  todayTimetable: {
-    period: number
-    class: string
-    subject: string
-    startTime: string
-    endTime: string
-    isCurrent: boolean
-  }[]
-  alerts: {
-    id: string
-    type: string
-    message: string
-    priority: number
-    dueDate?: string
-    isRead: boolean
-  }[]
-  obligations: {
-    id: string
-    type: string
-    description: string
-    dueDate?: string
-    status: string
-  }[]
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 /**
  * GET /api/teacher/dashboard
- * Returns teacher's dashboard data including teaching load, timetable, and alerts
+ * Get teacher dashboard data
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Verify user has TEACHER role
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
-      return NextResponse.json(
-        { error: 'Access denied. Teacher role required.' },
-        { status: 403 }
-      )
-    }
-
-    const schoolId = session.user.schoolId
-    if (!schoolId) {
-      return NextResponse.json(
-        { error: 'No school context found' },
-        { status: 400 }
-      )
-    }
-
-    // Get staff record (which includes teacher functionality)
-    const staff = await prisma.staff.findFirst({
-      where: {
-        schoolId,
-        userId: session.user.id,
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        status: true,
-      },
-    })
-
-    if (!staff) {
-      return NextResponse.json(
-        { error: 'No staff profile linked to this account' },
-        { status: 404 }
-      )
-    }
-
-    // Get staff subject assignments to determine classes and subjects
-    const staffSubjects = await prisma.staffSubject.findMany({
-      where: { staffId: staff.id },
-      include: {
-        subject: { select: { id: true, name: true } },
-        class: { select: { id: true, name: true } }
-      }
-    })
-
-    // Calculate teaching load from staff assignments
-    const uniqueClasses = new Set(staffSubjects.map(ss => ss.classId)).size
-    const uniqueSubjects = new Set(staffSubjects.map(ss => ss.subjectId)).size
-
-    // Get today's timetable entries for this teacher
-    const today = new Date()
-    const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const session = await auth();
     
-    const todayTimetableEntries = await prisma.timetableEntry.findMany({
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const schoolId = session.user.schoolId;
+
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 });
+    }
+
+    // Get teacher record
+    const teacher = await prisma.teacher.findFirst({
       where: {
-        staffId: staff.id,
-        dayOfWeek,
-        isActive: true,
+        userId,
+        schoolId,
       },
       include: {
-        class: { select: { name: true } },
-        subject: { select: { name: true } },
+        staffSubjects: {
+          include: {
+            subject: true,
+          },
+        },
+        staffClasses: {
+          include: {
+            class: {
+              include: {
+                streams: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!teacher) {
+      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+    }
+
+    // Get student count for assigned classes
+    const classIds = teacher.staffClasses.map(sc => sc.classId);
+    const studentCount = await prisma.student.count({
+      where: {
+        classId: { in: classIds },
+      },
+    });
+
+    // Get upcoming classes/periods (if timetable exists)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const upcomingClasses = await prisma.timetableEntry.findMany({
+      where: {
+        teacherId: teacher.id,
+        date: {
+          gte: today,
+        },
+      },
+      include: {
+        class: true,
+        subject: true,
       },
       orderBy: {
-        period: 'asc',
+        date: 'asc',
       },
-    })
+      take: 5,
+    });
 
-    const todayTimetable = todayTimetableEntries.map(entry => ({
-      id: entry.id,
-      period: entry.period,
-      timeSlot: `${entry.startTime} - ${entry.endTime}`,
-      subject: entry.subject.name,
-      class: entry.class.name,
-      room: entry.room || 'TBA',
-    }))
-
-    // Get real alerts for this teacher
-    const teacherAlerts = await prisma.teacherAlert.findMany({
+    // Get recent marks entries
+    const recentMarks = await prisma.mark.findMany({
       where: {
-        staffId: staff.id,
-        isActive: true,
-        isResolved: false,
+        teacherId: teacher.id,
+      },
+      include: {
+        student: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        subject: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
       take: 10,
-    })
+    });
 
-    const formattedAlerts = teacherAlerts.map(alert => ({
-      id: alert.id,
-      type: alert.type.toLowerCase(),
-      severity: alert.severity.toLowerCase(),
-      message: alert.message,
-      dueDate: alert.dueDate?.toISOString() || null,
-      isRead: alert.isRead,
-      createdAt: alert.createdAt.toISOString(),
-    }))
-
-    // Get real curriculum syllabus information
-    const currentAcademicYear = await prisma.academicYear.findFirst({
-      where: {
-        schoolId: staff.schoolId,
-        isActive: true,
+    // Build dashboard response
+    const dashboardData = {
+      teacher: {
+        id: teacher.id,
+        firstName: teacher.firstName,
+        lastName: teacher.lastName,
+        email: teacher.email,
+        phone: teacher.phone,
+        department: teacher.department,
+        employmentStatus: teacher.employmentStatus,
       },
-      select: {
-        name: true,
-        curriculumVersion: true,
+      stats: {
+        assignedClasses: teacher.staffClasses.length,
+        assignedSubjects: teacher.staffSubjects.length,
+        totalStudents: studentCount,
+        upcomingClasses: upcomingClasses.length,
       },
-    })
+      assignedClasses: teacher.staffClasses.map(sc => ({
+        id: sc.class.id,
+        name: sc.class.name,
+        level: sc.class.level,
+        levelType: sc.class.levelType,
+        streams: sc.class.streams.map(s => ({
+          id: s.id,
+          name: s.name,
+        })),
+      })),
+      assignedSubjects: teacher.staffSubjects.map(ss => ({
+        id: ss.subject.id,
+        name: ss.subject.name,
+        code: ss.subject.code,
+        levelType: ss.subject.levelType,
+      })),
+      upcomingClasses: upcomingClasses.map(entry => ({
+        id: entry.id,
+        date: entry.date,
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+        className: entry.class.name,
+        subjectName: entry.subject.name,
+      })),
+      recentMarks: recentMarks.map(mark => ({
+        id: mark.id,
+        studentName: `${mark.student.firstName} ${mark.student.lastName}`,
+        subjectName: mark.subject.name,
+        score: mark.score,
+        maxScore: mark.maxScore,
+        createdAt: mark.createdAt,
+      })),
+    };
 
-    // Prepare obligations based on alerts and pending tasks
-    const obligations = formattedAlerts
-      .filter(alert => !alert.isRead)
-      .map(alert => ({
-        id: alert.id,
-        type: 'alert',
-        description: alert.message,
-        dueDate: alert.dueDate,
-        status: 'pending',
-      }))
-
-    const dashboardData: TeacherDashboardData = {
-      teachingLoad: {
-        classes: uniqueClasses,
-        subjects: uniqueSubjects,
-        periodsPerWeek: staffSubjects.length,
-        curriculumSyllabus: currentAcademicYear?.curriculumVersion || 'Current Curriculum',
-      },
-      todayTimetable,
-      alerts: formattedAlerts,
-      obligations,
-    }
-
-    return NextResponse.json(dashboardData)
+    return NextResponse.json(dashboardData);
   } catch (error) {
-    console.error('Error fetching teacher dashboard:', error)
+    console.error('Error fetching teacher dashboard:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch teacher dashboard' },
+      { error: 'Failed to fetch dashboard data' },
       { status: 500 }
-    )
+    );
   }
 }

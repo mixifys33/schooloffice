@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (dateFrom || dateTo) {
-      whereClause.paymentDate = {}
+      whereClause.receivedAt = {}
       if (dateFrom) {
-        whereClause.paymentDate.gte = new Date(dateFrom)
+        whereClause.receivedAt.gte = new Date(dateFrom)
       }
       if (dateTo) {
-        whereClause.paymentDate.lte = new Date(dateTo)
+        whereClause.receivedAt.lte = new Date(dateTo)
       }
     }
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { paymentDate: 'desc' }
+      orderBy: { receivedAt: 'desc' }
     })
 
     // Format payments

@@ -2,7 +2,7 @@
  * Student Report Service
  * Handles school-to-parent reporting for any student matter
  * Requirements: 37.1, 37.2, 37.3, 37.4, 37.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   StudentReport,
@@ -251,7 +251,7 @@ export class StudentReportService {
 
   /**
    * Notify parent about a report via their preferred channel
-   * Requirement 37.2: Notify parent via preferred channel (SMS, WhatsApp, Email, in-app)
+   * Requirement 37.2: Notify parent via preferred channel (SMS, Email, in-app)
    */
   async notifyParent(reportId: string): Promise<StudentReportNotificationResult> {
     const report = await prisma.studentReport.findUnique({

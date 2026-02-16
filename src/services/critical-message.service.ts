@@ -2,7 +2,7 @@
  * Critical Message Service
  * Handles emergency override for critical alerts that bypass SMS limits
  * Requirements: 32.1, 32.2, 32.3, 32.4, 32.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import { MessageChannel, MessageStatus, MessageTemplateType, Role } from '@/types/enums'
 import { auditService, AuditResource } from './audit.service'

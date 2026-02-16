@@ -2,7 +2,7 @@
  * School Service
  * Handles multi-tenant school management operations
  * Requirements: 1.1, 1.2, 1.3
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   School,
@@ -14,12 +14,12 @@ import { LicenseType } from '@/types/enums'
 
 // Default feature flags based on license type - SIMPLIFIED
 const DEFAULT_FEATURES_BY_LICENSE: Record<LicenseType, FeatureFlags> = {
-  [LicenseType.FREE_PILOT]: {
+  [LicenseType.BASIC]: {
     smsEnabled: true,
     emailEnabled: true,
     paymentIntegration: true,
   },
-  [LicenseType.BASIC]: {
+  [LicenseType.STANDARD]: {
     smsEnabled: true,
     emailEnabled: true,
     paymentIntegration: true,
@@ -29,13 +29,19 @@ const DEFAULT_FEATURES_BY_LICENSE: Record<LicenseType, FeatureFlags> = {
     emailEnabled: true,
     paymentIntegration: true,
   },
+  [LicenseType.ENTERPRISE]: {
+    smsEnabled: true,
+    emailEnabled: true,
+    paymentIntegration: true,
+  },
 }
 
 // Default SMS budget per term by license type
 const DEFAULT_SMS_BUDGET: Record<LicenseType, number> = {
-  [LicenseType.FREE_PILOT]: 0,
   [LicenseType.BASIC]: 50000,
+  [LicenseType.STANDARD]: 100000,
   [LicenseType.PREMIUM]: 200000,
+  [LicenseType.ENTERPRISE]: 500000,
 }
 
 /**
@@ -79,7 +85,7 @@ export class SchoolService {
    * Requirement 1.1: Provision isolated school instance with default configuration
    */
   async createSchool(data: CreateSchoolInput): Promise<School> {
-    const licenseType = data.licenseType ?? LicenseType.FREE_PILOT
+    const licenseType = data.licenseType ?? LicenseType.BASIC
     const features = DEFAULT_FEATURES_BY_LICENSE[licenseType]
     const smsBudget = data.smsBudgetPerTerm ?? DEFAULT_SMS_BUDGET[licenseType]
 
@@ -92,7 +98,7 @@ export class SchoolService {
         email: data.email,
         logo: data.logo,
         licenseType: licenseType,
-        features: features,
+        features: JSON.parse(JSON.stringify(features)),
         smsBudgetPerTerm: smsBudget,
         isActive: true,
       },
@@ -142,15 +148,15 @@ export class SchoolService {
     // Handle license type change - also update features
     if (data.licenseType !== undefined) {
       updateData.licenseType = data.licenseType
-      updateData.features = DEFAULT_FEATURES_BY_LICENSE[data.licenseType]
+      updateData.features = DEFAULT_FEATURES_BY_LICENSE[data.licenseType] as Record<string, unknown>
     }
 
     // Handle partial feature flag updates
     if (data.features !== undefined) {
       const currentSchool = await prisma.school.findUnique({ where: { id } })
       if (currentSchool) {
-        const currentFeatures = currentSchool.features as FeatureFlags
-        updateData.features = { ...currentFeatures, ...data.features }
+        const currentFeatures = currentSchool.features as unknown as FeatureFlags
+        updateData.features = { ...currentFeatures, ...data.features } as Record<string, unknown>
       }
     }
 
@@ -198,7 +204,7 @@ export class SchoolService {
       where: { id },
       data: {
         licenseType: licenseType,
-        features: features,
+        features: features as Record<string, unknown>,
         smsBudgetPerTerm: smsBudget,
       },
     })
@@ -216,12 +222,12 @@ export class SchoolService {
       throw new Error(`School with id ${id} not found`)
     }
 
-    const currentFeatures = currentSchool.features as FeatureFlags
+    const currentFeatures = currentSchool.features as unknown as FeatureFlags
     const updatedFeatures = { ...currentFeatures, ...features }
 
     const school = await prisma.school.update({
       where: { id },
-      data: { features: updatedFeatures },
+      data: { features: updatedFeatures as Record<string, unknown> },
     })
 
     return mapPrismaSchoolToDomain(school)
@@ -271,7 +277,7 @@ export class SchoolService {
     })
 
     if (!school) return null
-    return school.features as FeatureFlags
+    return school.features as unknown as FeatureFlags
   }
 
   /**

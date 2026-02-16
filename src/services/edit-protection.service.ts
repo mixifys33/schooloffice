@@ -7,7 +7,7 @@
  * Property 1: Financial Record Immutability
  * For any financial record (payment, receipt, etc.), direct modification SHALL be prevented
  * and corrections SHALL only be possible through proper reversal/adjustment mechanisms.
- * 
+ *      
  * Property 2: Audit Trail for Modifications
  * For any attempted modification to financial records, the system SHALL create an 
  * audit trail documenting the attempt.

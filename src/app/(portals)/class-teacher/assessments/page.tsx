@@ -203,8 +203,8 @@ export default function ClassTeacherAssessmentsPage() {
                   {classPerformance.finalAverage}%
                 </p>
               </div>
-              <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                <BarChart3 className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+              <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                <BarChart3 className={cn('h-5 w-5', teacherColors.info.text)} />
               </div>
             </div>
           </CardContent>
@@ -499,8 +499,8 @@ export default function ClassTeacherAssessmentsPage() {
                 transitions.color
               )}>
                 <CardContent className="p-6 flex flex-col items-center text-center">
-                  <div className={cn('p-3 rounded-lg mb-3', teacherColors.chart.blue.bg)}>
-                    <BarChart3 className={cn('h-6 w-6', teacherColors.chart.blue.text)} />
+                  <div className={cn('p-3 rounded-lg mb-3', teacherColors.info.bg)}>
+                    <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
                   </div>
                   <h3 className={cn(typography.h3, 'mb-1')}>Assessment Report</h3>
                   <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-3')}>

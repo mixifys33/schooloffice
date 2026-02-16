@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     // Create the stream
     const newStream = await prisma.stream.create({
       data: {
+        schoolId,
         classId,
         name: name.trim(),
       },

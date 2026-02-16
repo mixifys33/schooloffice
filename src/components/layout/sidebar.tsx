@@ -42,6 +42,12 @@ export interface SidebarProps {
   footer?: React.ReactNode
   /** Additional class names */
   className?: string
+  /** Render prop for mobile trigger - allows parent to position the button */
+  renderMobileTrigger?: (triggerButton: React.ReactNode) => React.ReactNode
+  /** Control sidebar open state externally */
+  open?: boolean
+  /** Callback when sidebar open state changes */
+  onOpenChange?: (open: boolean) => void
 }
 
 function NavItemComponent({
@@ -205,29 +211,86 @@ function SidebarContent({
 }
 
 export function Sidebar(props: SidebarProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+
+  // Use external state if provided, otherwise use internal state
+  const isOpen = props.open !== undefined ? props.open : internalOpen
+  const setIsOpen = props.onOpenChange || setInternalOpen
 
   // Prevent hydration mismatch by only rendering Sheet after mount
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Create the trigger button
+  const triggerButton = mounted ? (
+    <Button
+      variant="ghost"
+      size="touch-icon"
+      className="h-10 w-10"
+      aria-label="Open navigation menu"
+      onClick={() => setIsOpen(true)}
+    >
+      <Menu className="h-6 w-6" />
+    </Button>
+  ) : (
+    <Button
+      variant="ghost"
+      size="touch-icon"
+      className="h-10 w-10"
+      aria-label="Open navigation menu"
+    >
+      <Menu className="h-6 w-6" />
+    </Button>
+  )
+
+  // If renderMobileTrigger is provided, use it (allows parent to position the button)
+  if (props.renderMobileTrigger) {
+    return (
+      <>
+        {props.renderMobileTrigger(triggerButton)}
+        
+        {/* Mobile Sheet - controlled by external state */}
+        {mounted && (
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
+              </SheetHeader>
+              <SidebarContent {...props} />
+            </SheetContent>
+          </Sheet>
+        )}
+        
+        {/* Desktop: Fixed sidebar */}
+        <aside
+          className={cn(
+            'hidden lg:flex lg:flex-col',
+            'fixed inset-y-0 left-0 z-30',
+            'w-64 border-r',
+            props.className
+          )}
+          style={{
+            backgroundColor: 'var(--bg-elevated)',
+            borderColor: 'var(--border-default)',
+          }}
+        >
+          <SidebarContent {...props} />
+        </aside>
+      </>
+    )
+  }
+
+  // Default behavior: fixed position button (legacy)
   return (
     <>
-      {/* Mobile: Sheet-based sidebar - only render after mount to prevent hydration mismatch */}
+      {/* Mobile: Sheet-based sidebar with fixed button */}
       <div className="lg:hidden">
-        {mounted ? (
+        <div className="fixed left-2 top-2 z-40">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="touch-icon"
-                className="fixed left-4 top-4 z-40 lg:hidden"
-                aria-label="Open navigation menu"
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
+              {triggerButton}
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0">
               <SheetHeader className="sr-only">
@@ -236,16 +299,7 @@ export function Sidebar(props: SidebarProps) {
               <SidebarContent {...props} />
             </SheetContent>
           </Sheet>
-        ) : (
-          <Button
-            variant="ghost"
-            size="touch-icon"
-            className="fixed left-4 top-4 z-40 lg:hidden"
-            aria-label="Open navigation menu"
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-        )}
+        </div>
       </div>
 
       {/* Desktop: Fixed sidebar */}

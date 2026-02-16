@@ -4,27 +4,15 @@ import React, { useState } from 'react'
 import { 
   Building2, 
   GraduationCap, 
-  DollarSign, 
   MessageSquare, 
-  Clock, 
-  Award, 
-  Users, 
   Shield, 
-  Zap, 
-  Activity,
   Palette
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SchoolIdentitySettings } from '@/components/settings/school-identity-settings'
 import { AcademicSettings } from '@/components/settings/academic-settings'
 import { CommunicationSettings } from '@/components/settings/communication-settings'
-import { AttendanceSettings } from '@/components/settings/attendance-settings'
-import { GradingSettings } from '@/components/settings/grading-settings'
-import { FinanceSettings } from '@/components/settings/finance-settings'
-import { GuardianSettingsPage } from '@/components/settings/guardian-settings'
 import { SecuritySettings } from '@/components/settings/security-settings'
-import { AutomationRulesPage } from '@/components/settings/automation-rules'
-import { SystemHealthDashboard } from '@/components/settings/system-health-dashboard'
 import { AppearanceSettings } from '@/components/settings/appearance-settings'
 
 /**
@@ -36,15 +24,9 @@ import { AppearanceSettings } from '@/components/settings/appearance-settings'
 const settingsTabs = [
   { id: 'identity', label: 'School', icon: Building2, status: 'working' },
   { id: 'academic', label: 'Academic', icon: GraduationCap, status: 'coming-soon' },
-  { id: 'finance', label: 'Finance', icon: DollarSign, status: 'partial' },
   { id: 'communication', label: 'Communication', icon: MessageSquare, status: 'partial' },
-  { id: 'attendance', label: 'Attendance', icon: Clock, status: 'working' },
-  { id: 'grading', label: 'Grading', icon: Award, status: 'working' },
-  { id: 'guardian', label: 'Guardian', icon: Users, status: 'partial' },
   { id: 'security', label: 'Security', icon: Shield, status: 'coming-soon' },
-  { id: 'automation', label: 'Automation', icon: Zap, status: 'partial' },
   { id: 'appearance', label: 'Appearance', icon: Palette, status: 'working' },
-  { id: 'system', label: 'System', icon: Activity, status: 'partial' },
 ]
 
 const getStatusColor = (status: string) => {
@@ -110,40 +92,16 @@ export default function SettingsPage() {
           <AcademicSettings />
         </TabsContent>
 
-        <TabsContent value="finance" className="mt-6">
-          <FinanceSettings />
-        </TabsContent>
-
         <TabsContent value="communication" className="mt-6">
           <CommunicationSettings />
-        </TabsContent>
-
-        <TabsContent value="attendance" className="mt-6">
-          <AttendanceSettings />
-        </TabsContent>
-
-        <TabsContent value="grading" className="mt-6">
-          <GradingSettings />
-        </TabsContent>
-
-        <TabsContent value="guardian" className="mt-6">
-          <GuardianSettingsPage />
         </TabsContent>
 
         <TabsContent value="security" className="mt-6">
           <SecuritySettings />
         </TabsContent>
 
-        <TabsContent value="automation" className="mt-6">
-          <AutomationRulesPage />
-        </TabsContent>
-
         <TabsContent value="appearance" className="mt-6">
           <AppearanceSettings />
-        </TabsContent>
-
-        <TabsContent value="system" className="mt-6">
-          <SystemHealthDashboard />
         </TabsContent>
       </Tabs>
     </div>

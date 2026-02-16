@@ -259,6 +259,7 @@ export async function POST(request: NextRequest) {
           const parentLastName = parentNameParts.slice(1).join(' ') || studentData.lastName.trim()
 
           guardianData = {
+            schoolId,
             firstName: parentFirstName,
             lastName: parentLastName,
             phone: studentData.parentPhone.trim(),

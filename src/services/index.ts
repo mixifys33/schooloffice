@@ -1,7 +1,7 @@
 /**
  * Services Index - Optimized for build performance
  * Import only what you need instead of using barrel exports
- */
+ */   
 
 // Core services - most commonly used
 export { SchoolService } from './school.service'

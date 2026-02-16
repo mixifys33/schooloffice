@@ -8,7 +8,7 @@
  * - NO update or delete operations are exposed on audit entries
  * - Any attempt to modify or delete audit entries will throw an error
  * - This ensures complete audit trail integrity for compliance and accountability
- */
+ */   
 import { prisma } from '@/lib/db'
 import { ActionType } from '@prisma/client'
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getDefaultReportCardTemplate } from '@/services/pdf-generation.service';
+import { pdfGenerationService } from '@/services/pdf-generation.service';
 
 export async function POST(
   request: NextRequest,

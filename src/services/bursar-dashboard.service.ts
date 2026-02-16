@@ -3,7 +3,7 @@
  * Implements the complete bursar section with term-aware functionality
  * PART 1.5: BURSAR DASHBOARD IMPLICATION
  */
-
+     
 import { prisma } from '@/lib/db';
 import { FeeStatusCalculatorService } from './fee-status-calculator.service';
 import { EnhancedFeeStructureService } from './enhanced-fee-structure.service';

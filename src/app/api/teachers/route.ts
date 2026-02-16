@@ -194,14 +194,19 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
-    // Extract the sendLoginInvite flag and access-related fields
+    // Extract the sendLoginInvite flag, access-related fields, and academic assignments
     const { 
       sendLoginInvite, 
       grantSystemAccess,
       accessLevel,
       permissions,
       channelConfig,
-      examinationRoles, // Remove this from teacherData as it's not part of CreateTeacherInput
+      examinationRoles,
+      // Extract academic assignments
+      assignedSubjects,
+      assignedClasses,
+      classTeacherFor,
+      assignedStreams,
       ...teacherData 
     } = body
 
@@ -211,6 +216,53 @@ export async function POST(request: NextRequest) {
 
     // Create teacher using the service (Requirements 1.1-1.6)
     const teacher = await teacherManagementService.createTeacher(schoolId, teacherData, userId)
+
+    // Create StaffResponsibility records for class teacher assignments
+    if (classTeacherFor && Array.isArray(classTeacherFor) && classTeacherFor.length > 0) {
+      const { prisma } = await import('@/lib/db')
+      
+      for (const classId of classTeacherFor) {
+        try {
+          await prisma.staffResponsibility.create({
+            data: {
+              schoolId,
+              staffId: teacher.id,
+              type: 'CLASS_TEACHING',
+              details: { classId },
+              assignedBy: userId,
+            },
+          })
+        } catch (err) {
+          console.error(`Failed to create CLASS_TEACHING responsibility for class ${classId}:`, err)
+        }
+      }
+    }
+
+    // Create StaffSubject records for subject assignments
+    if (assignedSubjects && Array.isArray(assignedSubjects) && assignedSubjects.length > 0) {
+      const { prisma } = await import('@/lib/db')
+      
+      for (const assignment of assignedSubjects) {
+        try {
+          // assignment can be either a string (subjectId) or an object { subjectId, classId }
+          const subjectId = typeof assignment === 'string' ? assignment : assignment.subjectId
+          const classId = typeof assignment === 'object' ? assignment.classId : null
+          
+          if (subjectId && classId) {
+            await prisma.staffSubject.create({
+              data: {
+                schoolId,
+                staffId: teacher.id,
+                subjectId,
+                classId,
+              },
+            })
+          }
+        } catch (err) {
+          console.error(`Failed to create StaffSubject assignment:`, err)
+        }
+      }
+    }
 
     // If shouldGrantAccess is true, grant system access and send invitation email
     if (shouldGrantAccess && teacher.email) {
@@ -235,7 +287,7 @@ export async function POST(request: NextRequest) {
             accessLevel: finalAccessLevel,
             email: teacher.email,
             temporaryPassword,
-            forcePasswordReset: true,
+            forcePasswordReset: false,
             permissions: finalPermissions,
             channelConfig: finalChannelConfig,
           },

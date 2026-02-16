@@ -1,6 +1,6 @@
 /**
  * TIMETABLE NOTIFICATION SERVICE
- * 
+ *    
  * Handles all notifications related to timetable changes:
  * - Teacher notifications for new/updated timetables
  * - Student/Parent notifications for schedule changes
@@ -15,7 +15,6 @@
  * - Emergency schedule changes
  */
 
-import { prisma } from '@/lib/db'
 import { TimetableDraft, TimetableConflict, TeacherWorkloadAnalysis } from '@/types/timetable'
 
 interface NotificationRecipient {
@@ -26,7 +25,7 @@ interface NotificationRecipient {
   role: string
   preferredChannel: 'SMS' | 'EMAIL' | 'BOTH'
 }
-
+         
 interface TimetableNotificationData {
   type: TimetableNotificationType
   timetable: TimetableDraft
@@ -44,7 +43,17 @@ interface TimetableNotificationData {
     name: string
     role: string
   }
-  metadata?: any
+  metadata?: {
+    totalConflicts?: number
+    criticalConflicts?: number
+    conflicts?: Array<{ description: string; severity: string }>
+    overloadedCount?: number
+    overloadedTeachers?: Array<{ name: string; totalPeriods: number; rating: string }>
+    affectedClasses?: string[]
+    affectedTeachers?: string[]
+    changeReason?: string
+    effectiveDate?: Date
+  }
 }
 
 enum TimetableNotificationType {
@@ -332,12 +341,15 @@ This is an automated notification from the SchoolOffice Timetable System.
    * Generate conflict notification message
    */
   private generateConflictMessage(data: TimetableNotificationData): { sms: string; email: { subject: string; body: string } } {
-    const { metadata } = data
+    const metadata = data.metadata || {}
+    const criticalConflicts = metadata.criticalConflicts || 0
+    const totalConflicts = metadata.totalConflicts || 0
+    const conflicts = metadata.conflicts || []
     
     const sms = `
 URGENT: Timetable conflicts detected!
 
-${metadata.criticalConflicts} critical conflicts found in ${data.term.name} timetable.
+${criticalConflicts} critical conflicts found in ${data.term.name} timetable.
 
 Immediate DoS attention required.
 
@@ -352,12 +364,12 @@ URGENT ATTENTION REQUIRED
 Critical conflicts have been detected in the ${data.term.name} ${data.term.academicYear} timetable.
 
 Conflict Summary:
-- Total Conflicts: ${metadata.totalConflicts}
-- Critical Conflicts: ${metadata.criticalConflicts}
+- Total Conflicts: ${totalConflicts}
+- Critical Conflicts: ${criticalConflicts}
 - Timetable Version: ${data.timetable.version}
 
 Critical Conflicts:
-${metadata.conflicts.map((conflict: any, index: number) => 
+${conflicts.map((conflict, index) => 
   `${index + 1}. ${conflict.description}`
 ).join('\n')}
 
@@ -385,7 +397,8 @@ This is an automated alert from the SchoolOffice Timetable System.
    * Generate workload alert message
    */
   private generateWorkloadAlertMessage(data: TimetableNotificationData): { email: { subject: string; body: string } } {
-    const { metadata } = data
+    const metadata = data.metadata || {}
+    const overloadedTeachers = metadata.overloadedTeachers || []
     
     const emailSubject = `Teacher Workload Alert - ${data.term.name}`
     
@@ -395,7 +408,7 @@ Teacher Workload Alert
 The following teachers have been identified with excessive workload in the ${data.term.name} ${data.term.academicYear} timetable:
 
 Overloaded Teachers:
-${metadata.overloadedTeachers.map((teacher: any) => 
+${overloadedTeachers.map((teacher) => 
   `- ${teacher.name}: ${teacher.totalPeriods} periods/week (${teacher.rating})`
 ).join('\n')}
 
@@ -426,11 +439,14 @@ This is an automated alert from the SchoolOffice Timetable System.
     data: TimetableNotificationData,
     recipientType: 'TEACHER' | 'PARENT'
   ): { sms: string; email: { subject: string; body: string } } {
-    const { metadata } = data
+    const metadata = data.metadata || {}
+    const effectiveDate = metadata.effectiveDate ? new Date(metadata.effectiveDate).toLocaleDateString() : 'TBD'
+    const changeReason = metadata.changeReason || 'Not specified'
+    const affectedClasses = metadata.affectedClasses || []
     
     const sms = recipientType === 'TEACHER' 
-      ? `URGENT: Schedule change effective ${metadata.effectiveDate.toLocaleDateString()}. Reason: ${metadata.changeReason}. Check updated timetable immediately. ${data.school.name}`
-      : `URGENT: Your child's class schedule has changed effective ${metadata.effectiveDate.toLocaleDateString()}. Reason: ${metadata.changeReason}. ${data.school.name}`
+      ? `URGENT: Schedule change effective ${effectiveDate}. Reason: ${changeReason}. Check updated timetable immediately. ${data.school.name}`
+      : `URGENT: Your child's class schedule has changed effective ${effectiveDate}. Reason: ${changeReason}. ${data.school.name}`
 
     const emailSubject = `URGENT: Emergency Schedule Change - ${data.term.name}`
     
@@ -441,9 +457,9 @@ URGENT: Emergency Schedule Change
 An emergency change has been made to the ${data.term.name} ${data.term.academicYear} timetable.
 
 Change Details:
-- Effective Date: ${metadata.effectiveDate.toLocaleDateString()}
-- Reason: ${metadata.changeReason}
-- Affected Classes: ${metadata.affectedClasses.join(', ')}
+- Effective Date: ${effectiveDate}
+- Reason: ${changeReason}
+- Affected Classes: ${affectedClasses.join(', ')}
 
 IMMEDIATE ACTION REQUIRED:
 1. Check your updated timetable immediately
@@ -462,9 +478,9 @@ URGENT: Emergency Schedule Change
 An emergency change has been made to your child's class schedule.
 
 Change Details:
-- Effective Date: ${metadata.effectiveDate.toLocaleDateString()}
-- Reason: ${metadata.changeReason}
-- Affected Classes: ${metadata.affectedClasses.join(', ')}
+- Effective Date: ${effectiveDate}
+- Reason: ${changeReason}
+- Affected Classes: ${affectedClasses.join(', ')}
 
 Please ensure your child is aware of the schedule changes and arrives at the correct times and locations.
 
@@ -537,27 +553,27 @@ ${data.school.name}
   }
 
   // Helper methods (would be implemented with actual database queries)
-  private async getTimetableWithDetails(timetableId: string): Promise<TimetableDraft> {
+  private async getTimetableWithDetails(_timetableId: string): Promise<TimetableDraft> {
     // This would fetch timetable with all details
     return {} as TimetableDraft
   }
 
-  private async getAffectedTeachers(timetableId: string): Promise<NotificationRecipient[]> {
+  private async getAffectedTeachers(_timetableId: string): Promise<NotificationRecipient[]> {
     // This would fetch all teachers with slots in this timetable
     return []
   }
 
-  private async getDoSUsers(schoolId: string): Promise<NotificationRecipient[]> {
+  private async getDoSUsers(_schoolId: string): Promise<NotificationRecipient[]> {
     // This would fetch all DoS users for the school
     return []
   }
 
-  private async getTeachersByIds(teacherIds: string[]): Promise<NotificationRecipient[]> {
+  private async getTeachersByIds(_teacherIds: string[]): Promise<NotificationRecipient[]> {
     // This would fetch teachers by their IDs
     return []
   }
 
-  private async getParentsByClasses(classIds: string[]): Promise<NotificationRecipient[]> {
+  private async getParentsByClasses(_classIds: string[]): Promise<NotificationRecipient[]> {
     // This would fetch parents of students in the specified classes
     return []
   }

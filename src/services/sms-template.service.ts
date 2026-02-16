@@ -4,7 +4,8 @@
  * No fluff - just what schools actually need with proper protection
  */
 import { prisma } from '@/lib/db'
-import {
+import { Prisma } from '@prisma/client'
+import {   
   SMSTemplateKey,
   SMSTriggerType,
   BuiltInSMSTemplate,
@@ -375,27 +376,18 @@ export class SMSTemplateService {
       where: { schoolId }
     })
 
-    return rules.map((rule: {
-      id: string
-      schoolId: string
-      templateKey: string
-      isEnabled: boolean
-      triggerConditions: Record<string, unknown>
-      restrictions: Record<string, unknown>
-      createdAt: Date
-      updatedAt: Date
-    }) => ({
+    return rules.map((rule) => ({
       id: rule.id,
       schoolId: rule.schoolId,
       templateKey: rule.templateKey as SMSTemplateKey,
       isEnabled: rule.isEnabled,
-      triggerConditions: rule.triggerConditions as {
+      triggerConditions: (rule.triggerConditions || {}) as {
         balanceThreshold?: number
         daysSinceTermStart?: number
         reminderInterval?: number
         maxRemindersPerTerm?: number
       },
-      restrictions: rule.restrictions as {
+      restrictions: (rule.restrictions || {}) as {
         maxPerDay?: number
         maxPerWeek?: number
         maxPerTerm?: number
@@ -422,16 +414,16 @@ export class SMSTemplateService {
       },
       update: {
         isEnabled: settings.isEnabled,
-        triggerConditions: settings.triggerConditions as Record<string, unknown> || {},
-        restrictions: settings.restrictions as Record<string, unknown> || {},
+        triggerConditions: (settings.triggerConditions || {}) as unknown as Prisma.InputJsonValue,
+        restrictions: (settings.restrictions || {}) as unknown as Prisma.InputJsonValue,
         updatedAt: new Date()
       },
       create: {
         schoolId,
         templateKey,
         isEnabled: settings.isEnabled || false,
-        triggerConditions: settings.triggerConditions as Record<string, unknown> || {},
-        restrictions: settings.restrictions as Record<string, unknown> || {}
+        triggerConditions: (settings.triggerConditions || {}) as unknown as Prisma.InputJsonValue,
+        restrictions: (settings.restrictions || {}) as unknown as Prisma.InputJsonValue
       }
     })
 
@@ -513,17 +505,7 @@ export class SMSTemplateService {
       take: 100
     })
 
-    return logs.map((log: {
-      id: string
-      schoolId: string
-      templateKey: string
-      sentBy: string
-      sentByRole: string
-      recipientCount: number
-      totalCost: number
-      timestamp: Date
-      metadata: Record<string, unknown>
-    }) => ({
+    return logs.map((log) => ({
       id: log.id,
       schoolId: log.schoolId,
       templateKey: log.templateKey as SMSTemplateKey,
@@ -532,7 +514,7 @@ export class SMSTemplateService {
       recipientCount: log.recipientCount,
       totalCost: log.totalCost,
       timestamp: log.timestamp,
-      metadata: log.metadata as {
+      metadata: (log.metadata || {}) as {
         triggerType: 'manual' | 'automatic'
         content: string
         recipients: string[]
@@ -620,8 +602,8 @@ export class SMSTemplateService {
   /**
    * Get daily limit for template type
    */
-  private getDailyLimit(protection: { dailyLimits: Record<string, unknown> }, templateKey: SMSTemplateKey): number | null {
-    const dailyLimits = protection.dailyLimits as {
+  private getDailyLimit(protection: { dailyLimits: Prisma.JsonValue }, templateKey: SMSTemplateKey): number | null {
+    const dailyLimits = (protection.dailyLimits || {}) as {
       announcement?: number
       emergency?: number
       feesReminder?: number

@@ -7,7 +7,7 @@
 import { prisma } from '@/lib/db';
 import { StudentAccountService } from './student-account.service';
 import { StudentMilestoneStatusService } from './student-milestone-status.service';
-
+   
 interface MigrationResult {
   migratedAccounts: number;
   errors: Array<{ studentId: string; error: string }>;

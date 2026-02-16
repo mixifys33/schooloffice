@@ -8,7 +8,7 @@
  * 
  * Property 2: Balance Update Atomicity
  * For any payment, discount, or penalty operation, the student balance update SHALL be atomic with the operation.
- */
+ */   
 import { prisma } from '@/lib/db'
 import type {
   StudentAccount,
@@ -186,7 +186,7 @@ export async function getStudentAccountDetails(
   // Get recent transactions
   const recentPayments = await prisma.payment.findMany({
     where: { studentId, termId },
-    orderBy: { paymentDate: 'desc' },
+    orderBy: { receivedAt: 'desc' },
     take: 5,
     include: {
       receipt: true,
@@ -236,7 +236,7 @@ export async function getStudentAccountDetails(
         method: p.method,
         reference: p.reference,
         status: p.status,
-        paymentDate: p.paymentDate.toISOString(),
+        paymentDate: p.receivedAt.toISOString(),
         receiptNumber: p.receipt?.receiptNumber,
       })),
       discounts: recentDiscounts.map(d => ({

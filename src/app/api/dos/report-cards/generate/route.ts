@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { generateNewCurriculumReportCard } from '@/services/pdf-generation.service';
+import { pdfGenerationService } from '@/services/pdf-generation.service';
 import { z } from 'zod';
 
 const generateReportCardSchema = z.object({
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate PDF
-    const pdfBuffer = await generateNewCurriculumReportCard(reportCardData);
+    const pdfBuffer = await pdfGenerationService.generateNewCurriculumReportCard(reportCardData);
 
     // Save report card record
     const reportCard = await prisma.reportCard.create({

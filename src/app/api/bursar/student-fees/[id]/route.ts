@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       include: {
         class: true,
         payments: {
-          orderBy: { paymentDate: 'desc' }
+          orderBy: { receivedAt: 'desc' }
         }
       }
     })
@@ -56,9 +56,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       id: payment.id,
       studentId: payment.studentId,
       amount: payment.amount,
-      paymentDate: payment.paymentDate.toISOString(),
+      paymentDate: payment.receivedAt.toISOString(),
       method: payment.method as 'cash' | 'bank' | 'mobile_money',
-      receiptNumber: payment.receiptNumber,
+      receiptNumber: payment.reference,
       recordedBy: payment.recordedBy
     }))
 
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         totalDue,
         totalPaid,
         balance,
-        lastPaymentDate: student.payments[0]?.paymentDate.toISOString() || null,
+        lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null,
         paymentStatus
       },
       payments,

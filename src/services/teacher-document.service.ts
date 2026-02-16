@@ -7,7 +7,7 @@
  * Property 25: Document Storage Integration - Documents stored via ImageKit
  * Property 26: Document Access Control - Admin roles only can access
  * Property 27: Document Preservation - Documents preserved on teacher status change
- */
+ */   
 import { prisma } from '@/lib/db'
 import { TeacherDocumentType, TeacherEventType, DOCUMENT_ACCESS_ROLES } from '@/types/teacher'
 import { Role, StaffRole } from '@/types/enums'

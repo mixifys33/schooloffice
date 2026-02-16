@@ -214,53 +214,57 @@ export const successMessages = {
  * ```
  */
 export function useFormNotifications() {
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   /**
    * Show success notification
    * Requirements: 21.2 - Display success notification toast for 3 seconds
    */
   const showSuccess = useCallback((message: string) => {
-    showToast({
-      type: 'success',
-      message,
+    toast({
+      title: 'Success',
+      description: message,
+      variant: 'success',
       duration: 3000, // 3 seconds per Requirement 21.2
     })
-  }, [showToast])
+  }, [toast])
 
   /**
    * Show error notification
    * Requirements: 21.3 - Display error message describing failure
    */
   const showError = useCallback((message: string) => {
-    showToast({
-      type: 'error',
-      message,
+    toast({
+      title: 'Error',
+      description: message,
+      variant: 'destructive',
       duration: 5000, // Longer duration for errors
     })
-  }, [showToast])
+  }, [toast])
 
   /**
    * Show warning notification
    */
   const showWarning = useCallback((message: string) => {
-    showToast({
-      type: 'warning',
-      message,
+    toast({
+      title: 'Warning',
+      description: message,
+      variant: 'default',
       duration: 4000,
     })
-  }, [showToast])
+  }, [toast])
 
   /**
    * Show info notification
    */
   const showInfo = useCallback((message: string) => {
-    showToast({
-      type: 'info',
-      message,
+    toast({
+      title: 'Info',
+      description: message,
+      variant: 'default',
       duration: 3000,
     })
-  }, [showToast])
+  }, [toast])
 
   /**
    * Show server error notification
@@ -270,12 +274,13 @@ export function useFormNotifications() {
     const serverError = parseServerError(error)
     const errorDetails = getErrorDetails(serverError.code)
     
-    showToast({
-      type: 'error',
-      message: serverError.message || errorDetails.message,
+    toast({
+      title: 'Error',
+      description: serverError.message || errorDetails.message,
+      variant: 'destructive',
       duration: 5000,
     })
-  }, [showToast])
+  }, [toast])
 
   return {
     showSuccess,

@@ -30,6 +30,12 @@ export interface DashboardLayoutProps {
   sidebarFooter?: React.ReactNode
   /** Whether to use bottom navigation on mobile instead of hamburger menu */
   useBottomNav?: boolean
+  /** Whether to hide the header (useful when using custom context bars) */
+  hideHeader?: boolean
+  /** Control sidebar open state externally */
+  sidebarOpen?: boolean
+  /** Callback when sidebar open state changes */
+  onSidebarOpenChange?: (open: boolean) => void
   /** Additional class names for main content */
   className?: string
 }
@@ -43,6 +49,9 @@ export function DashboardLayout({
   headerContent,
   sidebarFooter,
   useBottomNav = false,
+  hideHeader = false,
+  sidebarOpen,
+  onSidebarOpenChange,
   className,
 }: DashboardLayoutProps) {
   const BrandElement = brandLogo ? (
@@ -61,70 +70,81 @@ export function DashboardLayout({
       className="min-h-screen"
       style={{ backgroundColor: 'var(--bg-surface)' }}
     >
-      {/* Sidebar */}
+      {/* Sidebar - pass a render prop for the mobile trigger */}
       <Sidebar
         items={navItems}
         brandText={brandText}
         brandLogo={brandLogo}
         subtitle={subtitle}
         footer={sidebarFooter}
-      />
-
-      {/* Main content area */}
-      <div className="lg:pl-64">
-        {/* Header */}
-        <header 
-          className="sticky top-0 z-20 border-b"
-          style={{
-            backgroundColor: 'var(--bg-elevated)',
-            borderColor: 'var(--border-default)',
-          }}
-        >
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            {/* Mobile: Space for hamburger menu */}
-            <div className="w-12 lg:hidden" />
-            
-            {/* Desktop: Brand (hidden on mobile since it's in sidebar) */}
-            <div className="hidden lg:flex lg:items-center lg:gap-2">
-              {BrandElement}
-              {subtitle && (
-                <span 
-                  className="text-sm"
-                  style={{ color: 'var(--text-secondary)' }}
+        open={sidebarOpen}
+        onOpenChange={onSidebarOpenChange}
+        renderMobileTrigger={(triggerButton) => (
+          <>
+            {/* Main content area */}
+            <div className="lg:pl-64">
+              {/* Header - conditionally rendered */}
+              {!hideHeader && (
+                <header 
+                  className="sticky top-0 z-20 border-b"
+                  style={{
+                    backgroundColor: 'var(--bg-elevated)',
+                    borderColor: 'var(--border-default)',
+                  }}
                 >
-                  {subtitle}
-                </span>
+                  <div className="flex h-16 items-center gap-2 px-2 sm:px-4 lg:px-8">
+                    {/* Mobile: Hamburger button - part of header flow */}
+                    <div className="flex-shrink-0 lg:hidden">
+                      {triggerButton}
+                    </div>
+                    
+                    {/* Desktop: Brand (hidden on mobile since it's in sidebar) */}
+                    <div className="hidden lg:flex lg:items-center lg:gap-2">
+                      {BrandElement}
+                      {subtitle && (
+                        <span 
+                          className="text-sm"
+                          style={{ color: 'var(--text-secondary)' }}
+                        >
+                          {subtitle}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mobile: Brand - compact and truncated */}
+                    <div className="flex flex-1 items-center min-w-0 lg:hidden">
+                      <div className="text-sm font-semibold truncate" style={{ color: 'var(--accent-primary)' }}>
+                        {typeof brandText === 'string' ? brandText : 'SchoolOffice'}
+                      </div>
+                    </div>
+
+                    {/* Header content (user menu, notifications, etc.) - compact on mobile */}
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+                      {headerContent}
+                    </div>
+                  </div>
+                </header>
               )}
+
+              {/* Main content */}
+              <main
+                className={cn(
+                  hideHeader ? 'min-h-screen' : 'min-h-[calc(100vh-4rem)]',
+                  useBottomNav && 'pb-16 lg:pb-0', // Add padding for bottom nav
+                  className
+                )}
+              >
+                <ResponsiveContainer className="py-4 md:py-6">
+                  {children}
+                </ResponsiveContainer>
+              </main>
             </div>
 
-            {/* Mobile: Centered brand */}
-            <div className="flex items-center gap-2 lg:hidden">
-              {BrandElement}
-            </div>
-
-            {/* Header content (user menu, notifications, etc.) */}
-            <div className="flex items-center gap-4">
-              {headerContent}
-            </div>
-          </div>
-        </header>
-
-        {/* Main content */}
-        <main
-          className={cn(
-            'min-h-[calc(100vh-4rem)]',
-            useBottomNav && 'pb-16 lg:pb-0', // Add padding for bottom nav
-            className
-          )}
-        >
-          <ResponsiveContainer className="py-4 md:py-6">
-            {children}
-          </ResponsiveContainer>
-        </main>
-      </div>
-
-      {/* Bottom navigation for mobile (optional) */}
-      {useBottomNav && <BottomNav items={navItems} />}
+            {/* Bottom navigation for mobile (optional) */}
+            {useBottomNav && <BottomNav items={navItems} />}
+          </>
+        )}
+      />
     </div>
   )
 }

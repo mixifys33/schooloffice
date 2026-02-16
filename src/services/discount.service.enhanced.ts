@@ -3,7 +3,7 @@
  * Fixes Issue #7: Discount Approval State Machine Vulnerability
  * 
  * Balance updates now happen atomically with status changes
- */
+ */   
 import { prisma } from '@/lib/db'
 import type {
   StudentDiscount,
@@ -222,7 +222,7 @@ export async function applyDiscount(
           schoolId: studentAccount.schoolId,
           userId: data.appliedBy,
           action: 'DISCOUNT_APPLIED',
-          resourceType: 'Discount',
+          resource: "Discount",
           resourceId: discount.id,
           newValue: {
             name: data.name,
@@ -356,7 +356,7 @@ export async function approveDiscount(
           schoolId: discount.studentAccount.schoolId,
           userId: approverId,
           action: 'DISCOUNT_APPROVED',
-          resourceType: 'Discount',
+          resource: "Discount",
           resourceId: discountId,
           previousValue: { status: discount.status },
           newValue: { status: 'APPROVED' },

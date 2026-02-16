@@ -364,26 +364,48 @@ export async function DELETE(request: NextRequest) {
 
       // Check if any terms have associated data that would prevent deletion
       for (const term of terms) {
-        const [examsCount, resultsCount, paymentsCount, feeStructuresCount, timetablesCount] = await Promise.all([
+        const [
+          examsCount, 
+          resultsCount, 
+          paymentsCount, 
+          feeStructuresCount, 
+          timetablesCount,
+          caEntriesCount,
+          examEntriesCount
+        ] = await Promise.all([
           prisma.exam.count({ where: { termId: term.id } }),
           prisma.result.count({ where: { termId: term.id } }),
           prisma.payment.count({ where: { termId: term.id } }),
           prisma.feeStructure.count({ where: { termId: term.id } }),
           prisma.timetableDraft.count({ where: { termId: term.id } }),
+          prisma.cAEntry.count({ where: { termId: term.id } }),
+          prisma.examEntry.count({ where: { termId: term.id } }),
         ])
 
-        if (examsCount > 0 || resultsCount > 0 || paymentsCount > 0 || feeStructuresCount > 0 || timetablesCount > 0) {
+        if (
+          examsCount > 0 || 
+          resultsCount > 0 || 
+          paymentsCount > 0 || 
+          feeStructuresCount > 0 || 
+          timetablesCount > 0 ||
+          caEntriesCount > 0 ||
+          examEntriesCount > 0
+        ) {
+          const dependencies: any = {
+            exams: examsCount,
+            results: resultsCount,
+            payments: paymentsCount,
+            feeStructures: feeStructuresCount,
+            timetables: timetablesCount,
+            caEntries: caEntriesCount,
+            examEntries: examEntriesCount
+          }
+          
           return NextResponse.json(
             { 
               error: `Cannot delete term "${term.name}" as it has associated data. Please clean up these dependencies first.`,
               termName: term.name,
-              dependencies: {
-                exams: examsCount,
-                results: resultsCount,
-                payments: paymentsCount,
-                feeStructures: feeStructuresCount,
-                timetables: timetablesCount
-              }
+              dependencies
             },
             { status: 400 }
           )

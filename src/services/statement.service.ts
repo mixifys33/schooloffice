@@ -9,7 +9,7 @@
  *
  * Property 28: Guardian Statement Aggregation
  * For any guardian statement, the financial data SHALL aggregate all linked students' transactions.
- */
+ */   
 import { prisma } from '@/lib/db'
 import type {
   StudentStatement,

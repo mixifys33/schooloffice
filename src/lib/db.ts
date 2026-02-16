@@ -27,6 +27,11 @@ function createPrismaClient(): PrismaClient {
         queryTimeout: 30000,   // 30 seconds
       },
     },
+    // Increase transaction timeout to 15 seconds
+    transactionOptions: {
+      maxWait: 15000, // 15 seconds max wait to start transaction
+      timeout: 15000, // 15 seconds transaction timeout
+    },
   });
 }
 
@@ -36,21 +41,15 @@ function createPrismaClient(): PrismaClient {
 async function connectWithRetry(client: PrismaClient, maxRetries = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔧 [DB] Connection attempt ${attempt}/${maxRetries}...`);
       await client.$connect();
-      console.log('✅ [DB] Database connected successfully');
       return;
     } catch (error: any) {
-      console.error(`❌ [DB] Connection attempt ${attempt} failed:`, error.message);
-      
       if (attempt === maxRetries) {
-        console.error('❌ [DB] All connection attempts failed');
         throw error;
       }
       
       // Exponential backoff: 1s, 2s, 4s
       const delay = Math.pow(2, attempt - 1) * 1000;
-      console.log(`🔧 [DB] Retrying in ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -64,17 +63,10 @@ if (process.env.NODE_ENV === 'production') {
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = createPrismaClient();
     
-    // Connect with retry logic in development
-    connectWithRetry(globalForPrisma.prisma)
-      .catch((error) => {
-        console.error('❌ FATAL: Development Database connection failed after all retries:', error);
-        console.error('Please check:');
-        console.error('1. Your .env DATABASE_URL is correct');
-        console.error('2. MongoDB Atlas cluster is running');
-        console.error('3. Your IP is whitelisted in MongoDB Atlas');
-        console.error('4. Network connectivity to MongoDB Atlas');
-        // Don't exit in development - let the app start and retry on demand
-      });
+    // Connect with retry logic in development (silent)
+    connectWithRetry(globalForPrisma.prisma).catch(() => {
+      // Silent - will retry on demand
+    });
   }
   prismaInstance = globalForPrisma.prisma;
 }
@@ -95,13 +87,8 @@ class EnhancedPrismaClient {
    */
   private async ensureConnection(): Promise<void> {
     if (!this.isConnected) {
-      try {
-        await connectWithRetry(this.client, 2); // Fewer retries for on-demand connection
-        this.isConnected = true;
-      } catch (error) {
-        console.error('❌ [DB] Failed to establish connection:', error);
-        throw error;
-      }
+      await connectWithRetry(this.client, 2); // Fewer retries for on-demand connection
+      this.isConnected = true;
     }
   }
 
@@ -121,7 +108,6 @@ class EnhancedPrismaClient {
               // Reset connection flag on connection errors
               if (error.message?.includes('Server selection timeout') || 
                   error.message?.includes('No such host is known')) {
-                console.log('🔧 [DB] Connection error detected, will retry on next request');
                 this.isConnected = false;
               }
               throw error;
@@ -145,7 +131,6 @@ class EnhancedPrismaClient {
             } catch (error: any) {
               if (error.message?.includes('Server selection timeout') || 
                   error.message?.includes('No such host is known')) {
-                console.log('🔧 [DB] Connection error detected, will retry on next request');
                 this.isConnected = false;
               }
               throw error;

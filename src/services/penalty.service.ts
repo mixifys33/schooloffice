@@ -6,7 +6,7 @@
  * Property 12: Discount/Penalty Removal Audit
  * For any discount or penalty removal, the system SHALL require a reason
  * and create an audit entry with before/after values.
- *
+ *   
  * Property 23: Auto-Penalty Application
  * For any student with overdue balance past the grace period, when auto-penalty
  * is enabled, the system SHALL apply the configured late payment penalty.
@@ -157,7 +157,7 @@ export async function applyPenalty(
     schoolId: studentAccount.schoolId,
     userId: data.appliedBy,
     action: 'PENALTY_APPLIED',
-    resourceType: 'Penalty',
+    resource: "Penalty",
     resourceId: penalty.id,
     newValue: {
       name: data.name,
@@ -274,7 +274,7 @@ export async function waivePenalty(
     schoolId: penalty.studentAccount.schoolId,
     userId,
     action: 'PENALTY_WAIVED',
-    resourceType: 'Penalty',
+    resource: "Penalty",
     resourceId: penaltyId,
     previousValue,
     newValue: {

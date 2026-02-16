@@ -8,7 +8,7 @@
  * - Who closed a term
  * 
  * NOT: Every click, view, or minor action
- */
+ */  
 import { prisma } from '@/lib/db'
 import { AuditLog, CreateAuditLogInput } from '@/types'
 

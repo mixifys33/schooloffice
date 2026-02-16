@@ -7,7 +7,7 @@
  * Property 1: Financial Data Integrity
  * For any financial claim, the system SHALL provide verifiable proof through immutable records
  * including: payment record, receipt, audit trail, and balance calculation.
- * 
+ *     
  * Property 2: Financial Dispute Resolution
  * For any financial dispute, the system SHALL resolve the dispute within 60 seconds
  * by providing a complete chronological record of transactions.
@@ -86,7 +86,7 @@ export interface FinancialEvidence {
 export interface FinancialDiscrepancy {
   type: 'BALANCE_MISMATCH' | 'MISSING_RECORD' | 'INCONSISTENT_DATA' | 'TIMESTAMP_MISMATCH'
   description: string
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+  severity: ConflictSeverity.CRITICAL | 'HIGH' | 'MEDIUM' | 'LOW'
   affectedFields: string[]
   suggestedResolution: string
 }
@@ -243,7 +243,7 @@ export class FinancialTruthService {
           discrepancies.push({
             type: 'INCONSISTENT_DATA',
             description: 'Payment amount does not match receipt amount',
-            severity: 'CRITICAL',
+            severity: ConflictSeverity.CRITICAL,
             affectedFields: ['amount'],
             suggestedResolution: 'Verify the original transaction and reconcile amounts'
           })

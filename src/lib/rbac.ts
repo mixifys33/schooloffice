@@ -736,7 +736,7 @@ export class RoleAccessError extends Error {
  * Requirement 4.5: Enforce role-based access at API level
  */
 export const API_ROLE_ACCESS: Record<string, Role[]> = {
-  'student:read': [Role.STUDENT, Role.PARENT, Role.TEACHER, Role.SCHOOL_ADMIN, Role.SUPER_ADMIN],
+  'student:read': [Role.STUDENT, Role.PARENT, Role.TEACHER, Role.DEPUTY, Role.SCHOOL_ADMIN, Role.SUPER_ADMIN],
   'student:write': [Role.SCHOOL_ADMIN, Role.DEPUTY, Role.SUPER_ADMIN],
   'parent:read': [Role.PARENT, Role.SCHOOL_ADMIN, Role.SUPER_ADMIN],
   'parent:write': [Role.SCHOOL_ADMIN, Role.SUPER_ADMIN],

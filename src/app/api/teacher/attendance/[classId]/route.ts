@@ -224,7 +224,7 @@ export async function POST(
     try {
       await auditService.logAction({
         schoolId, userId: session.user.id, action: 'ATTENDANCE_RECORDED',
-        resourceType: 'Attendance', resourceId: classId,
+        resource: "Attendance", resourceId: classId,
         details: {
           classId, date: requestDate.toISOString(), recordCount: records.length,
           presentCount: records.filter(r => r.status === AttendanceStatus.PRESENT).length,

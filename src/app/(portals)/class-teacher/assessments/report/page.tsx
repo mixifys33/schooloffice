@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BarChart3, FileText, TrendingUp, Award, Download, Printer } from 'lucide-react'
+import { ArrowLeft, BarChart3, FileText, TrendingUp, Award, Download, Printer, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -35,23 +35,49 @@ interface ReportOption {
 
 interface ClassOption {
   id: string
+  classId: string
+  subjectId: string
   name: string
   subject: string
+  subjectCode: string
+}
+
+interface ReportData {
+  reportType: string
+  class: { name: string; level: number }
+  subject: { name: string; code: string }
+  term: { name: string; academicYear: string }
+  students: Array<{
+    studentId: string
+    studentName: string
+    admissionNumber: string
+    caScore: number
+    caActivities: Array<{ name: string; type: string; score: number; maxScore: number }>
+    examScore: number
+    finalScore: number
+    hasCAs: boolean
+    hasExam: boolean
+  }>
+  classStats: {
+    totalStudents: number
+    averageCA: number
+    averageExam: number
+    averageFinal: number
+    highestScore: number
+    lowestScore: number
+  }
+  generatedAt: string
 }
 
 export default function ClassTeacherAssessmentReportsPage() {
+  const [classes, setClasses] = useState<ClassOption[]>([])
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [selectedReportType, setSelectedReportType] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [fetchingClasses, setFetchingClasses] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Mock data for classes
-  const classes: ClassOption[] = [
-    { id: '1', name: 'Form 4A', subject: 'Mathematics' },
-    { id: '2', name: 'Form 4B', subject: 'Mathematics' },
-    { id: '3', name: 'Form 3A', subject: 'Physics' },
-    { id: '4', name: 'Form 3B', subject: 'Chemistry' },
-  ]
+  const [reportData, setReportData] = useState<ReportData | null>(null)
+  const [generating, setGenerating] = useState(false)
 
   // Report options
   const reportOptions: ReportOption[] = [
@@ -81,21 +107,324 @@ export default function ClassTeacherAssessmentReportsPage() {
     }
   ]
 
-  const handleGenerateReport = () => {
+  // Fetch classes on mount
+  useEffect(() => {
+    async function fetchClasses() {
+      try {
+        const response = await fetch('/api/class-teacher/assessments/reports')
+        if (!response.ok) throw new Error('Failed to fetch classes')
+        const data = await response.json()
+        setClasses(data.classes)
+      } catch (err) {
+        console.error('Error fetching classes:', err)
+        setError('Failed to load classes')
+      } finally {
+        setFetchingClasses(false)
+      }
+    }
+    fetchClasses()
+  }, [])
+
+  const handleGenerateReport = async () => {
     if (!selectedClass || !selectedReportType) {
       setError('Please select both a class and report type')
       return
     }
 
-    setLoading(true)
+    setGenerating(true)
     setError(null)
+    setReportData(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      // In a real app, this would trigger report generation/download
-      alert(`Generating ${selectedReportType} report for ${classes.find(c => c.id === selectedClass)?.name} - ${classes.find(c => c.id === selectedClass)?.subject}`)
-    }, 1000)
+    try {
+      const selectedClassData = classes.find((c) => c.id === selectedClass)
+      if (!selectedClassData) throw new Error('Class not found')
+
+      const response = await fetch('/api/class-teacher/assessments/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: selectedClassData.classId,
+          subjectId: selectedClassData.subjectId,
+          reportType: selectedReportType,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate report')
+      }
+
+      const data = await response.json()
+      setReportData(data)
+    } catch (err) {
+      console.error('Error generating report:', err)
+      setError(err instanceof Error ? err.message : 'Failed to generate report')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handlePrintReport = () => {
+    if (!reportData) return
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const getReportContent = () => {
+      if (reportData.reportType === 'ca-only') {
+        return reportData.students.map((student) => `
+          <tr>
+            <td>${student.studentName}</td>
+            <td>${student.admissionNumber}</td>
+            <td>
+              ${student.caActivities.map((ca) => `
+                <div style="margin-bottom: 4px;">
+                  ${ca.name}: ${ca.score}/${ca.maxScore}
+                </div>
+              `).join('')}
+            </td>
+            <td class="score-cell">${student.caScore.toFixed(2)}/20</td>
+          </tr>
+        `).join('')
+      } else if (reportData.reportType === 'exam-only') {
+        return reportData.students.map((student) => `
+          <tr>
+            <td>${student.studentName}</td>
+            <td>${student.admissionNumber}</td>
+            <td class="score-cell">${student.examScore.toFixed(2)}/80</td>
+            <td>${student.hasCAs ? 'CA Complete' : 'CA Pending'}</td>
+          </tr>
+        `).join('')
+      } else {
+        return reportData.students.map((student) => `
+          <tr>
+            <td>${student.studentName}</td>
+            <td>${student.admissionNumber}</td>
+            <td class="score-cell">${student.caScore.toFixed(2)}/20</td>
+            <td class="score-cell">${student.examScore.toFixed(2)}/80</td>
+            <td class="score-cell"><strong>${student.finalScore.toFixed(2)}/100</strong></td>
+          </tr>
+        `).join('')
+      }
+    }
+
+    const getTableHeaders = () => {
+      if (reportData.reportType === 'ca-only') {
+        return '<th>NAME</th><th>ADM NO.</th><th>CA ACTIVITIES</th><th>CA SCORE (20%)</th>'
+      } else if (reportData.reportType === 'exam-only') {
+        return '<th>NAME</th><th>ADM NO.</th><th>EXAM SCORE (80%)</th><th>CA STATUS</th>'
+      } else {
+        return '<th>NAME</th><th>ADM NO.</th><th>CA (20%)</th><th>EXAM (80%)</th><th>FINAL (100%)</th>'
+      }
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${reportData.class.name} - ${reportData.subject.name} Report</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+              padding: 30px;
+              color: #1a1a1a;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #e5e7eb;
+            }
+            .header h1 {
+              font-size: 24px;
+              font-weight: 600;
+              margin-bottom: 8px;
+            }
+            .header-info {
+              display: flex;
+              justify-content: center;
+              gap: 30px;
+              font-size: 14px;
+              color: #6b7280;
+              margin-top: 12px;
+              flex-wrap: wrap;
+            }
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+              gap: 15px;
+              margin: 20px 0;
+              padding: 15px;
+              background: #f9fafb;
+              border-radius: 8px;
+            }
+            .stat-item {
+              text-align: center;
+            }
+            .stat-label {
+              font-size: 12px;
+              color: #6b7280;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            .stat-value {
+              font-size: 20px;
+              font-weight: 600;
+              color: #111827;
+              margin-top: 4px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+              border: 1px solid #e5e7eb;
+            }
+            th {
+              padding: 12px;
+              text-align: left;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: #6b7280;
+              background: #f9fafb;
+              border-bottom: 2px solid #e5e7eb;
+            }
+            td {
+              padding: 12px;
+              font-size: 13px;
+              border-bottom: 1px solid #f3f4f6;
+            }
+            .score-cell {
+              font-family: 'Courier New', monospace;
+              font-weight: 500;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e5e7eb;
+              text-align: center;
+              font-size: 11px;
+              color: #9ca3af;
+            }
+            @media print {
+              body { padding: 20px; }
+              .stats-grid { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${reportData.class.name} - ${reportData.subject.name}</h1>
+            <h2 style="font-size: 18px; color: #6b7280; margin-top: 8px;">
+              ${reportOptions.find((opt) => opt.id === reportData.reportType)?.title}
+            </h2>
+            <div class="header-info">
+              <div><strong>Term:</strong> ${reportData.term.name}</div>
+              <div><strong>Academic Year:</strong> ${reportData.term.academicYear}</div>
+              <div><strong>Total Students:</strong> ${reportData.classStats.totalStudents}</div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-label">Average CA</div>
+              <div class="stat-value">${reportData.classStats.averageCA.toFixed(2)}/20</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Average Exam</div>
+              <div class="stat-value">${reportData.classStats.averageExam.toFixed(2)}/80</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Average Final</div>
+              <div class="stat-value">${reportData.classStats.averageFinal.toFixed(2)}/100</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Highest Score</div>
+              <div class="stat-value">${reportData.classStats.highestScore.toFixed(2)}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Lowest Score</div>
+              <div class="stat-value">${reportData.classStats.lowestScore.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>${getTableHeaders()}</tr>
+            </thead>
+            <tbody>
+              ${getReportContent()}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <div>SchoolOffice.academy - Class Teacher Portal</div>
+            <div style="margin-top: 8px;">Generated: ${new Date(reportData.generatedAt).toLocaleString()}</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              setTimeout(function() { window.print(); }, 250);
+            }
+          </script>
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(printContent)
+    printWindow.document.close()
+  }
+
+  const handleDownloadCSV = () => {
+    if (!reportData) return
+
+    const getCSVContent = () => {
+      if (reportData.reportType === 'ca-only') {
+        const headers = ['Name', 'Admission Number', 'CA Activities', 'CA Score (20%)']
+        const rows = reportData.students.map((student) => [
+          `"${student.studentName}"`,
+          student.admissionNumber,
+          `"${student.caActivities.map((ca) => `${ca.name}: ${ca.score}/${ca.maxScore}`).join('; ')}"`,
+          `${student.caScore.toFixed(2)}/20`,
+        ])
+        return [headers, ...rows].map((row) => row.join(',')).join('\n')
+      } else if (reportData.reportType === 'exam-only') {
+        const headers = ['Name', 'Admission Number', 'Exam Score (80%)', 'CA Status']
+        const rows = reportData.students.map((student) => [
+          `"${student.studentName}"`,
+          student.admissionNumber,
+          `${student.examScore.toFixed(2)}/80`,
+          student.hasCAs ? 'CA Complete' : 'CA Pending',
+        ])
+        return [headers, ...rows].map((row) => row.join(',')).join('\n')
+      } else {
+        const headers = ['Name', 'Admission Number', 'CA (20%)', 'Exam (80%)', 'Final (100%)']
+        const rows = reportData.students.map((student) => [
+          `"${student.studentName}"`,
+          student.admissionNumber,
+          `${student.caScore.toFixed(2)}/20`,
+          `${student.examScore.toFixed(2)}/80`,
+          `${student.finalScore.toFixed(2)}/100`,
+        ])
+        return [headers, ...rows].map((row) => row.join(',')).join('\n')
+      }
+    }
+
+    const csvContent = getCSVContent()
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+    link.setAttribute(
+      'download',
+      `${reportData.class.name}_${reportData.subject.name}_${reportData.reportType}_${new Date().toISOString().split('T')[0]}.csv`
+    )
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   return (
@@ -136,7 +465,10 @@ export default function ClassTeacherAssessmentReportsPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      {fetchingClasses ? (
+        <SkeletonLoader count={3} height={200} />
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
         {/* Report Configuration */}
         <div className="lg:col-span-1">
           <Card className={cn(cardStyles.base, cardStyles.normal)}>
@@ -185,17 +517,17 @@ export default function ClassTeacherAssessmentReportsPage() {
                 <div className="space-y-3">
                   <Button 
                     onClick={handleGenerateReport} 
-                    disabled={loading || !selectedClass || !selectedReportType}
+                    disabled={generating || !selectedClass || !selectedReportType}
                     className="w-full gap-2"
                   >
-                    {loading ? (
+                    {generating ? (
                       <>
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                         Generating...
                       </>
                     ) : (
                       <>
-                        <Printer className="h-4 w-4" />
+                        <BarChart3 className="h-4 w-4" />
                         Generate Report
                       </>
                     )}
@@ -203,11 +535,22 @@ export default function ClassTeacherAssessmentReportsPage() {
                   
                   <Button 
                     variant="outline" 
-                    disabled={!selectedClass || !selectedReportType}
+                    disabled={!reportData}
                     className="w-full gap-2"
+                    onClick={handlePrintReport}
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Report
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    disabled={!reportData}
+                    className="w-full gap-2"
+                    onClick={handleDownloadCSV}
                   >
                     <Download className="h-4 w-4" />
-                    Download PDF
+                    Download CSV
                   </Button>
                 </div>
               </div>
@@ -265,12 +608,98 @@ export default function ClassTeacherAssessmentReportsPage() {
             <CardHeader>
               <CardTitle className={cn(typography.sectionTitle)}>Report Preview</CardTitle>
               <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                Preview of the selected report type
+                {reportData ? 'Generated report data' : 'Preview of the selected report type'}
               </p>
             </CardHeader>
             <CardContent>
               <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg p-6 min-h-[300px]">
-                {selectedReportType ? (
+                {reportData ? (
+                  <div>
+                    <div className="mb-6">
+                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>
+                        {reportData.class.name} - {reportData.subject.name}
+                      </h3>
+                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                        {reportData.term.name} | {reportData.term.academicYear}
+                      </p>
+                    </div>
+
+                    {/* Class Statistics */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+                      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-3 rounded-lg">
+                        <div className="text-xs text-[var(--text-muted)]">Students</div>
+                        <div className="text-lg font-semibold">{reportData.classStats.totalStudents}</div>
+                      </div>
+                      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-3 rounded-lg">
+                        <div className="text-xs text-[var(--text-muted)]">Avg CA</div>
+                        <div className="text-lg font-semibold">{reportData.classStats.averageCA.toFixed(1)}/20</div>
+                      </div>
+                      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-3 rounded-lg">
+                        <div className="text-xs text-[var(--text-muted)]">Avg Exam</div>
+                        <div className="text-lg font-semibold">{reportData.classStats.averageExam.toFixed(1)}/80</div>
+                      </div>
+                      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-3 rounded-lg">
+                        <div className="text-xs text-[var(--text-muted)]">Avg Final</div>
+                        <div className="text-lg font-semibold">{reportData.classStats.averageFinal.toFixed(1)}/100</div>
+                      </div>
+                      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] p-3 rounded-lg">
+                        <div className="text-xs text-[var(--text-muted)]">Highest</div>
+                        <div className="text-lg font-semibold">{reportData.classStats.highestScore.toFixed(1)}</div>
+                      </div>
+                    </div>
+
+                    {/* Student Data Preview (first 5 students) */}
+                    <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">NAME</th>
+                              {reportData.reportType === 'ca-only' && (
+                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">CA SCORE</th>
+                              )}
+                              {reportData.reportType === 'exam-only' && (
+                                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">EXAM SCORE</th>
+                              )}
+                              {reportData.reportType === 'final' && (
+                                <>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">CA</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">EXAM</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-muted)]">FINAL</th>
+                                </>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.students.slice(0, 5).map((student, index) => (
+                              <tr key={student.studentId} className="border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                                <td className="px-4 py-2 text-sm">{student.studentName}</td>
+                                {reportData.reportType === 'ca-only' && (
+                                  <td className="px-4 py-2 text-sm font-mono">{student.caScore.toFixed(2)}/20</td>
+                                )}
+                                {reportData.reportType === 'exam-only' && (
+                                  <td className="px-4 py-2 text-sm font-mono">{student.examScore.toFixed(2)}/80</td>
+                                )}
+                                {reportData.reportType === 'final' && (
+                                  <>
+                                    <td className="px-4 py-2 text-sm font-mono">{student.caScore.toFixed(2)}/20</td>
+                                    <td className="px-4 py-2 text-sm font-mono">{student.examScore.toFixed(2)}/80</td>
+                                    <td className="px-4 py-2 text-sm font-mono font-semibold">{student.finalScore.toFixed(2)}/100</td>
+                                  </>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {reportData.students.length > 5 && (
+                        <div className="px-4 py-2 text-xs text-center text-[var(--text-muted)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                          Showing 5 of {reportData.students.length} students
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : selectedReportType ? (
                   <div className="text-center">
                     <div className="mx-auto mb-4">
                       {selectedReportType === 'ca-only' && <FileText className="h-12 w-12 text-[var(--chart-green)] mx-auto" />}
@@ -281,32 +710,8 @@ export default function ClassTeacherAssessmentReportsPage() {
                       {reportOptions.find(opt => opt.id === selectedReportType)?.title}
                     </h3>
                     <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-4')}>
-                      Preview of the {selectedReportType.replace('-', ' ')} report for the selected class
+                      Click "Generate Report" to load data for the selected class
                     </p>
-                    <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg p-4 text-left">
-                      <div className="flex justify-between mb-2">
-                        <span className={cn(typography.caption)}>Student Name</span>
-                        <span className={cn(typography.caption)}>Score</span>
-                      </div>
-                      <div className="h-px bg-[var(--border-default)] dark:bg-[var(--border-strong)] my-2"></div>
-                      <div className="flex justify-between mb-2">
-                        <span>John Doe</span>
-                        <span>16.33/20</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span>Jane Smith</span>
-                        <span>18.50/20</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span>Robert Brown</span>
-                        <span>14.75/20</span>
-                      </div>
-                      <div className="h-px bg-[var(--border-default)] dark:bg-[var(--border-strong)] my-2"></div>
-                      <div className="flex justify-between font-medium">
-                        <span>Average</span>
-                        <span>16.53/20</span>
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -324,6 +729,7 @@ export default function ClassTeacherAssessmentReportsPage() {
           </Card>
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -59,7 +59,7 @@ function getDashboardPath(role: StaffRole | Role): string {
   const paths: Record<string, string> = {
     // StaffRole paths
     [StaffRole.CLASS_TEACHER]: '/dashboard/class-teacher',
-    [StaffRole.DOS]: '/dashboard/dos',
+    [StaffRole.DOS]: '/dos',
     [StaffRole.HOSTEL_STAFF]: '/dashboard/hostel',
     [StaffRole.SUPPORT_STAFF]: '/dashboard/support',
     [StaffRole.BURSAR]: '/dashboard/bursar',

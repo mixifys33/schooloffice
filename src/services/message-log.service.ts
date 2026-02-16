@@ -4,8 +4,9 @@
  * Provides immutable audit trail for all communications.
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
  */
-
+   
 import { prisma } from '../lib/db'
+import type { Prisma } from '@prisma/client'
 import {
   CommunicationLog,
   MessageLogEntry,
@@ -19,7 +20,7 @@ import {
   PaginatedMessageLogs,
   MessageLogEntry as HubMessageLogEntry,
 } from '../types/communication-hub'
-import { DeliveryStatus } from '../types/enums'
+import { DeliveryStatus, MessageChannel } from '../types/enums'
 import type { IMessageLogService } from '../types/services'
 
 export class MessageLogService implements IMessageLogService {
@@ -95,7 +96,7 @@ export class MessageLogService implements IMessageLogService {
     } = params
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.CommunicationLogWhereInput = {
       schoolId,
     }
 
@@ -114,7 +115,7 @@ export class MessageLogService implements IMessageLogService {
     }
 
     if (status) {
-      where.status = status
+      where.status = status as any
     }
 
     if (senderId) {
@@ -205,11 +206,11 @@ export class MessageLogService implements IMessageLogService {
 
     return {
       messageId: logEntry.messageId,
-      channel: logEntry.channel,
+      channel: logEntry.channel as MessageChannel,
       recipientContact: logEntry.recipientContact,
       content: logEntry.content,
       statusHistory,
-      finalStatus: logEntry.status,
+      finalStatus: logEntry.status as DeliveryStatus,
       createdAt: logEntry.createdAt,
       generatedAt: new Date(),
     }
@@ -375,7 +376,7 @@ export class MessageLogService implements IMessageLogService {
     } = filters
 
     // Build where clause
-    const where: any = {}
+    const where: Prisma.CommunicationLogWhereInput = {}
 
     // School filter - if provided, filter by specific school, otherwise get all schools
     if (schoolId) {
@@ -400,7 +401,7 @@ export class MessageLogService implements IMessageLogService {
 
     // Status filter
     if (status) {
-      where.status = status
+      where.status = status as any
     }
 
     // Search by recipient phone/email
@@ -426,37 +427,40 @@ export class MessageLogService implements IMessageLogService {
     const pageSize = 50
     const offset = (page - 1) * pageSize
 
-    // Get logs with pagination
-    const [logs, total] = await Promise.all([
+    // Get logs with pagination and school info
+    const [logs, total, schools] = await Promise.all([
       prisma.communicationLog.findMany({
         where,
-        include: {
-          school: {
-            select: {
-              name: true,
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
         take: pageSize,
         skip: offset,
       }),
       prisma.communicationLog.count({ where }),
+      // Get school names separately
+      prisma.school.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
     ])
+
+    // Create school name lookup map
+    const schoolMap = new Map(schools.map(s => [s.id, s.name]))
 
     // Map to Hub format
     const hubLogs: HubMessageLogEntry[] = logs.map(log => ({
       id: log.id,
       timestamp: log.createdAt,
       schoolId: log.schoolId,
-      schoolName: log.school?.name || 'Unknown School',
+      schoolName: schoolMap.get(log.schoolId) || 'Unknown School',
       recipient: log.recipientContact,
-      channel: log.channel as any, // Cast to MessageChannel enum
+      channel: log.channel as MessageChannel,
       content: log.content,
       templateType: log.templateId || undefined,
-      status: log.status,
+      status: log.status as DeliveryStatus,
       deliveredAt: log.status === 'DELIVERED' ? log.updatedAt : undefined,
-      errorMessage: log.status === 'FAILED' ? log.statusReason : undefined,
+      errorMessage: log.status === 'FAILED' ? (log.statusReason || undefined) : undefined,
     }))
 
     const totalPages = Math.ceil(total / pageSize)
@@ -488,7 +492,7 @@ export class MessageLogService implements IMessageLogService {
     } = filters
 
     // Build where clause
-    const where: any = {}
+    const where: Prisma.CommunicationLogWhereInput = {}
 
     // School filter - if provided, filter by specific school, otherwise get all schools
     if (schoolId) {
@@ -513,7 +517,7 @@ export class MessageLogService implements IMessageLogService {
 
     // Status filter
     if (status) {
-      where.status = status
+      where.status = status as any
     }
 
     // Search by recipient phone/email or content
@@ -536,37 +540,40 @@ export class MessageLogService implements IMessageLogService {
 
     const offset = (page - 1) * pageSize
 
-    // Get logs with pagination
-    const [logs, total] = await Promise.all([
+    // Get logs with pagination and school info
+    const [logs, total, schools] = await Promise.all([
       prisma.communicationLog.findMany({
         where,
-        include: {
-          school: {
-            select: {
-              name: true,
-            },
-          },
-        },
         orderBy: { createdAt: 'desc' },
         take: pageSize,
         skip: offset,
       }),
       prisma.communicationLog.count({ where }),
+      // Get school names separately
+      prisma.school.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
     ])
+
+    // Create school name lookup map
+    const schoolMap = new Map(schools.map(s => [s.id, s.name]))
 
     // Map to Hub format
     const hubLogs: HubMessageLogEntry[] = logs.map(log => ({
       id: log.id,
       timestamp: log.createdAt,
       schoolId: log.schoolId,
-      schoolName: log.school?.name || 'Unknown School',
+      schoolName: schoolMap.get(log.schoolId) || 'Unknown School',
       recipient: log.recipientContact,
-      channel: log.channel as any, // Cast to MessageChannel enum
+      channel: log.channel as MessageChannel,
       content: log.content,
       templateType: log.templateId || undefined,
-      status: log.status,
+      status: log.status as DeliveryStatus,
       deliveredAt: log.status === 'DELIVERED' ? log.updatedAt : undefined,
-      errorMessage: log.status === 'FAILED' ? log.statusReason : undefined,
+      errorMessage: log.status === 'FAILED' ? (log.statusReason || undefined) : undefined,
     }))
 
     const totalPages = Math.ceil(total / pageSize)
@@ -612,7 +619,7 @@ export class MessageLogService implements IMessageLogService {
     } = filters
 
     // Build where clause (same as getPaginatedMessageLogs)
-    const where: any = {}
+    const where: Prisma.CommunicationLogWhereInput = {}
 
     if (schoolId) {
       where.schoolId = schoolId
@@ -633,7 +640,7 @@ export class MessageLogService implements IMessageLogService {
     }
 
     if (status) {
-      where.status = status
+      where.status = status as any
     }
 
     if (searchQuery) {
@@ -653,19 +660,24 @@ export class MessageLogService implements IMessageLogService {
       ]
     }
 
-    // Get all matching logs (no pagination for export)
-    const logs = await prisma.communicationLog.findMany({
-      where,
-      include: {
-        school: {
-          select: {
-            name: true,
-          },
+    // Get all matching logs (no pagination for export) and school info
+    const [logs, schools] = await Promise.all([
+      prisma.communicationLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 10000, // Reasonable limit for export
+      }),
+      // Get school names separately
+      prisma.school.findMany({
+        select: {
+          id: true,
+          name: true,
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10000, // Reasonable limit for export
-    })
+      }),
+    ])
+
+    // Create school name lookup map
+    const schoolMap = new Map(schools.map(s => [s.id, s.name]))
 
     // Create CSV content with Hub-specific headers
     const headers = [
@@ -688,7 +700,7 @@ export class MessageLogService implements IMessageLogService {
         log.id,
         log.createdAt.toISOString(),
         log.schoolId,
-        `"${log.school?.name || 'Unknown School'}"`,
+        `"${schoolMap.get(log.schoolId) || 'Unknown School'}"`,
         `"${log.recipientContact}"`,
         log.channel,
         `"${log.content.replace(/"/g, '""')}"`, // Escape quotes in content
@@ -705,17 +717,17 @@ export class MessageLogService implements IMessageLogService {
   /**
    * Map Prisma model to entity interface
    */
-  private mapPrismaToEntity(prismaLog: any): CommunicationLog {
+  private mapPrismaToEntity(prismaLog: Prisma.CommunicationLogGetPayload<object>): CommunicationLog {
     const statusHistory: StatusHistoryEntry[] = prismaLog.statusHistory
-      ? JSON.parse(prismaLog.statusHistory)
+      ? JSON.parse(prismaLog.statusHistory as string)
       : []
 
     const fallbackAttempts = prismaLog.fallbackAttempts
-      ? JSON.parse(prismaLog.fallbackAttempts)
+      ? JSON.parse(JSON.stringify(prismaLog.fallbackAttempts))
       : undefined
 
     const metadata = prismaLog.metadata
-      ? JSON.parse(prismaLog.metadata)
+      ? JSON.parse(JSON.stringify(prismaLog.metadata))
       : undefined
 
     return {
@@ -723,17 +735,17 @@ export class MessageLogService implements IMessageLogService {
       schoolId: prismaLog.schoolId,
       messageId: prismaLog.messageId,
       senderId: prismaLog.senderId,
-      senderRole: prismaLog.senderRole,
-      channel: prismaLog.channel,
+      senderRole: prismaLog.senderRole as any,
+      channel: prismaLog.channel as any,
       recipientId: prismaLog.recipientId,
-      recipientType: prismaLog.recipientType,
+      recipientType: prismaLog.recipientType as any,
       recipientContact: prismaLog.recipientContact,
       content: prismaLog.content,
-      templateId: prismaLog.templateId,
-      status: prismaLog.status,
-      statusReason: prismaLog.statusReason,
-      cost: prismaLog.cost,
-      externalMessageId: prismaLog.externalMessageId,
+      templateId: prismaLog.templateId ?? undefined,
+      status: prismaLog.status as any,
+      statusReason: prismaLog.statusReason ?? undefined,
+      cost: prismaLog.cost ?? undefined,
+      externalMessageId: prismaLog.externalMessageId ?? undefined,
       fallbackAttempts,
       metadata,
       statusHistory,

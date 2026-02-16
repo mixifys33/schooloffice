@@ -299,7 +299,7 @@ export default function AssignTeacherPage() {
                             {teacher.email}
                           </p>
                         )}
-                        {teacher.assignedClasses.length > 0 && (
+                        {teacher.assignedClasses && teacher.assignedClasses.length > 0 && (
                           <p className="text-xs text-muted-foreground mt-1">
                             Currently assigned to: {teacher.assignedClasses.map(c => c.name).join(', ')}
                           </p>

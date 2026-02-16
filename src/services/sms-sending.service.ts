@@ -5,12 +5,10 @@
 import { prisma } from '@/lib/db'
 import { smsTemplateService } from './sms-template.service'
 import { smsGateway } from './sms-gateway.service'
-import { 
+import {   
   SMSTemplateKey, 
-  SMSTemplateRenderData,
-  SMSAuditLog 
+  SMSTemplateRenderData
 } from '@/types/sms-templates'
-import { StudentAccountError } from './student-account.service'
 
 export interface SMSSendWithTemplateRequest {
   schoolId: string
@@ -118,8 +116,7 @@ export class SMSSendingService {
         // Send SMS
         const sendResult = await smsGateway.sendSMS({
           to: recipient.phone,
-          message: renderedContent,
-          schoolId
+          message: renderedContent
         })
 
         if (sendResult.success) {
@@ -205,18 +202,6 @@ export class SMSSendingService {
       }
     }
 
-    // Get current term for the school
-    const currentTerm = await prisma.term.findFirst({
-      where: {
-        academicYear: {
-          schoolId,
-          isActive: true
-        },
-        startDate: { lte: new Date() },
-        endDate: { gte: new Date() }
-      }
-    })
-
     // Get school info
     const school = await prisma.school.findUnique({
       where: { id: schoolId },
@@ -279,14 +264,14 @@ export class SMSSendingService {
     // Get school info
     const school = await prisma.school.findUnique({
       where: { id: schoolId },
-      select: { name: true }
+      select: { name: true, phone: true }
     })
 
     // Prepare recipients with template data
     const recipients = absentStudents
       .filter(student => student.guardian?.phone)
       .map(student => ({
-        phone: student.guardian!.phone,
+        phone: student.guardian!.phone!,
         studentId: student.id,
         guardianId: student.guardian!.id,
         data: {
@@ -405,7 +390,14 @@ export class SMSSendingService {
       return [];
     }
 
-    const where: any = {
+    interface StudentWhereInput {
+      schoolId: string
+      status: 'ACTIVE'
+      classId?: { in: string[] }
+      id?: { in: string[] }
+    }
+
+    const where: StudentWhereInput = {
       schoolId,
       status: 'ACTIVE',
     };
@@ -419,7 +411,7 @@ export class SMSSendingService {
     }
 
     // Fetch students and their associated student accounts for the current term
-    const students = await prisma.student.findMany({
+    const students = (await prisma.student.findMany({
       where,
       include: {
         class: { select: { name: true } },
@@ -428,9 +420,6 @@ export class SMSSendingService {
             // Only include guardians who are financially responsible and receive finance messages
             isFinanciallyResponsible: true,
             receivesFinanceMessages: true,
-            guardian: {
-              phone: { not: null }, // Ensure guardian has a phone number
-            },
           },
           include: {
             guardian: {
@@ -443,13 +432,30 @@ export class SMSSendingService {
             },
           },
         },
-        studentAccount: {
+        studentAccounts: {
           where: {
             termId: currentTerm.id,
           },
         },
       },
-    });
+    })) as unknown as Array<{
+      id: string
+      firstName: string
+      lastName: string
+      class: { name: string } | null
+      studentGuardians: Array<{
+        isFinanciallyResponsible: boolean
+        guardian: {
+          id: string
+          firstName: string
+          lastName: string
+          phone: string | null
+        }
+      }>
+      studentAccounts: Array<{
+        balance: number
+      }>
+    }>;
 
     const studentsToRemind: StudentWithGuardian[] = [];
 
@@ -461,7 +467,7 @@ export class SMSSendingService {
       }
 
       // Find the relevant student account for the current term
-      const studentAccount = student.studentAccount[0]; // Assuming only one account per student per term
+      const studentAccount = student.studentAccounts[0]; // Assuming only one account per student per term
 
       if (!studentAccount) {
         console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - No student account found for the current term.`);
@@ -478,7 +484,7 @@ export class SMSSendingService {
       }
 
       // Select the primary financially responsible guardian
-      const primaryGuardian = student.studentGuardians.find(sg => sg.isFinanciallyResponsible)?.guardian;
+      const primaryGuardian = student.studentGuardians.find((sg) => sg.isFinanciallyResponsible)?.guardian;
 
       if (!primaryGuardian || !primaryGuardian.phone) {
         console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - Financially responsible guardian has no phone.`);
@@ -495,7 +501,7 @@ export class SMSSendingService {
           id: primaryGuardian.id,
           firstName: primaryGuardian.firstName,
           lastName: primaryGuardian.lastName,
-          phone: primaryGuardian.phone,
+          phone: primaryGuardian.phone!,
         },
       });
     }
@@ -524,15 +530,19 @@ export class SMSSendingService {
       where,
       include: {
         class: { select: { name: true } },
-        guardian: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true
+        studentGuardians: {
+          include: {
+            guardian: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true
+              }
+            }
           }
         },
-        attendanceRecords: {
+        attendance: {
           where: {
             date: {
               gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
@@ -549,17 +559,25 @@ export class SMSSendingService {
     // Filter for absent students
     return students
       .filter(student => {
-        const todayAttendance = student.attendanceRecords[0]
+        const todayAttendance = student.attendance[0]
         return !todayAttendance || todayAttendance.status === 'ABSENT'
       })
-      .map(student => ({
-        id: student.id,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        className: student.class?.name,
-        guardian: student.guardian
-      }))
-      .filter(student => student.guardian)
+      .map(student => {
+        const primaryGuardian = student.studentGuardians[0]?.guardian
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          className: student.class?.name,
+          guardian: primaryGuardian ? {
+            id: primaryGuardian.id,
+            firstName: primaryGuardian.firstName,
+            lastName: primaryGuardian.lastName,
+            phone: primaryGuardian.phone || ''
+          } : undefined
+        }
+      })
+      .filter(student => student.guardian && student.guardian.phone)
   }
 
   /**
@@ -590,12 +608,16 @@ export class SMSSendingService {
       where,
       include: {
         class: { select: { name: true } },
-        guardian: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true
+        studentGuardians: {
+          include: {
+            guardian: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true
+              }
+            }
           }
         }
         // Add report/results relation when available
@@ -605,29 +627,25 @@ export class SMSSendingService {
     // For now, return all students as having reports ready
     // In a real implementation, you'd check for completed reports/results
     return students
-      .map(student => ({
-        id: student.id,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        className: student.class?.name,
-        position: Math.floor(Math.random() * 30) + 1, // Mock position
-        guardian: student.guardian
-      }))
-      .filter(student => student.guardian)
+      .map(student => {
+        const primaryGuardian = student.studentGuardians[0]?.guardian
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          className: student.class?.name,
+          position: Math.floor(Math.random() * 30) + 1, // Mock position
+          guardian: primaryGuardian ? {
+            id: primaryGuardian.id,
+            firstName: primaryGuardian.firstName,
+            lastName: primaryGuardian.lastName,
+            phone: primaryGuardian.phone || ''
+          } : undefined
+        }
+      })
+      .filter(student => student.guardian && student.guardian.phone)
   }
 
-  /**
-   * Get payment deadline (typically end of current month)
-   */
-  private getPaymentDeadline(): string {
-    const now = new Date()
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    return lastDay.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    })
-  }
 }
 
 // Export singleton instance

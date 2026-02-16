@@ -2,12 +2,14 @@
  * Enhanced Loading States Component
  * 
  * Requirements: 20.1, 20.6 - Implement loading spinners, skeleton loading states
+ * Requirements: 21.1, 21.2, 21.5 - WCAG 2.1 AA compliance, screen reader support
  * 
  * Features:
  * - Skeleton loading with staggered animations
  * - Pulse effects for better visual feedback
  * - Context-aware loading states
  * - Smooth transitions between loading and content
+ * - Full accessibility support with ARIA labels and live regions
  */
 
 'use client'
@@ -15,6 +17,7 @@
 import React from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { statusAccessibility, focusStyles } from '@/lib/accessibility'
 
 // Base skeleton component with enhanced animations
 export interface SkeletonProps {
@@ -35,6 +38,8 @@ export function Skeleton({ className, animate = true, delay = 0 }: SkeletonProps
         animationDelay: `${delay}ms`,
         animationDuration: '1.5s'
       }}
+      aria-hidden="true"
+      role="presentation"
     />
   )
 }
@@ -54,7 +59,10 @@ export function TableSkeleton({
   className 
 }: TableSkeletonProps) {
   return (
-    <div className={cn('space-y-3', className)}>
+    <div 
+      className={cn('space-y-3', className)}
+      {...statusAccessibility.loadingProps('Loading table data')}
+    >
       {/* Header */}
       {showHeader && (
         <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-surface)]">
@@ -160,9 +168,14 @@ export function LoadingSpinner({
   className,
   label 
 }: LoadingSpinnerProps) {
+  const ariaLabel = label || 'Loading'
+  
   if (variant === 'dots') {
     return (
-      <div className={cn('flex items-center gap-1', className)}>
+      <div 
+        className={cn('flex items-center gap-1', className)}
+        {...statusAccessibility.loadingProps(ariaLabel)}
+      >
         {[0, 1, 2].map((i) => (
           <div
             key={i}
@@ -178,6 +191,7 @@ export function LoadingSpinner({
               animationDelay: `${i * 0.1}s`,
               animationDuration: '0.6s'
             }}
+            aria-hidden="true"
           />
         ))}
         {label && (
@@ -191,12 +205,16 @@ export function LoadingSpinner({
 
   if (variant === 'pulse') {
     return (
-      <div className={cn('flex items-center gap-2', className)}>
+      <div 
+        className={cn('flex items-center gap-2', className)}
+        {...statusAccessibility.loadingProps(ariaLabel)}
+      >
         <div
           className={cn(
             'rounded-full bg-[var(--accent-primary)] animate-pulse',
             sizeClasses[size]
           )}
+          aria-hidden="true"
         />
         {label && (
           <span className="text-sm text-[var(--text-secondary)]">
@@ -209,12 +227,16 @@ export function LoadingSpinner({
 
   if (variant === 'bounce') {
     return (
-      <div className={cn('flex items-center gap-2', className)}>
+      <div 
+        className={cn('flex items-center gap-2', className)}
+        {...statusAccessibility.loadingProps(ariaLabel)}
+      >
         <div
           className={cn(
             'rounded-full bg-[var(--accent-primary)] animate-bounce',
             sizeClasses[size]
           )}
+          aria-hidden="true"
         />
         {label && (
           <span className="text-sm text-[var(--text-secondary)]">
@@ -227,12 +249,16 @@ export function LoadingSpinner({
 
   // Default spinner
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div 
+      className={cn('flex items-center gap-2', className)}
+      {...statusAccessibility.loadingProps(ariaLabel)}
+    >
       <Loader2 
         className={cn(
           'animate-spin text-[var(--accent-primary)]',
           sizeClasses[size]
         )}
+        aria-hidden="true"
       />
       {label && (
         <span className="text-sm text-[var(--text-secondary)]">

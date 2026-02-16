@@ -7,7 +7,7 @@ import {
   ReportCardState, 
   SmsMode, 
   SmsPreview, 
-  SmsSendingRequest, 
+  SmsSendingRequest,    
   SmsSendingResult,
   SecureReportLink,
   SubjectResult
@@ -456,9 +456,11 @@ export class DosResultsCollectionService {
         }
 
         // Calculate overall average
-        const validScores = subjectResults.filter(sr => sr.finalScore !== null).map(sr => sr.finalScore!) as number[];
-        const overallAverage = validScores.length > 0
-          ? Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length)
+        // IMPORTANT: Include ALL subjects, treating null scores as 0
+        // Formula: (sum of all subject scores) / (total number of subjects)
+        const allScores = subjectResults.map(sr => sr.finalScore ?? 0)
+        const overallAverage = subjectResults.length > 0
+          ? Math.round(allScores.reduce((sum, score) => sum + score, 0) / subjectResults.length)
           : null;
 
         // Determine overall grade
@@ -572,7 +574,7 @@ export class DosResultsCollectionService {
             data: {
               token,
               guardianId: reportCard.student.id, // Using student ID as guardian ID for simplicity
-              resourceType: 'REPORT_CARD',
+              resource: "REPORT_CARD",
               resourceId: reportCardId,
               expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
               createdAt: new Date()

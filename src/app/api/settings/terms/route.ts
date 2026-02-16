@@ -161,6 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for overlapping terms within the same academic year
+    // STRICT VALIDATION: No term dates should overlap at all
     console.log(`[DEBUG] Checking overlap for term: ${name}`);
     console.log(`[DEBUG] Academic Year ID: ${academicYearId}`);
     console.log(`[DEBUG] New term dates: ${start.toISOString()} to ${end.toISOString()}`);
@@ -169,22 +170,32 @@ export async function POST(request: NextRequest) {
       where: {
         academicYearId,
         OR: [
+          // Case 1: New term starts during an existing term
           {
             AND: [
               { startDate: { lte: start } },
               { endDate: { gte: start } },
             ],
           },
+          // Case 2: New term ends during an existing term
           {
             AND: [
               { startDate: { lte: end } },
               { endDate: { gte: end } },
             ],
           },
+          // Case 3: New term completely contains an existing term
           {
             AND: [
               { startDate: { gte: start } },
               { endDate: { lte: end } },
+            ],
+          },
+          // Case 4: Existing term completely contains the new term
+          {
+            AND: [
+              { startDate: { lte: start } },
+              { endDate: { gte: end } },
             ],
           },
         ],
@@ -192,12 +203,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (overlapping) {
-      console.log(`[DEBUG] Overlap detected with term: ${overlapping.name}`);
+      console.log(`[DEBUG] ❌ Overlap detected with term: ${overlapping.name}`);
       console.log(`[DEBUG] Existing term dates: ${overlapping.startDate.toISOString()} to ${overlapping.endDate.toISOString()}`);
       
       return NextResponse.json(
         { 
-          error: 'Term dates overlap with existing term in the same academic year',
+          error: 'Term dates overlap with an existing term. Terms cannot have overlapping dates within the same academic year.',
           details: {
             conflictingTerm: overlapping.name,
             conflictingDates: {
@@ -207,14 +218,15 @@ export async function POST(request: NextRequest) {
             attemptedDates: {
               start: startDate,
               end: endDate
-            }
+            },
+            suggestion: `Adjust your dates to avoid overlap. The conflicting term "${overlapping.name}" runs from ${overlapping.startDate.toISOString().split('T')[0]} to ${overlapping.endDate.toISOString().split('T')[0]}.`
           }
         },
         { status: 400 }
       )
     }
 
-    console.log(`[DEBUG] No overlap detected - proceeding with term creation`);
+    console.log(`[DEBUG] ✅ No overlap detected - proceeding with term creation`);
 
     // Calculate week count
     const weekCount = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
@@ -227,6 +239,7 @@ export async function POST(request: NextRequest) {
         endDate: end,
         weekCount: Math.max(1, weekCount), // Ensure at least 1 week
         academicYearId,
+        schoolId: session.user.schoolId,
       },
       include: {
         academicYear: {
@@ -382,6 +395,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check for overlapping terms within the same academic year (excluding current term)
+    // STRICT VALIDATION: No term dates should overlap at all
     console.log(`[DEBUG] Checking overlap for term update: ${name}`);
     console.log(`[DEBUG] Academic Year ID: ${academicYearId}`);
     console.log(`[DEBUG] Updated term dates: ${start.toISOString()} to ${end.toISOString()}`);
@@ -392,22 +406,32 @@ export async function PUT(request: NextRequest) {
         academicYearId,
         id: { not: id },
         OR: [
+          // Case 1: Updated term starts during an existing term
           {
             AND: [
               { startDate: { lte: start } },
               { endDate: { gte: start } },
             ],
           },
+          // Case 2: Updated term ends during an existing term
           {
             AND: [
               { startDate: { lte: end } },
               { endDate: { gte: end } },
             ],
           },
+          // Case 3: Updated term completely contains an existing term
           {
             AND: [
               { startDate: { gte: start } },
               { endDate: { lte: end } },
+            ],
+          },
+          // Case 4: Existing term completely contains the updated term
+          {
+            AND: [
+              { startDate: { lte: start } },
+              { endDate: { gte: end } },
             ],
           },
         ],
@@ -415,12 +439,12 @@ export async function PUT(request: NextRequest) {
     })
 
     if (overlapping) {
-      console.log(`[DEBUG] Overlap detected with term: ${overlapping.name}`);
+      console.log(`[DEBUG] ❌ Overlap detected with term: ${overlapping.name}`);
       console.log(`[DEBUG] Existing term dates: ${overlapping.startDate.toISOString()} to ${overlapping.endDate.toISOString()}`);
       
       return NextResponse.json(
         { 
-          error: 'Term dates overlap with existing term in the same academic year',
+          error: 'Term dates overlap with an existing term. Terms cannot have overlapping dates within the same academic year.',
           details: {
             conflictingTerm: overlapping.name,
             conflictingDates: {
@@ -430,14 +454,15 @@ export async function PUT(request: NextRequest) {
             attemptedDates: {
               start: startDate,
               end: endDate
-            }
+            },
+            suggestion: `Adjust your dates to avoid overlap. The conflicting term "${overlapping.name}" runs from ${overlapping.startDate.toISOString().split('T')[0]} to ${overlapping.endDate.toISOString().split('T')[0]}.`
           }
         },
         { status: 400 }
       )
     }
 
-    console.log(`[DEBUG] No overlap detected - proceeding with term update`);
+    console.log(`[DEBUG] ✅ No overlap detected - proceeding with term update`);
 
     // Calculate week count
     const weekCount = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
@@ -518,7 +543,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if there are any associated data that would prevent deletion
-    const [examsCount, resultsCount, paymentsCount, feeStructuresCount, timetablesCount, studentAccountsCount] = await Promise.all([
+    const [
+      examsCount, 
+      resultsCount, 
+      paymentsCount, 
+      feeStructuresCount, 
+      timetablesCount, 
+      studentAccountsCount,
+      caEntriesCount,
+      examEntriesCount
+    ] = await Promise.all([
       prisma.exam.count({
         where: { termId: id },
       }),
@@ -537,9 +571,24 @@ export async function DELETE(request: NextRequest) {
       prisma.studentAccount.count({
         where: { termId: id },
       }),
+      prisma.cAEntry.count({
+        where: { termId: id },
+      }),
+      prisma.examEntry.count({
+        where: { termId: id },
+      }),
     ])
 
-    if (examsCount > 0 || resultsCount > 0 || paymentsCount > 0 || feeStructuresCount > 0 || timetablesCount > 0 || studentAccountsCount > 0) {
+    if (
+      examsCount > 0 || 
+      resultsCount > 0 || 
+      paymentsCount > 0 || 
+      feeStructuresCount > 0 || 
+      timetablesCount > 0 || 
+      studentAccountsCount > 0 ||
+      caEntriesCount > 0 ||
+      examEntriesCount > 0
+    ) {
       const dependencies = [];
       if (examsCount > 0) dependencies.push(`${examsCount} exam(s)`);
       if (resultsCount > 0) dependencies.push(`${resultsCount} result(s)`);
@@ -547,9 +596,11 @@ export async function DELETE(request: NextRequest) {
       if (feeStructuresCount > 0) dependencies.push(`${feeStructuresCount} fee structure(s)`);
       if (timetablesCount > 0) dependencies.push(`${timetablesCount} timetable(s)`);
       if (studentAccountsCount > 0) dependencies.push(`${studentAccountsCount} student account(s)`);
+      if (caEntriesCount > 0) dependencies.push(`${caEntriesCount} CA entry/entries`);
+      if (examEntriesCount > 0) dependencies.push(`${examEntriesCount} exam entry/entries`);
       
       return NextResponse.json(
-        { error: `Cannot delete term with associated data: ${dependencies.join(', ')}` },
+        { error: `Cannot delete term with associated data: ${dependencies.join(', ')}. Please delete or move these records first.` },
         { status: 400 }
       )
     }
@@ -559,13 +610,29 @@ export async function DELETE(request: NextRequest) {
       where: { id },
     })
 
+    console.log(`✅ [API] Successfully deleted term: ${id}`)
+
     return NextResponse.json({ 
       message: 'Term deleted successfully' 
     })
   } catch (error) {
-    console.error('Error deleting term:', error)
+    console.error('❌ [API] Error deleting term:', error)
+    
+    // Provide more specific error message
+    let errorMessage = 'Internal server error'
+    if (error instanceof Error) {
+      // Check for common Prisma errors
+      if (error.message.includes('Foreign key constraint')) {
+        errorMessage = 'Cannot delete term due to existing related records. Please ensure all associated data is removed first.'
+      } else if (error.message.includes('Record to delete does not exist')) {
+        errorMessage = 'Term not found or already deleted'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

@@ -6,7 +6,7 @@
  * 
  * Property 1: Chronological Transaction Order
  * For any financial statement, transactions SHALL be ordered chronologically with timestamps.
- * 
+ *   
  * Property 2: Complete Transaction Details
  * For any financial statement, each transaction SHALL include: date, amount, method, 
  * reference, balance before/after, and associated receipt number.

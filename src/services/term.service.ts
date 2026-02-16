@@ -1,10 +1,10 @@
 /**
  * Enhanced Term Service
  * Handles term management operations with date validation, calendar integration, and holiday management
- * Requirements: 2.2
- */
+ * Requirements: 2.2  
+ */   
 import { prisma } from '@/lib/db'
-import { calculateWeekCount as calcWeekCount, getHolidayPeriod, validateTermWithinYear, dateRangesOverlap } from '@/lib/academic-calendar-utils'
+import { calculateWeekCount as calcWeekCount, getHolidayPeriod, dateRangesOverlap } from '@/lib/academic-calendar-utils'
 import {
   Term,
   CreateTermInput,
@@ -109,6 +109,7 @@ export class TermService {
 
     const term = await prisma.term.create({
       data: {
+        schoolId: academicYear.schoolId,
         academicYearId: data.academicYearId,
         name: data.name,
         startDate: data.startDate,
@@ -137,7 +138,7 @@ export class TermService {
       },
     })
 
-    return existingTerms.some((term: any) =>
+    return existingTerms.some((term) =>
       dateRangesOverlap(startDate, endDate, term.startDate, term.endDate)
     )
   }

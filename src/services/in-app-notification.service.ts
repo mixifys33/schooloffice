@@ -3,7 +3,7 @@
  * Handles creation, retrieval, and management of in-app notifications
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5
  */
-
+   
 import { prisma } from '../lib/db'
 import {
   InAppNotification,

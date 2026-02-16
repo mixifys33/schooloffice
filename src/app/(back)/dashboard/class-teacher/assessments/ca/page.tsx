@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -14,7 +14,9 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
-  Lock
+  Lock,
+  Cloud,
+  CloudOff
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -103,6 +105,8 @@ export default function ClassTeacherCAEntryPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Selection state
   const [assignedClasses, setAssignedClasses] = useState<AssignedClassSubject[]>([])
@@ -114,6 +118,10 @@ export default function ClassTeacherCAEntryPage() {
   const [activeCaId, setActiveCaId] = useState<string | null>(null)
   const [editedScores, setEditedScores] = useState<Map<string, number | null>>(new Map())
   const [hasChanges, setHasChanges] = useState(false)
+  
+  // Auto-save timer ref
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isUnmountingRef = useRef(false)
 
   // CA creation form
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -121,6 +129,11 @@ export default function ClassTeacherCAEntryPage() {
   const [newCaMaxScore, setNewCaMaxScore] = useState('10')
   const [newCaType, setNewCaType] = useState('assignment')
   const [newCaDescription, setNewCaDescription] = useState('')
+  
+  // Search, Sort, and Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'score-asc' | 'score-desc' | 'none'>('none')
+  const [filterBy, setFilterBy] = useState<'all' | 'no-scores' | 'with-scores'>('all')
 
   // Fetch assigned classes and subjects on mount
   useEffect(() => {
@@ -147,6 +160,132 @@ export default function ClassTeacherCAEntryPage() {
 
     fetchAssignedClasses()
   }, [classIdParam, subjectIdParam])
+
+  // Load scores from localStorage on mount (backup in case of page reload)
+  useEffect(() => {
+    if (!activeCaId) return
+    
+    const storageKey = `ca-scores-${activeCaId}`
+    const savedScores = localStorage.getItem(storageKey)
+    
+    if (savedScores) {
+      try {
+        const parsed = JSON.parse(savedScores) as Record<string, number | null>
+        const scoresMap = new Map<string, number | null>(Object.entries(parsed))
+        setEditedScores(scoresMap)
+        setHasChanges(scoresMap.size > 0)
+        console.log('✅ Restored unsaved scores from localStorage')
+      } catch (err) {
+        console.error('Failed to restore scores from localStorage:', err)
+      }
+    }
+  }, [activeCaId])
+
+  // Save scores to localStorage whenever they change (backup)
+  useEffect(() => {
+    if (!activeCaId || editedScores.size === 0) return
+    
+    const storageKey = `ca-scores-${activeCaId}`
+    const scoresObj = Object.fromEntries(editedScores)
+    localStorage.setItem(storageKey, JSON.stringify(scoresObj))
+  }, [editedScores, activeCaId])
+
+  // Auto-save function with debouncing
+  const autoSaveScores = useCallback(async () => {
+    if (!caData || !activeCaId || editedScores.size === 0 || !caData.canEdit) return
+    
+    setAutoSaving(true)
+    
+    try {
+      const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+        studentId,
+        score,
+      }))
+
+      const response = await fetch('/api/class-teacher/assessments/ca/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caId: activeCaId,
+          scores: scoresToSave,
+          isDraft: true, // Always save as draft during auto-save
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Auto-save failed')
+      }
+
+      setLastSaved(new Date())
+      
+      // Clear localStorage backup after successful save
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
+      
+      console.log('✅ Auto-saved scores to database')
+    } catch (err) {
+      console.error('❌ Auto-save error:', err)
+      // Don't show error to user for auto-save failures
+    } finally {
+      setAutoSaving(false)
+    }
+  }, [caData, activeCaId, editedScores])
+
+  // Trigger auto-save when scores change (with 2-second debounce)
+  useEffect(() => {
+    if (!hasChanges || !caData?.canEdit) return
+    
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+    
+    // Set new timer for auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveScores()
+    }, 2000) // 2 seconds debounce
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [hasChanges, autoSaveScores, caData?.canEdit])
+
+  // Save on page unload/close (using beforeunload event)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges && !isUnmountingRef.current) {
+        // Try to save using sendBeacon (works even when page is closing)
+        if (activeCaId && editedScores.size > 0) {
+          const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+            studentId,
+            score,
+          }))
+          
+          const blob = new Blob([JSON.stringify({
+            caId: activeCaId,
+            scores: scoresToSave,
+            isDraft: true,
+          })], { type: 'application/json' })
+          
+          navigator.sendBeacon('/api/class-teacher/assessments/ca/scores', blob)
+        }
+        
+        // Show warning
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      isUnmountingRef.current = true
+    }
+  }, [hasChanges, activeCaId, editedScores])
 
   // Fetch CA data when selections are made
   useEffect(() => {
@@ -177,6 +316,10 @@ export default function ClassTeacherCAEntryPage() {
         if (data.caEntries.length > 0 && !activeCaId) {
           setActiveCaId(data.caEntries[0].id)
         }
+        
+        // Clear edited scores and changes flag after loading fresh data
+        setEditedScores(new Map())
+        setHasChanges(false)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load CA data')
       } finally {
@@ -194,7 +337,7 @@ export default function ClassTeacherCAEntryPage() {
     // Validate against max score
     if (numValue !== null && caData && activeCaId) {
       const activeCa = caData.caEntries.find(ca => ca.id === activeCaId)
-      if (activeCa && (numValue < 0 || (activeCa.maxScore !== undefined && numValue > activeCa.maxScore))) {
+      if (activeCa && numValue < 0 || numValue > activeCa.maxScore) {
         return // Invalid value, don't update
       }
     }
@@ -211,14 +354,21 @@ export default function ClassTeacherCAEntryPage() {
   const getScoreValue = (student: StudentCA): string => {
     if (editedScores.has(student.studentId)) {
       const edited = editedScores.get(student.studentId)
-      return edited === null ? '' : edited.toString()
+      return edited === null || edited === undefined ? '' : edited.toString()
     }
     return student.score === null ? '' : student.score.toString()
   }
 
-  // Save CA scores as draft
+  // Save CA scores as draft (manual save)
   const handleSaveDraft = async () => {
-    if (!caData || !activeCaId || !hasChanges) return
+    if (!caData || !activeCaId) return
+
+    // If no changes, just show success message
+    if (!hasChanges) {
+      setSuccessMessage('All scores are already saved')
+      setTimeout(() => setSuccessMessage(null), 2000)
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -245,6 +395,10 @@ export default function ClassTeacherCAEntryPage() {
         throw new Error(errorData.error || 'Failed to save scores')
       }
 
+      // Clear localStorage backup after successful save
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
+
       // Refresh CA data
       const refreshResponse = await fetch(
         `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
@@ -256,6 +410,7 @@ export default function ClassTeacherCAEntryPage() {
 
       setEditedScores(new Map())
       setHasChanges(false)
+      setLastSaved(new Date())
       setSuccessMessage('Scores saved as draft successfully')
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
@@ -265,13 +420,13 @@ export default function ClassTeacherCAEntryPage() {
     }
   }
 
-  // Submit final CA scores
+  // Submit final CA scores (changes status to SUBMITTED, but scores must be saved first)
   const handleSubmitFinal = async () => {
     if (!caData || !activeCaId) return
 
     // Confirm submission
     const confirmed = window.confirm(
-      'Are you sure you want to submit final scores? This will notify the administration and scores cannot be changed without approval.'
+      'Are you sure you want to submit final scores? This will lock the scores and notify the administration. Scores cannot be changed without approval after submission.'
     )
     if (!confirmed) return
 
@@ -280,25 +435,31 @@ export default function ClassTeacherCAEntryPage() {
     setSuccessMessage(null)
 
     try {
-      // First save any pending changes
-      if (hasChanges) {
+      // IMPORTANT: First save any pending changes as DRAFT
+      if (hasChanges && editedScores.size > 0) {
         const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
           studentId,
           score,
         }))
 
-        await fetch('/api/class-teacher/assessments/ca/scores', {
+        const saveResponse = await fetch('/api/class-teacher/assessments/ca/scores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             caId: activeCaId,
             scores: scoresToSave,
-            isDraft: false,
+            isDraft: true, // Save as draft first
           }),
         })
+
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save scores before submission')
+        }
+        
+        console.log('✅ Saved pending scores before submission')
       }
 
-      // Submit final scores
+      // Now submit (changes status to SUBMITTED)
       const response = await fetch('/api/class-teacher/assessments/ca/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -311,6 +472,10 @@ export default function ClassTeacherCAEntryPage() {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to submit scores')
       }
+
+      // Clear localStorage backup after successful submission
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
 
       // Refresh CA data
       const refreshResponse = await fetch(
@@ -444,7 +609,7 @@ export default function ClassTeacherCAEntryPage() {
     <div className="space-y-6 p-4 sm:p-6">
       {/* Back Navigation */}
       <Link
-        href="/dashboard/class-teacher/assessments"
+        href="/class-teacher/assessments"
         className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -726,7 +891,7 @@ export default function ClassTeacherCAEntryPage() {
                   <div className="flex items-center gap-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)] text-sm">
                     <Info className="h-4 w-4" />
                     <span>
-                      Enter scores out of {activeCa.maxScore}. Save as draft to continue later, or submit final scores when complete.
+                      Enter scores out of {activeCa.maxScore}. Scores are auto-saved as you type (as drafts). Click "Submit Final" when ready to lock and notify administration.
                     </span>
                   </div>
                 </div>
@@ -746,28 +911,105 @@ export default function ClassTeacherCAEntryPage() {
 
                   {/* Action Buttons */}
                   {caData.canEdit && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSaveDraft}
-                        disabled={!hasChanges || saving || submitting}
-                        className="gap-2"
-                      >
-                        <Save className="h-4 w-4" />
-                        {saving ? 'Saving...' : 'Save Draft'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleSubmitFinal}
-                        disabled={submitting || saving}
-                        className="gap-2"
-                      >
-                        <Send className="h-4 w-4" />
-                        {submitting ? 'Submitting...' : 'Submit Final'}
-                      </Button>
+                    <div className="flex items-center gap-3">
+                      {/* Auto-save indicator */}
+                      <div className="flex items-center gap-2 text-sm">
+                        {autoSaving ? (
+                          <>
+                            <Cloud className="h-4 w-4 text-blue-500 animate-pulse" />
+                            <span className="text-[var(--text-muted)]">Saving...</span>
+                          </>
+                        ) : lastSaved ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-[var(--text-muted)]">
+                              Saved {lastSaved.toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </>
+                        ) : hasChanges ? (
+                          <>
+                            <CloudOff className="h-4 w-4 text-amber-500" />
+                            <span className="text-[var(--text-muted)]">Unsaved changes</span>
+                          </>
+                        ) : null}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveDraft}
+                          disabled={saving || submitting}
+                          className="gap-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          {saving ? 'Saving...' : 'Save Now'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSubmitFinal}
+                          disabled={submitting || saving}
+                          className="gap-2"
+                        >
+                          <Send className="h-4 w-4" />
+                          {submitting ? 'Submitting...' : 'Submit Final'}
+                        </Button>
+                      </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Search, Filter, and Sort Controls */}
+              <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Search */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                      Search Students
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Search by name, admission no., or score..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+
+                  {/* Sort */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                      Sort By
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="w-full h-9 px-3 py-1 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                    >
+                      <option value="none">Default Order</option>
+                      <option value="name-asc">Name (A-Z)</option>
+                      <option value="name-desc">Name (Z-A)</option>
+                      <option value="score-desc">Score (High to Low)</option>
+                      <option value="score-asc">Score (Low to High)</option>
+                    </select>
+                  </div>
+
+                  {/* Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                      Filter
+                    </label>
+                    <select
+                      value={filterBy}
+                      onChange={(e) => setFilterBy(e.target.value as any)}
+                      className="w-full h-9 px-3 py-1 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                    >
+                      <option value="all">All Students</option>
+                      <option value="no-scores">No Scores Only</option>
+                      <option value="with-scores">With Scores Only</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -797,7 +1039,71 @@ export default function ClassTeacherCAEntryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {activeCa.studentScores.map((student, index) => (
+                    {(() => {
+                      // Get current score for a student (from editedScores or original score)
+                      const getCurrentScore = (student: StudentCA): number | null => {
+                        if (editedScores.has(student.studentId)) {
+                          return editedScores.get(student.studentId) ?? null
+                        }
+                        return student.score
+                      }
+
+                      // Filter students
+                      let filteredStudents = activeCa.studentScores.filter(student => {
+                        // Apply filter
+                        const currentScore = getCurrentScore(student)
+                        if (filterBy === 'no-scores' && currentScore !== null && currentScore > 0) {
+                          return false
+                        }
+                        if (filterBy === 'with-scores' && (currentScore === null || currentScore === 0)) {
+                          return false
+                        }
+
+                        // Apply search
+                        if (searchQuery.trim()) {
+                          const query = searchQuery.toLowerCase()
+                          const nameMatch = student.studentName.toLowerCase().includes(query)
+                          const admissionMatch = student.admissionNumber.toLowerCase().includes(query)
+                          const scoreMatch = currentScore !== null && currentScore.toString().includes(query)
+                          
+                          return nameMatch || admissionMatch || scoreMatch
+                        }
+
+                        return true
+                      })
+
+                      // Sort students
+                      if (sortBy !== 'none') {
+                        filteredStudents = [...filteredStudents].sort((a, b) => {
+                          if (sortBy === 'name-asc') {
+                            return a.studentName.localeCompare(b.studentName)
+                          }
+                          if (sortBy === 'name-desc') {
+                            return b.studentName.localeCompare(a.studentName)
+                          }
+                          if (sortBy === 'score-asc' || sortBy === 'score-desc') {
+                            const scoreA = getCurrentScore(a) ?? -1
+                            const scoreB = getCurrentScore(b) ?? -1
+                            return sortBy === 'score-asc' ? scoreA - scoreB : scoreB - scoreA
+                          }
+                          return 0
+                        })
+                      }
+
+                      // Render filtered and sorted students
+                      if (filteredStudents.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
+                              {searchQuery.trim() || filterBy !== 'all' 
+                                ? 'No students match your search or filter criteria'
+                                : 'No students found in this class'}
+                            </td>
+                          </tr>
+                        )
+                      }
+
+                      return filteredStudents.map((student, index) => (
                       <tr key={student.studentId} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
                         <td className="px-4 py-3 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
                           {index + 1}
@@ -847,7 +1153,8 @@ export default function ClassTeacherCAEntryPage() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      ))
+                    })()}
                   </tbody>
                 </table>
               </div>

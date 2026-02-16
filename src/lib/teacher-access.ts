@@ -173,7 +173,7 @@ export function applyTeacherSubjectFilter(
 export async function checkTeacherAccess(
   userId: string,
   role: string,
-  resourceType: 'class' | 'subject' | 'student',
+  resource: "class" | 'subject' | 'student',
   resourceId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
   // Non-teachers have different access rules

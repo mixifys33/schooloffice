@@ -2,7 +2,7 @@
  * OTP Verification Service
  * Handles guardian contact verification via SMS with yes/no confirmation
  * Requirements: 24.1, 24.2, 24.3, 24.4, 24.5
- */
+ */  
 import { prisma } from '@/lib/db'
 import {
   OTPVerification,

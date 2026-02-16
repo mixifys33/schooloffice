@@ -6,7 +6,7 @@ export interface SubjectDefinition {
   name: string;
   code: string;
   educationLevel: SchoolType;
-}
+}    
 
 export interface ClassSubjectAssignment {
   classId: string;

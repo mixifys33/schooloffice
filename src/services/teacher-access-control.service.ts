@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/db'
 import { auditService } from './audit.service'
 import { getTeacherAssignments, type TeacherAssignments } from '@/lib/teacher-access'
-
+   
 /**
  * Error thrown when teacher access is denied
  * Requirement 11.1, 11.2: Deny access and display authorization error
@@ -374,7 +374,7 @@ export class TeacherAccessControlService {
       await this.logUnauthorizedAccess({
         schoolId,
         teacherId: userId,
-        resourceType: 'class',
+        resource: "class",
         resourceId: classId,
         reason: result.reason || 'Access denied',
         deviceInfo,
@@ -410,7 +410,7 @@ export class TeacherAccessControlService {
       await this.logUnauthorizedAccess({
         schoolId,
         teacherId: userId,
-        resourceType: 'student',
+        resource: "student",
         resourceId: studentId,
         reason: result.reason || 'Access denied',
         deviceInfo,

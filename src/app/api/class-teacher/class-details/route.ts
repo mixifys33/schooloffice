@@ -376,7 +376,7 @@ If you believe this is an error, please provide your staff details to the admini
           ? Math.round((studentPresentRecords / studentAttendance.length) * 100)
           : 0
 
-        // Get real performance for this student
+        // Get real performance for this student using CAEntry and ExamEntry
         let performance = 0
         let caScore = 0
         let examScore = 0
@@ -384,56 +384,57 @@ If you believe this is an error, please provide your staff details to the admini
 
         if (currentTerm) {
           try {
-            const studentMarks = await prisma.mark.findMany({
+            // Get CA entries for this student
+            const caEntries = await prisma.cAEntry.findMany({
               where: {
                 studentId: student.id,
-                exam: {
-                  termId: currentTerm.id,
-                },
+                termId: currentTerm.id,
+                status: 'SUBMITTED', // Only count submitted entries
               },
-              include: {
-                exam: {
-                  select: {
-                    type: true,
-                  },
-                },
+              select: {
+                rawScore: true,
+                maxScore: true,
               },
             })
 
-            if (studentMarks.length > 0) {
-              const caMarks = studentMarks.filter(mark => mark.exam.type === 'CA')
-              const examMarks = studentMarks.filter(mark => mark.exam.type === 'EXAM')
+            // Calculate CA average (out of 20)
+            if (caEntries.length > 0) {
+              const caPercentages = caEntries.map(entry => 
+                entry.maxScore > 0 ? (entry.rawScore / entry.maxScore) * 100 : 0
+              )
+              const caAverage = caPercentages.reduce((sum, p) => sum + p, 0) / caPercentages.length
+              caScore = Math.round((caAverage / 100) * 20) // Convert to out of 20
+            }
 
-              // Calculate CA average
-              if (caMarks.length > 0) {
-                const caTotal = caMarks.reduce((sum, mark) => {
-                  return sum + (mark.maxScore > 0 ? (mark.score / mark.maxScore) * 100 : 0)
-                }, 0)
-                caScore = Math.round(caTotal / caMarks.length)
-              }
+            // Get Exam entries for this student
+            const examEntries = await prisma.examEntry.findMany({
+              where: {
+                studentId: student.id,
+                termId: currentTerm.id,
+                status: 'SUBMITTED', // Only count submitted entries
+              },
+              select: {
+                examScore: true,
+                maxScore: true,
+              },
+            })
 
-              // Calculate Exam average
-              if (examMarks.length > 0) {
-                const examTotal = examMarks.reduce((sum, mark) => {
-                  return sum + (mark.maxScore > 0 ? (mark.score / mark.maxScore) * 100 : 0)
-                }, 0)
-                examScore = Math.round(examTotal / examMarks.length)
-              }
+            // Calculate Exam average (out of 80)
+            if (examEntries.length > 0) {
+              const examPercentages = examEntries.map(entry => 
+                entry.maxScore > 0 ? (entry.examScore / entry.maxScore) * 100 : 0
+              )
+              const examAverage = examPercentages.reduce((sum, p) => sum + p, 0) / examPercentages.length
+              examScore = Math.round((examAverage / 100) * 80) // Convert to out of 80
+            }
 
-              // Calculate overall performance and final score
-              const allMarksTotal = studentMarks.reduce((sum, mark) => {
-                return sum + (mark.maxScore > 0 ? (mark.score / mark.maxScore) * 100 : 0)
-              }, 0)
-              performance = Math.round(allMarksTotal / studentMarks.length)
-              
-              // Calculate final score based on CA and Exam weights (typically 30% CA, 70% Exam)
-              // Calculate final score based on CA and Exam weights (typically 30% CA, 70% Exam)
-              if (caScore > 0 && examScore > 0) {
-                finalScore = Math.round((caScore * 0.3) + (examScore * 0.7))
-              }
+            // Calculate final score (CA + Exam)
+            if (caScore > 0 || examScore > 0) {
+              finalScore = caScore + examScore // Total out of 100
+              performance = finalScore // Overall performance
             }
           } catch (marksError) {
-            console.error('❌ [API] Error processing marks for student:', student.id, marksError.message)
+            console.error('❌ [API] Error processing CA/Exam entries for student:', student.id, marksError)
             // Continue with default values
           }
         }
@@ -515,9 +516,8 @@ If you believe this is an error, please provide your staff details to the admini
       }
     }))
 
-    // Get real curriculum topics - since CurriculumTopic doesn't exist, 
-    // we'll use subjects assigned to this class as curriculum topics
-    const classSubjects = await prisma.classSubject.findMany({
+    // Get real curriculum topics - subjects assigned to teachers for this class
+    const staffSubjects = await prisma.staffSubject.findMany({
       where: {
         classId,
       },
@@ -526,6 +526,13 @@ If you believe this is an error, please provide your staff details to the admini
           select: {
             id: true,
             name: true,
+            code: true,
+          },
+        },
+        staff: {
+          select: {
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -534,10 +541,12 @@ If you believe this is an error, please provide your staff details to the admini
       },
     })
 
-    const formattedCurriculumTopics = classSubjects.map(cs => ({
-      id: cs.subject.id,
-      name: cs.subject.name,
-      subject: cs.subject.name,
+    const formattedCurriculumTopics = staffSubjects.map(ss => ({
+      id: ss.subject.id,
+      name: ss.subject.name,
+      code: ss.subject.code,
+      subject: ss.subject.name,
+      teacherName: `${ss.staff.firstName} ${ss.staff.lastName}`,
       status: 'in-progress' as const, // Default status since we don't have completion tracking
       completionDate: null,
     }))

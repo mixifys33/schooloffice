@@ -3,7 +3,7 @@
  * Implements term-scoped fee structures with milestone tracking
  * PART 2.1: INTRODUCE FEE STRUCTURE PER TERM
  */
-
+   
 import { prisma } from '@/lib/db';
 import { FinanceAuditService } from './finance-audit.service';
 
@@ -119,7 +119,7 @@ export class EnhancedFeeStructureService {
       schoolId: input.schoolId,
       userId: input.createdBy,
       action: 'FEE_STRUCTURE_CREATED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: feeStructure.id,
       newValue: {
         classId: input.classId,
@@ -213,7 +213,7 @@ export class EnhancedFeeStructureService {
       schoolId,
       userId,
       action: 'FEE_STRUCTURE_UPDATED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: id,
       previousValue,
       newValue: {
@@ -248,7 +248,7 @@ export class EnhancedFeeStructureService {
       schoolId,
       userId,
       action: 'FEE_STRUCTURE_LOCKED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: id,
       newValue: { lockedAt: new Date().toISOString() },
     });

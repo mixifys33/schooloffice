@@ -133,7 +133,7 @@ export default function SchoolAdminDashboardPage() {
         const timeoutId = setTimeout(() => {
           console.log('Dashboard API request timeout - aborting request')
           controller.abort()
-        }, 15000) // Increased timeout to 15 seconds to allow for slower responses
+        }, 30000) // Increased timeout to 30 seconds for complex queries
 
         try {
           const response = await fetch('/api/dashboard/overview', {

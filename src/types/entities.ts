@@ -1924,7 +1924,7 @@ export interface CommunicationDeliveryReport {
   delivered: number
   failed: number
   read: number
-  byChannel: Record<MessageChannel, { sent: number; delivered: number; failed: number; read: number }>
+  byChannel: Record<string, { sent: number; delivered: number; failed: number; read: number }>
   byStatus: Record<DeliveryStatus, number>
 }
 

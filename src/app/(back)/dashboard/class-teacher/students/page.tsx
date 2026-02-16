@@ -1,902 +1,436 @@
-/**
- * Class Teacher Students Marks Management Page
- * 
- * Requirements: 11.1, 11.2, 19.1, 19.2, 19.4
- * - Create /dashboard/class-teacher/students page
- * - Implement proper route authorization
- * - Add consistent dashboard navigation integration
- * - Include page titles and breadcrumbs
- * 
- * This page provides the main interface for class teachers to manage student marks
- * using progressive filtering: Class → Stream → Subject → Students
- */
-
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Users, BookOpen, GraduationCap, AlertCircle, RefreshCw, FileText, CheckCircle, Save, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowLeft, Users, GraduationCap, Calendar, ClipboardList, BookOpen, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AlertBanner } from '@/components/ui/alert-banner'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { useToast } from '@/components/ui/toast'
-import { AutoSaveIndicator, FloatingAutoSaveIndicator } from '@/components/ui/auto-save-indicator'
-import { useAutoSave } from '@/hooks/use-auto-save'
-import ProgressiveFilter, { type FilterSelection } from '@/components/teacher/ProgressiveFilter'
-import MarksEntryTable, { 
-  type CreateCAEntryRequest, 
-  type CreateExamEntryRequest 
-} from '@/components/teacher/MarksEntryTable'
+import { ErrorMessagePanel } from '@/components/teacher'
 import { 
+  errorMessages, 
   spacing, 
   typography, 
   cardStyles, 
-  teacherColors 
+  teacherColors,
+  transitions 
 } from '@/lib/teacher-ui-standards'
 import { cn } from '@/lib/utils'
 
-interface StudentsMarksData {
-  students: {
-    id: string;
-    name: string;
-    admissionNumber: string;
-    caEntries: any[];
-    examEntry?: any;
-    gradeCalculation: any;
-  }[];
-  subject: {
-    id: string;
-    name: string;
-    code: string;
-  };
-  term: {
-    id: string;
-    name: string;
-    isActive: boolean;
-  };
+/**
+ * Students Page for Class Teacher Portal
+ * Requirements: 1.1, 1.4, 2.1-2.7, 12.1-12.4, 14.1-14.4
+ * - Display only students in assigned class
+ * - Show student details, attendance, and performance
+ * - Allow quick actions: Take attendance, Enter marks
+ * - Disable data entry when context is invalid (1.4)
+ * - Dense but clean layout with muted colors (12.1)
+ * - Clear enabled/disabled states (12.2)
+ * - Hide/disable non-permitted actions (12.3)
+ * - Clear error messages with next steps (12.4)
+ */
+
+interface Student {
+  id: string
+  name: string
+  admissionNumber: string
+  gender: string | null
+  age: number | null
+  parentPhone: string | null
+  parentEmail: string | null
+  status: string
+  attendanceRate: number
+  performance: number
+  lastAttendanceDate: string | null
+  lastMarkEntryDate: string | null
 }
 
-interface StudentFilterOptions {
-  all: boolean;
-  missingCA: boolean;
-  missingExam: boolean;
-  complete: boolean;
+interface ClassTeacherContextData {
+  teacherId: string
+  teacherName: string
+  roleName: string
+  currentTerm: {
+    id: string
+    name: string
+    startDate: string
+    endDate: string
+  } | null
+  academicYear: {
+    id: string
+    name: string
+  } | null
+  contextError: string | null
+}
+
+interface ClassTeacherStudentsData {
+  context: ClassTeacherContextData
+  class: {
+    id: string
+    name: string
+    streamName: string | null
+    studentCount: number
+  } | null
+  students: Student[]
 }
 
 export default function ClassTeacherStudentsPage() {
-  const router = useRouter()
-  const { showToast } = useToast()
-  const [selection, setSelection] = useState<FilterSelection>({})
-  const [studentsData, setStudentsData] = useState<StudentsMarksData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<ClassTeacherStudentsData | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [studentFilters, setStudentFilters] = useState<StudentFilterOptions>({
-    all: true,
-    missingCA: false,
-    missingExam: false,
-    complete: false,
-  })
-  
-  // Enhanced feedback states
-  const [savingStates, setSavingStates] = useState<Map<string, boolean>>(new Map())
-  const [successStates, setSuccessStates] = useState<Map<string, boolean>>(new Map())
-  const [unsavedChanges, setUnsavedChanges] = useState<Set<string>>(new Set())
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  
-  // Auto-save for draft entries
-  const [draftEntries, setDraftEntries] = useState<Map<string, any>>(new Map())
-  
-  // Auto-save hook for managing draft data
-  const autoSave = useAutoSave(Object.fromEntries(draftEntries), {
-    key: `marks-drafts-${selection.classId}-${selection.subjectId}`,
-    saveFunction: async (data) => {
-      // Save drafts to server or handle batch operations
-      if (Object.keys(data).length > 0) {
-        await handleBatchSave(Object.values(data))
-      }
-    },
-    debounceMs: 3000, // Save after 3 seconds of inactivity
-    onSaveSuccess: () => {
-      setAutoSaveStatus('saved')
-      showToast({
-        type: 'success',
-        message: 'Draft entries auto-saved',
-        duration: 2000
-      })
-    },
-    onSaveError: (error) => {
-      setAutoSaveStatus('error')
-      showToast({
-        type: 'error',
-        message: 'Auto-save failed - changes saved locally',
-        duration: 4000
-      })
-    },
-    onDataRecovered: (recoveredData) => {
-      const entries = new Map(Object.entries(recoveredData))
-      setDraftEntries(entries)
-      showToast({
-        type: 'info',
-        message: 'Recovered unsaved changes from previous session',
-        duration: 5000
-      })
-    }
-  })
 
-  // Load students data when class and subject are selected
   useEffect(() => {
-    if (selection.classId && selection.subjectId) {
-      loadStudentsData(selection.classId, selection.subjectId)
-    } else {
-      setStudentsData(null)
-    }
-  }, [selection.classId, selection.subjectId])
-
-  const loadStudentsData = async (classId: string, subjectId: string) => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const response = await fetch(`/api/teacher/marks/${classId}/${subjectId}/students`)
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/login')
-          return
+    async function fetchStudentsData() {
+      try {
+        const response = await fetch('/api/class-teacher/students')
+        if (!response.ok) {
+          throw new Error('Failed to fetch students data')
         }
-        if (response.status === 403) {
-          router.push('/dashboard/access-denied')
-          return
-        }
-        throw new Error('Failed to load students data')
+        const studentsData = await response.json()
+        setData(studentsData)
+      } catch (err) {
+        setError('Unable to load students')
+        console.error('Error fetching class teacher students:', err)
+      } finally {
+        setLoading(false)
       }
-      
-      const data = await response.json()
-      setStudentsData(data)
-      
-      // Show success feedback
-      showToast({
-        type: 'success',
-        message: `Loaded ${data.students.length} students for ${data.subject.name}`,
-        duration: 2000
-      })
-    } catch (err: any) {
-      console.error('Error loading students data:', err)
-      setError('Unable to load students data. Please try again.')
-      showToast({
-        type: 'error',
-        message: 'Failed to load students data',
-        duration: 4000
-      })
-    } finally {
-      setLoading(false)
     }
+
+    fetchStudentsData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className={cn(spacing.section, 'p-4 sm:p-6')}>
+        <SkeletonLoader variant="text" count={2} />
+        <SkeletonLoader variant="card" count={6} />
+      </div>
+    )
   }
 
-  const handleSelectionChange = (newSelection: FilterSelection) => {
-    setSelection(newSelection)
+  if (error || !data) {
+    return (
+      <div className="p-4 sm:p-6">
+        <ErrorMessagePanel
+          config={errorMessages.networkError}
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    )
   }
 
-  const handleStudentFilterChange = (filterType: keyof StudentFilterOptions) => {
-    setStudentFilters(prev => {
-      // If selecting a specific filter, turn off "all"
-      if (filterType !== 'all') {
-        return {
-          ...prev,
-          all: false,
-          [filterType]: !prev[filterType],
-        }
-      } else {
-        // If selecting "all", turn off other filters
-        return {
-          all: true,
-          missingCA: false,
-          missingExam: false,
-          complete: false,
-        }
-      }
-    })
-  }
-
-  // Filter students based on selected filters
-  const getFilteredStudents = () => {
-    if (!studentsData) return []
-    
-    if (studentFilters.all) {
-      return studentsData.students
-    }
-    
-    return studentsData.students.filter(student => {
-      const hasCA = student.caEntries.length > 0
-      const hasExam = !!student.examEntry
-      const isComplete = hasCA && hasExam
-      
-      if (studentFilters.missingCA && !hasCA) return true
-      if (studentFilters.missingExam && !hasExam) return true
-      if (studentFilters.complete && isComplete) return true
-      
-      return false
-    })
-  }
-
-  const filteredStudents = getFilteredStudents()
-
-  // Calculate filter counts
-  const getFilterCounts = () => {
-    if (!studentsData) return { all: 0, missingCA: 0, missingExam: 0, complete: 0 }
-    
-    const counts = {
-      all: studentsData.students.length,
-      missingCA: 0,
-      missingExam: 0,
-      complete: 0,
-    }
-    
-    studentsData.students.forEach(student => {
-      const hasCA = student.caEntries.length > 0
-      const hasExam = !!student.examEntry
-      
-      if (!hasCA) counts.missingCA++
-      if (!hasExam) counts.missingExam++
-      if (hasCA && hasExam) counts.complete++
-    })
-    
-    return counts
-  }
-
-  const filterCounts = getFilterCounts()
-
-  // Enhanced handler functions with feedback
-  const handleCAEntryCreate = async (entry: CreateCAEntryRequest) => {
-    const operationId = `ca-create-${entry.studentId}-${Date.now()}`
-    setSavingStates(prev => new Map(prev).set(operationId, true))
-    
-    try {
-      const response = await fetch('/api/teacher/marks/ca-entry', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entry),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create CA entry')
-      }
-
-      // Show success feedback
-      setSuccessStates(prev => new Map(prev).set(operationId, true))
-      showToast({
-        type: 'success',
-        message: `CA entry "${entry.name}" created successfully`,
-        duration: 3000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-      
-      // Clear success state after animation
-      setTimeout(() => {
-        setSuccessStates(prev => {
-          const newMap = new Map(prev)
-          newMap.delete(operationId)
-          return newMap
-        })
-      }, 2000)
-    } catch (error) {
-      console.error('Error creating CA entry:', error)
-      showToast({
-        type: 'error',
-        message: 'Failed to create CA entry. Please try again.',
-        duration: 4000
-      })
-      throw error
-    } finally {
-      setSavingStates(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(operationId)
-        return newMap
-      })
-    }
-  }
-
-  const handleCAEntryUpdate = async (id: string, entry: Partial<CreateCAEntryRequest>) => {
-    const operationId = `ca-update-${id}`
-    setSavingStates(prev => new Map(prev).set(operationId, true))
-    setUnsavedChanges(prev => new Set(prev).add(id))
-    
-    try {
-      const response = await fetch(`/api/teacher/marks/ca-entry/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entry),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update CA entry')
-      }
-
-      // Show success feedback
-      setSuccessStates(prev => new Map(prev).set(operationId, true))
-      setUnsavedChanges(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(id)
-        return newSet
-      })
-      
-      showToast({
-        type: 'success',
-        message: 'CA entry updated successfully',
-        duration: 2000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-      
-      // Clear success state after animation
-      setTimeout(() => {
-        setSuccessStates(prev => {
-          const newMap = new Map(prev)
-          newMap.delete(operationId)
-          return newMap
-        })
-      }, 2000)
-    } catch (error) {
-      console.error('Error updating CA entry:', error)
-      showToast({
-        type: 'error',
-        message: 'Failed to update CA entry. Please try again.',
-        duration: 4000
-      })
-      throw error
-    } finally {
-      setSavingStates(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(operationId)
-        return newMap
-      })
-    }
-  }
-
-  const handleCAEntryDelete = async (id: string) => {
-    const operationId = `ca-delete-${id}`
-    setSavingStates(prev => new Map(prev).set(operationId, true))
-    
-    try {
-      const response = await fetch(`/api/teacher/marks/ca-entry/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete CA entry')
-      }
-
-      showToast({
-        type: 'success',
-        message: 'CA entry deleted successfully',
-        duration: 2000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-    } catch (error) {
-      console.error('Error deleting CA entry:', error)
-      showToast({
-        type: 'error',
-        message: 'Failed to delete CA entry. Please try again.',
-        duration: 4000
-      })
-      throw error
-    } finally {
-      setSavingStates(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(operationId)
-        return newMap
-      })
-    }
-  }
-
-  const handleExamEntryCreate = async (entry: CreateExamEntryRequest) => {
-    const operationId = `exam-create-${entry.studentId}`
-    setSavingStates(prev => new Map(prev).set(operationId, true))
-    
-    try {
-      const response = await fetch('/api/teacher/marks/exam-entry', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entry),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create exam entry')
-      }
-
-      // Show success feedback
-      setSuccessStates(prev => new Map(prev).set(operationId, true))
-      showToast({
-        type: 'success',
-        message: `Exam score ${entry.examScore} recorded successfully`,
-        duration: 3000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-      
-      // Clear success state after animation
-      setTimeout(() => {
-        setSuccessStates(prev => {
-          const newMap = new Map(prev)
-          newMap.delete(operationId)
-          return newMap
-        })
-      }, 2000)
-    } catch (error) {
-      console.error('Error creating exam entry:', error)
-      showToast({
-        type: 'error',
-        message: 'Failed to record exam score. Please try again.',
-        duration: 4000
-      })
-      throw error
-    } finally {
-      setSavingStates(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(operationId)
-        return newMap
-      })
-    }
-  }
-
-  const handleExamEntryUpdate = async (id: string, entry: Partial<CreateExamEntryRequest>) => {
-    const operationId = `exam-update-${id}`
-    setSavingStates(prev => new Map(prev).set(operationId, true))
-    setUnsavedChanges(prev => new Set(prev).add(id))
-    
-    try {
-      const response = await fetch(`/api/teacher/marks/exam-entry/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entry),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update exam entry')
-      }
-
-      // Show success feedback
-      setSuccessStates(prev => new Map(prev).set(operationId, true))
-      setUnsavedChanges(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(id)
-        return newSet
-      })
-      
-      showToast({
-        type: 'success',
-        message: 'Exam score updated successfully',
-        duration: 2000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-      
-      // Clear success state after animation
-      setTimeout(() => {
-        setSuccessStates(prev => {
-          const newMap = new Map(prev)
-          newMap.delete(operationId)
-          return newMap
-        })
-      }, 2000)
-    } catch (error) {
-      console.error('Error updating exam entry:', error)
-      showToast({
-        type: 'error',
-        message: 'Failed to update exam score. Please try again.',
-        duration: 4000
-      })
-      throw error
-    } finally {
-      setSavingStates(prev => {
-        const newMap = new Map(prev)
-        newMap.delete(operationId)
-        return newMap
-      })
-    }
-  }
-
-  const handleBatchSave = async (entries: any[]) => {
-    setAutoSaveStatus('saving')
-    
-    try {
-      const response = await fetch('/api/teacher/marks/batch-save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ entries }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save batch entries')
-      }
-
-      setAutoSaveStatus('saved')
-      showToast({
-        type: 'success',
-        message: `Successfully saved ${entries.length} entries`,
-        duration: 3000
-      })
-
-      // Reload students data to reflect changes
-      if (selection.classId && selection.subjectId) {
-        await loadStudentsData(selection.classId, selection.subjectId)
-      }
-      
-      // Reset auto-save status after delay
-      setTimeout(() => {
-        setAutoSaveStatus('idle')
-      }, 2000)
-    } catch (error) {
-      console.error('Error saving batch entries:', error)
-      setAutoSaveStatus('error')
-      showToast({
-        type: 'error',
-        message: 'Failed to save entries. Please try again.',
-        duration: 4000
-      })
-      
-      // Reset auto-save status after delay
-      setTimeout(() => {
-        setAutoSaveStatus('idle')
-      }, 3000)
-      throw error
-    }
-  }
+  const { context, class: classData, students } = data
+  const hasContextError = !!context.contextError
+  const teacherName = context.teacherName
 
   return (
-    <div className={spacing.page}>
-      {/* Breadcrumbs */}
-      <nav className="flex items-center space-x-1 text-sm text-[var(--text-muted)] mb-4">
-        <a href="/dashboard" className="hover:text-[var(--text-primary)] transition-colors">
-          Dashboard
-        </a>
-        <span>/</span>
-        <a href="/dashboard/class-teacher" className="hover:text-[var(--text-primary)] transition-colors">
-          Class Teacher
-        </a>
-        <span>/</span>
-        <span className="text-[var(--text-primary)] font-medium">Students</span>
-      </nav>
+    <div className={cn(spacing.section, 'p-4 sm:p-6')}>
+      {/* Back Navigation */}
+      <Link
+        href="/class-teacher"
+        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </Link>
 
-      {/* Page Header with Auto-save Status */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className={cn(typography.pageTitle, 'text-[var(--text-primary)]')}>
-            Student Marks Management
-          </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className={cn(typography.subtitle, 'text-[var(--text-secondary)]')}>
-              Manage CA and exam marks for your students using progressive filtering
-            </p>
-            
-            {/* Auto-save Status Indicator */}
-            {autoSave.state.status !== 'idle' && (
-              <AutoSaveIndicator
-                state={autoSave.state}
-                onManualSave={() => autoSave.saveNow(Object.fromEntries(draftEntries))}
-                onRetry={() => autoSave.saveNow(Object.fromEntries(draftEntries))}
-                onRecover={() => {
-                  const recovered = autoSave.recoverFromLocalStorage()
-                  if (recovered) {
-                    setDraftEntries(new Map(Object.entries(recovered)))
-                  }
-                }}
-                hasRecoverableData={!!autoSave.recoverFromLocalStorage()}
-                compact
-              />
-            )}
-            
-            {/* Unsaved Changes Indicator */}
-            {unsavedChanges.size > 0 && (
-              <div className={cn(
-                'flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium',
-                teacherColors.warning.bg, teacherColors.warning.text
-              )}>
-                <AlertCircle className="h-3 w-3" />
-                <span>{unsavedChanges.size} unsaved changes</span>
-              </div>
-            )}
+      {/* Page Header */}
+      <div className={cn(cardStyles.base, cardStyles.compact, 'mt-4')}>
+        <div className="flex items-center gap-4">
+          <div className={cn('p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg', teacherColors.info.bg)}>
+            <Users className={cn('h-6 w-6', teacherColors.info.text)} />
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/class-teacher/students/reports">
-            <Button variant="outline" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              View Reports
-            </Button>
-          </Link>
-          
-          {studentsData && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => selection.classId && selection.subjectId && loadStudentsData(selection.classId, selection.subjectId)}
-              disabled={loading}
-              className="transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              <RefreshCw className={cn('h-4 w-4 mr-2 transition-transform duration-200', loading && 'animate-spin')} />
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          )}
+          <div>
+            <h1 className={typography.pageTitle}>
+              {classData ? `${classData.name} ${classData.streamName ? `(${classData.streamName})` : ''}` : 'My Students'}
+            </h1>
+            <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1')}>
+              {students.length} students • Class Teacher Portal
+              {context.currentTerm && (
+                <span className="ml-2 text-sm font-medium text-[var(--chart-blue)] dark:text-[var(--chart-blue)]">
+                  • {context.currentTerm.name}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Progressive Filter */}
-      <Card className={cn(cardStyles.base, cardStyles.normal, 'mb-6')}>
-        <CardHeader>
-          <CardTitle className={cn(typography.sectionTitle, 'flex items-center gap-2')}>
-            <GraduationCap className="h-5 w-5" />
-            Select Class and Subject
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProgressiveFilter
-            teacherId="current-teacher" // This will be handled by the API based on session
-            onSelectionChange={handleSelectionChange}
-            initialSelection={selection}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Error Display */}
-      {error && (
-        <AlertBanner
-          type="danger"
-          message={error}
-          action={{ 
-            label: 'Retry', 
-            onClick: () => selection.classId && selection.subjectId && loadStudentsData(selection.classId, selection.subjectId)
-          }}
-          className="mb-6"
-        />
-      )}
-
-      {/* Students Data Section */}
-      {selection.classId && selection.subjectId && (
-        <div className="space-y-6">
-          {/* Subject and Term Info */}
-          {studentsData && (
-            <Card className={cn(cardStyles.base, cardStyles.compact)}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
-                    <BookOpen className={cn('h-5 w-5', teacherColors.info.text)} />
-                  </div>
-                  <div>
-                    <h3 className={cn(typography.h3, 'text-[var(--text-primary)]')}>
-                      {studentsData.subject.name} ({studentsData.subject.code})
-                    </h3>
-                    <p className={cn(typography.body, 'text-[var(--text-secondary)]')}>
-                      {studentsData.term.name} • {studentsData.students.length} students
-                    </p>
-                  </div>
-                </div>
-                
-                {!studentsData.term.isActive && (
-                  <div className="flex items-center gap-2 text-amber-600">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm">Inactive Term</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Student Filters */}
-          {studentsData && (
-            <Card className={cn(cardStyles.base, cardStyles.compact)}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4 text-[var(--text-secondary)]" />
-                  <span className={cn(typography.body, 'font-medium text-[var(--text-primary)]')}>
-                    Filter Students
-                  </span>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={studentFilters.all ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStudentFilterChange('all')}
-                    className="transition-all duration-200 hover:scale-105 active:scale-95"
-                  >
-                    All Students ({filterCounts.all})
-                  </Button>
-                  <Button
-                    variant={studentFilters.missingCA ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStudentFilterChange('missingCA')}
-                    className={cn(
-                      'transition-all duration-200 hover:scale-105 active:scale-95',
-                      studentFilters.missingCA ? '' : 'border-amber-300 text-amber-700 hover:bg-amber-50'
-                    )}
-                  >
-                    Missing CA ({filterCounts.missingCA})
-                  </Button>
-                  <Button
-                    variant={studentFilters.missingExam ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStudentFilterChange('missingExam')}
-                    className={cn(
-                      'transition-all duration-200 hover:scale-105 active:scale-95',
-                      studentFilters.missingExam ? '' : 'border-red-300 text-red-700 hover:bg-red-50'
-                    )}
-                  >
-                    Missing Exam ({filterCounts.missingExam})
-                  </Button>
-                  <Button
-                    variant={studentFilters.complete ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStudentFilterChange('complete')}
-                    className={cn(
-                      'transition-all duration-200 hover:scale-105 active:scale-95',
-                      studentFilters.complete ? '' : 'border-green-300 text-green-700 hover:bg-green-50'
-                    )}
-                  >
-                    Complete ({filterCounts.complete})
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Enhanced Loading State with Skeleton */}
-          {loading && (
-            <Card className={cn(cardStyles.base, cardStyles.normal)}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <div className="relative">
-                    <RefreshCw className="h-6 w-6 animate-spin text-[var(--accent-primary)]" />
-                    <div className="absolute inset-0 rounded-full border-2 border-[var(--accent-primary)]/20 animate-pulse" />
-                  </div>
-                  <span className={cn(typography.body, 'text-[var(--text-secondary)] font-medium')}>
-                    Loading students data...
-                  </span>
-                </div>
-                
-                {/* Skeleton for table */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-surface)] animate-pulse">
-                    <div className="h-4 w-4 bg-[var(--bg-muted)] rounded" />
-                    <div className="h-4 w-32 bg-[var(--bg-muted)] rounded" />
-                    <div className="h-4 w-24 bg-[var(--bg-muted)] rounded" />
-                    <div className="flex-1 h-4 bg-[var(--bg-muted)] rounded" />
-                    <div className="h-4 w-16 bg-[var(--bg-muted)] rounded" />
-                    <div className="h-4 w-16 bg-[var(--bg-muted)] rounded" />
-                    <div className="h-4 w-16 bg-[var(--bg-muted)] rounded" />
-                  </div>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-[var(--bg-surface)] animate-pulse" style={{ animationDelay: `${i * 100}ms` }}>
-                      <div className="h-4 w-4 bg-[var(--bg-muted)] rounded" />
-                      <div className="h-4 w-32 bg-[var(--bg-muted)] rounded" />
-                      <div className="h-4 w-24 bg-[var(--bg-muted)] rounded" />
-                      <div className="flex-1 h-8 bg-[var(--bg-muted)] rounded" />
-                      <div className="h-8 w-16 bg-[var(--bg-muted)] rounded" />
-                      <div className="h-8 w-16 bg-[var(--bg-muted)] rounded" />
-                      <div className="h-8 w-16 bg-[var(--bg-muted)] rounded" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Students List */}
-          {studentsData && !loading && (
-            <Card className={cn(cardStyles.base, cardStyles.normal)}>
-              <CardHeader>
-                <CardTitle className={cn(typography.sectionTitle, 'flex items-center gap-2')}>
-                  <Users className="h-5 w-5" />
-                  Students ({filteredStudents.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredStudents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
-                    <p className={cn(typography.body, 'text-[var(--text-secondary)]')}>
-                      No students match the selected filters
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleStudentFilterChange('all')}
-                      className="mt-3"
-                    >
-                      Show All Students
-                    </Button>
-                  </div>
-                ) : (
-                  <MarksEntryTable
-                    students={filteredStudents}
-                    subject={studentsData.subject}
-                    onCAEntryCreate={handleCAEntryCreate}
-                    onCAEntryUpdate={handleCAEntryUpdate}
-                    onCAEntryDelete={handleCAEntryDelete}
-                    onExamEntryCreate={handleExamEntryCreate}
-                    onExamEntryUpdate={handleExamEntryUpdate}
-                    onBatchSave={handleBatchSave}
-                    loading={loading}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          )}
+      {/* Context Error Warning - Requirement 12.4: Clear error messages */}
+      {hasContextError && (
+        <div className={cn(cardStyles.base, cardStyles.compact, 'mt-4 bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] border-[var(--warning-light)] dark:border-[var(--warning-dark)]')}>
+          <div className="flex items-center gap-2">
+            <AlertCircle className={cn('h-5 w-5', teacherColors.warning.text)} />
+            <div>
+              <h3 className={cn(typography.h3, teacherColors.warning.text)}>Data Entry Disabled</h3>
+              <p className={cn(typography.caption, teacherColors.warning.text)}>
+                {context.contextError || 'Academic context could not be determined. Please contact administration.'}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Instructions when no selection */}
-      {!selection.classId && (
-        <Card className={cn(cardStyles.base, cardStyles.normal)}>
-          <CardContent className="text-center py-12">
-            <GraduationCap className="h-16 w-16 text-[var(--text-muted)] mx-auto mb-4" />
-            <h3 className={cn(typography.h3, 'text-[var(--text-primary)] mb-2')}>
-              Get Started
-            </h3>
-            <p className={cn(typography.body, 'text-[var(--text-secondary)] mb-4')}>
-              Select a class from the filter above to begin managing student marks
-            </p>
-            <div className="text-left max-w-md mx-auto">
-              <p className={cn(typography.caption, 'text-[var(--text-muted)] mb-2')}>
-                This system supports:
-              </p>
-              <ul className="text-sm text-[var(--text-secondary)] space-y-1">
-                <li>• Progressive filtering: Class → Stream → Subject → Students</li>
-                <li>• Multiple CA entries per subject with custom max scores</li>
-                <li>• Exam entry management with validation</li>
-                <li>• Automatic grade calculations (CA 20% + Exam 80%)</li>
-                <li>• Student filtering by mark status</li>
-              </ul>
+      {/* Quick Actions */}
+      <div className={cn('flex flex-wrap gap-3', spacing.card)}>
+        <Link
+          href={hasContextError ? '#' : '/class-teacher/attendance'}
+          className={cn(
+            'flex-1 min-w-[200px] p-4 rounded-lg border transition-colors',
+            hasContextError 
+              ? 'opacity-60 cursor-not-allowed' 
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800',
+            teacherColors.secondary.bg,
+            teacherColors.secondary.border
+          )}
+          onClick={hasContextError ? (e) => e.preventDefault() : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+              <ClipboardList className={cn('h-6 w-6', teacherColors.info.text)} />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h3 className={typography.label}>Take Attendance</h3>
+              <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                Record daily attendance
+              </p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href={hasContextError ? '#' : '/class-teacher/assessments'}
+          className={cn(
+            'flex-1 min-w-[200px] p-4 rounded-lg border transition-colors',
+            hasContextError 
+              ? 'opacity-60 cursor-not-allowed' 
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800',
+            teacherColors.secondary.bg,
+            teacherColors.secondary.border
+          )}
+          onClick={hasContextError ? (e) => e.preventDefault() : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <div className={cn('p-2 rounded-lg', teacherColors.success.bg)}>
+              <BookOpen className={cn('h-6 w-6', teacherColors.success.text)} />
+            </div>
+            <div>
+              <h3 className={typography.label}>Enter Assessments</h3>
+              <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                Record CA and Exam scores
+              </p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href={hasContextError ? '#' : '/class-teacher/reports'}
+          className={cn(
+            'flex-1 min-w-[200px] p-4 rounded-lg border transition-colors',
+            hasContextError 
+              ? 'opacity-60 cursor-not-allowed' 
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800',
+            teacherColors.secondary.bg,
+            teacherColors.secondary.border
+          )}
+          onClick={hasContextError ? (e) => e.preventDefault() : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+              <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
+            </div>
+            <div>
+              <h3 className={typography.label}>View Reports</h3>
+              <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+                Monitor class performance
+              </p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Students Table */}
+      <div className={cn(cardStyles.base, cardStyles.normal)}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={typography.sectionTitle}>Students</h2>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Users className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm">
+              <GraduationCap className="h-4 w-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className={cn(teacherColors.secondary.bg)}>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Admission #</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Gender</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Age</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Attendance</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Performance</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Last Attendance</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Status</th>
+                <th className="px-4 py-2 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              {students.map((student) => (
+                <tr key={student.id} className="hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                          {student.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="ml-4">
+                        <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">{student.name}</div>
+                        <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                          {student.parentPhone && `📞 ${student.parentPhone}`}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{student.admissionNumber}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{student.gender || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)] dark:text-[var(--text-muted)]">{student.age || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2 mr-2">
+                        <div
+                          className={cn(
+                            'h-2 rounded-full',
+                            student.attendanceRate >= 90 ? 'bg-green-500' :
+                            student.attendanceRate >= 75 ? 'bg-blue-500' :
+                            student.attendanceRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                          )}
+                          style={{ width: `${student.attendanceRate}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                        {student.attendanceRate}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2 mr-2">
+                        <div
+                          className={cn(
+                            'h-2 rounded-full',
+                            student.performance >= 90 ? 'bg-green-500' :
+                            student.performance >= 75 ? 'bg-blue-500' :
+                            student.performance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                          )}
+                          style={{ width: `${student.performance}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                        {student.performance}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                    {student.lastAttendanceDate ? new Date(student.lastAttendanceDate).toLocaleDateString('en-UG', { month: 'short', day: 'numeric' }) : '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <span className={cn(
+                      'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                      student.status === 'ACTIVE' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                    )}>
+                      {student.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <div className="flex justify-center gap-1">
+                      <Link
+                        href={`/class-teacher/students/${student.id}`}
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <Users className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
+                      </Link>
+                      <Link
+                        href={`/class-teacher/attendance?studentId=${student.id}`}
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <ClipboardList className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
+                      </Link>
+                      <Link
+                        href={`/class-teacher/assessments?studentId=${student.id}`}
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <BookOpen className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Empty State */}
+        {students.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+            <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>No Students Found</h3>
+            <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+              {classData ? `No students enrolled in ${classData.name} yet.` : 'No students assigned to your class.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Class Summary */}
+      {classData && (
+        <div className={cn(cardStyles.base, cardStyles.normal)}>
+          <h2 className={typography.sectionTitle}>Class Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className={cn(cardStyles.base, cardStyles.compact)}>
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-[var(--text-muted)]" />
+                <div>
+                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Total Students</h3>
+                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {students.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn(cardStyles.base, cardStyles.compact)}>
+              <div className="flex items-center gap-3">
+                <ClipboardList className={cn('h-5 w-5', teacherColors.info.text)} />
+                <div>
+                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Avg Attendance</h3>
+                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {Math.round(students.reduce((sum, s) => sum + s.attendanceRate, 0) / students.length) || 0}%
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn(cardStyles.base, cardStyles.compact)}>
+              <div className="flex items-center gap-3">
+                <TrendingUp className={cn('h-5 w-5', teacherColors.success.text)} />
+                <div>
+                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Avg Performance</h3>
+                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                    {Math.round(students.reduce((sum, s) => sum + s.performance, 0) / students.length) || 0}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-      
-      {/* Floating Auto-save Indicator */}
-      <FloatingAutoSaveIndicator
-        state={autoSave.state}
-        onManualSave={() => autoSave.saveNow(Object.fromEntries(draftEntries))}
-        onRetry={() => autoSave.saveNow(Object.fromEntries(draftEntries))}
-        onRecover={() => {
-          const recovered = autoSave.recoverFromLocalStorage()
-          if (recovered) {
-            setDraftEntries(new Map(Object.entries(recovered)))
-          }
-        }}
-        hasRecoverableData={!!autoSave.recoverFromLocalStorage()}
-        position="bottom-right"
-        hideWhenSaved={false}
-      />
     </div>
   )
 }

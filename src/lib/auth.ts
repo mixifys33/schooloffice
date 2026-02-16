@@ -204,7 +204,7 @@ export function getDashboardPath(role: Role | StaffRole): string {
       return '/student'
     // Handle StaffRole cases
     case StaffRole.DOS:
-      return '/dashboard/dos'
+      return '/dos'
     case StaffRole.CLASS_TEACHER:
       return '/dashboard/class-teacher'
     case StaffRole.BURSAR:
@@ -234,15 +234,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.log('🔧 [NextAuth] Authorize called with:', {
-          schoolCode: credentials?.schoolCode,
-          identifier: credentials?.identifier,
-          hasPassword: !!credentials?.password,
-          passwordLength: credentials?.password ? (credentials.password as string).length : 0
-        })
-        
         if (!credentials?.identifier || !credentials?.password) {
-          console.log('❌ [NextAuth] Missing credentials')
           return null
         }
 
@@ -251,29 +243,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const schoolCode = credentials.schoolCode as string | undefined
         const ipAddress = 'unknown' // In production, extract from request headers
 
-        console.log('🔧 [NextAuth] Processing:', {
-          originalIdentifier: credentials.identifier,
-          processedIdentifier: identifier,
-          schoolCode,
-          passwordLength: password.length,
-          ipAddress
-        })
-
         // Super Admin authentication (no school code required)
         // Requirements: 5.1
         if (!schoolCode || schoolCode.trim() === '') {
-          console.log('🔧 [NextAuth] Attempting Super Admin authentication')
           return authenticateSuperAdmin(identifier, password, ipAddress)
         }
 
         // School-first authentication
         // Requirements: 2.1, 2.2
         const normalizedSchoolCode = normalizeSchoolCode(schoolCode)
-        console.log('🔧 [NextAuth] Normalized school code:', normalizedSchoolCode)
 
         // Validate school code format
         if (!isValidSchoolCodeFormat(normalizedSchoolCode)) {
-          console.log('❌ [NextAuth] Invalid school code format')
           await logAuthEvent({
             eventType: AuthEventType.LOGIN_FAILED,
             identifier,
@@ -286,7 +267,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Find school by code
         // Requirements: 2.2
-        console.log('🔧 [NextAuth] Looking up school...')
         const school = await prisma.school.findUnique({
           where: { code: normalizedSchoolCode },
           select: {
@@ -301,7 +281,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // School not found - return null (generic error)
         // Requirements: 2.6
         if (!school) {
-          console.log('❌ [NextAuth] School not found')
           await logAuthEvent({
             eventType: AuthEventType.LOGIN_FAILED,
             identifier,
@@ -312,11 +291,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        console.log('✅ [NextAuth] School found:', school.name)
-
         // Check if school is suspended
         if (!school.isActive) {
-          console.log('❌ [NextAuth] School is suspended')
           await logAuthEvent({
             schoolId: school.id,
             eventType: AuthEventType.LOGIN_FAILED,
@@ -330,7 +306,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Find user by identifier within school context
         // Requirements: 2.3, 2.4, 2.5
-        console.log('🔧 [NextAuth] Looking up user...')
         // Try multiple approaches to handle case sensitivity and special characters
         const lowerIdentifier = identifier.toLowerCase()
         const upperIdentifier = identifier.toUpperCase()
@@ -365,7 +340,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // If not found with exact matches, try case-insensitive search
         if (!user) {
-          console.log('🔧 [NextAuth] Trying case-insensitive search...')
           try {
             user = await prisma.user.findFirst({
               where: {
@@ -387,14 +361,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             })
           } catch (searchError) {
             // If search still fails, fall back to exact match only
-            console.warn('Case-insensitive search failed, using exact match only:', searchError)
           }
         }
 
         // User not found - return null (generic error)
         // Requirements: 2.7
         if (!user) {
-          console.log('❌ [NextAuth] User not found')
           await logAuthEvent({
             schoolId: school.id,
             eventType: AuthEventType.LOGIN_FAILED,
@@ -406,11 +378,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        console.log('✅ [NextAuth] User found:', user.email)
-
         // Check if user is active
         if (!user.isActive) {
-          console.log('❌ [NextAuth] User is inactive')
           await logAuthEvent({
             userId: user.id,
             schoolId: school.id,
@@ -426,7 +395,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Check if account is locked
         // Requirements: 7.2
         if (user.lockedUntil && user.lockedUntil > new Date()) {
-          console.log('❌ [NextAuth] Account is locked')
           await logAuthEvent({
             userId: user.id,
             schoolId: school.id,
@@ -441,7 +409,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Verify password
         if (!user.passwordHash) {
-          console.log('❌ [NextAuth] No password set')
           await logAuthEvent({
             userId: user.id,
             schoolId: school.id,
@@ -454,23 +421,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        console.log('🔧 [NextAuth] Verifying password...')
-        console.log('🔧 [NextAuth] Password details:', {
-          passwordProvided: password,
-          passwordLength: password.length,
-          hashExists: !!user.passwordHash,
-          hashLength: user.passwordHash ? user.passwordHash.length : 0,
-          hashPrefix: user.passwordHash ? user.passwordHash.substring(0, 10) : 'none'
-        })
         const isValidPassword = await verifyPassword(password, user.passwordHash)
-        console.log('🔧 [NextAuth] Password verification result:', isValidPassword)
         if (!isValidPassword) {
-          console.log('❌ [NextAuth] Invalid password')
-          console.log('🔧 [NextAuth] Debug info:', {
-            providedPassword: password,
-            userEmail: user.email,
-            userId: user.id
-          })
           await recordFailedAttempt(user.id)
           await logAuthEvent({
             userId: user.id,
@@ -483,8 +435,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
           return null
         }
-
-        console.log('✅ [NextAuth] Password verified')
 
         // Clear failed attempts on successful login
         await clearFailedAttempts(user.id)
@@ -518,12 +468,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ? (user.staff.primaryRole as StaffRole)
           : (user.activeRole as Role) || userRoles[0]
 
-        console.log('✅ [NextAuth] Roles configured:', {
-          userRoles,
-          allRoles,
-          activeRole
-        })
-
         // Log successful login
         // Requirements: 7.3
         await logAuthEvent({
@@ -536,7 +480,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           metadata: { roles: allRoles, activeRole },
         })
 
-        const result = {
+        return {
           id: user.id,
           email: user.email,
           role: activeRole,
@@ -548,16 +492,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           licenseType: school.licenseType as LicenseType,
           forcePasswordReset: user.forcePasswordReset,
         }
-
-        console.log('✅ [NextAuth] Authentication successful, returning:', {
-          id: result.id,
-          email: result.email,
-          role: result.role,
-          schoolName: result.schoolName,
-          forcePasswordReset: result.forcePasswordReset
-        })
-
-        return result
       },
     }),
   ],
@@ -611,6 +545,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      // If redirecting to login page, allow it
+      if (url.startsWith(baseUrl + '/login') || url === '/login') {
+        return url
+      }
+      
+      // If URL is relative, make it absolute
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      }
+      
+      // If URL is from same origin, allow it
+      if (url.startsWith(baseUrl)) {
+        return url
+      }
+      
+      // Default redirect to base URL
+      return baseUrl
     },
   },
   pages: {

@@ -81,7 +81,9 @@ export function StatCard({
   className,
   onClick,
 }: StatCardProps) {
-  const colors = colorClasses[color]
+  // Defensive: ensure color is valid, fallback to 'blue' if undefined or invalid
+  const validColor = (color && colorClasses[color]) ? color : 'blue'
+  const colors = colorClasses[validColor]
   const isClickable = !!onClick
 
   return (

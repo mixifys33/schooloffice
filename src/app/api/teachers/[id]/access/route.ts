@@ -171,7 +171,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         accessLevel,
         email: email.trim(),
         temporaryPassword,
-        forcePasswordReset: true, // Always true per Requirement 4.5
+        forcePasswordReset: false, // No forced password reset per user preference
         permissions: finalPermissions,
         channelConfig: finalChannelConfig,
       },

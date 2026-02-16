@@ -72,15 +72,15 @@ export default function CoreSubjectsPage() {
   );
 
   const handleBack = () => {
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   const handleAddSubject = () => {
-    router.push('/dashboard/dos/subjects/add?type=core');
+    router.push('/dos/subjects/add?type=core');
   };
 
   const handleEditSubject = (subjectId: string) => {
-    router.push(`/dashboard/dos/subjects/edit/${subjectId}`);
+    router.push(`/dos/subjects/edit/${subjectId}`);
   };
 
   return (

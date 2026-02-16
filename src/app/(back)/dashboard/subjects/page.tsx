@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { Plus, BookOpen, Edit2, Trash2, Users, Building2, X } from 'lucide-react'
+import { Plus, BookOpen, Edit2, Trash2, Users, Building2, X, Upload } from 'lucide-react'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { SearchInput } from '@/components/ui/search-input'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Toast, useLocalToast } from '@/components/ui/toast'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { FormField } from '@/components/ui/form-field'
+import { SelectField } from '@/components/ui/form-field'
+import { SubjectBulkUpload } from '@/components/subjects/subject-bulk-upload'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +26,8 @@ interface SubjectItem {
   id: string
   name: string
   code: string
+  levelType?: 'O_LEVEL' | 'A_LEVEL'
+  isCompulsory?: boolean
   teacherCount: number
   classCount: number
 }
@@ -31,11 +35,14 @@ interface SubjectItem {
 interface FormData {
   name: string
   code: string
+  levelType: string
+  isCompulsory: boolean
 }
 
 interface FormErrors {
   name?: string
   code?: string
+  levelType?: string
 }
 
 export default function SubjectsPage() {
@@ -49,12 +56,18 @@ export default function SubjectsPage() {
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
   const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null)
   const [subjectToDelete, setSubjectToDelete] = useState<SubjectItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   // Form state
-  const [formData, setFormData] = useState<FormData>({ name: '', code: '' })
+  const [formData, setFormData] = useState<FormData>({ 
+    name: '', 
+    code: '', 
+    levelType: '',
+    isCompulsory: true 
+  })
   const [formErrors, setFormErrors] = useState<FormErrors>({})
 
   const fetchSubjects = useCallback(async () => {
@@ -111,6 +124,10 @@ export default function SubjectsPage() {
       errors.code = 'Code must be 10 characters or less'
     }
 
+    if (!formData.levelType) {
+      errors.levelType = 'Level type is required'
+    }
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -118,10 +135,20 @@ export default function SubjectsPage() {
   const handleOpenDialog = (subject?: SubjectItem) => {
     if (subject) {
       setEditingSubject(subject)
-      setFormData({ name: subject.name, code: subject.code })
+      setFormData({ 
+        name: subject.name, 
+        code: subject.code,
+        levelType: (subject as any).levelType || '',
+        isCompulsory: (subject as any).isCompulsory ?? true
+      })
     } else {
       setEditingSubject(null)
-      setFormData({ name: '', code: '' })
+      setFormData({ 
+        name: '', 
+        code: '',
+        levelType: '',
+        isCompulsory: true
+      })
     }
     setFormErrors({})
     setDialogOpen(true)
@@ -130,7 +157,12 @@ export default function SubjectsPage() {
   const handleCloseDialog = () => {
     setDialogOpen(false)
     setEditingSubject(null)
-    setFormData({ name: '', code: '' })
+    setFormData({ 
+      name: '', 
+      code: '',
+      levelType: '',
+      isCompulsory: true
+    })
     setFormErrors({})
   }
 
@@ -199,7 +231,7 @@ export default function SubjectsPage() {
     {
       key: 'name',
       header: 'Subject Name',
-      render: (subject) => (
+      render: (_value, subject) => (
         <div className="flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{subject.name}</span>
@@ -209,14 +241,40 @@ export default function SubjectsPage() {
     {
       key: 'code',
       header: 'Code',
-      render: (subject) => (
+      render: (_value, subject) => (
         <Badge variant="secondary">{subject.code}</Badge>
+      ),
+    },
+    {
+      key: 'levelType',
+      header: 'Level',
+      render: (_value, subject) => (
+        subject.levelType ? (
+          <Badge variant="outline">
+            {subject.levelType === 'O_LEVEL' ? 'O-Level' : 'A-Level'}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        )
+      ),
+    },
+    {
+      key: 'isCompulsory',
+      header: 'Type',
+      render: (_value, subject) => (
+        subject.levelType === 'O_LEVEL' ? (
+          <Badge variant={subject.isCompulsory ? 'default' : 'secondary'} className="text-xs">
+            {subject.isCompulsory ? 'Compulsory' : 'Optional'}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        )
       ),
     },
     {
       key: 'teacherCount',
       header: 'Teachers',
-      render: (subject) => (
+      render: (_value, subject) => (
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Users className="h-4 w-4" />
           <span>{subject.teacherCount}</span>
@@ -226,7 +284,7 @@ export default function SubjectsPage() {
     {
       key: 'classCount',
       header: 'Classes',
-      render: (subject) => (
+      render: (_value, subject) => (
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Building2 className="h-4 w-4" />
           <span>{subject.classCount}</span>
@@ -236,7 +294,7 @@ export default function SubjectsPage() {
     {
       key: 'actions',
       header: '',
-      render: (subject) => (
+      render: (_value, subject) => (
         <div className="flex items-center gap-2 justify-end">
           <Button
             variant="ghost"
@@ -294,10 +352,16 @@ export default function SubjectsPage() {
             {subjects.length} subject{subjects.length !== 1 ? 's' : ''} configured
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add Subject</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowBulkUpload(true)} variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Bulk Upload</span>
+          </Button>
+          <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Subject</span>
+          </Button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -358,7 +422,7 @@ export default function SubjectsPage() {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className={cn(
-              'fixed inset-0 z-50 bg-[var(--text-primary)]/50',
+              'fixed inset-0 z-50 bg-black/20 dark:bg-black/40',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
             )}
@@ -409,6 +473,39 @@ export default function SubjectsPage() {
                 required
                 touchFriendly
               />
+              <SelectField
+                label="Level Type"
+                name="levelType"
+                options={[
+                  { value: 'O_LEVEL', label: 'O-Level (S1-S4)' },
+                  { value: 'A_LEVEL', label: 'A-Level (S5-S6)' }
+                ]}
+                placeholder="Select level type"
+                value={formData.levelType}
+                onChange={(e) => setFormData({ ...formData, levelType: e.target.value })}
+                error={formErrors.levelType}
+                required
+                helpText="Select whether this is an O-Level or A-Level subject"
+              />
+              {formData.levelType === 'O_LEVEL' && (
+                <div className="flex items-start gap-3 p-4 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="isCompulsory"
+                    checked={formData.isCompulsory}
+                    onChange={(e) => setFormData({ ...formData, isCompulsory: e.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="isCompulsory" className="text-sm font-medium cursor-pointer">
+                      Compulsory Subject
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Check if this subject is compulsory for all O-Level students
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
@@ -438,6 +535,27 @@ export default function SubjectsPage() {
         onConfirm={handleConfirmDelete}
         isLoading={submitting}
       />
+
+      {/* Bulk Upload Dialog */}
+      {showBulkUpload && (
+        <div className="fixed inset-0 z-50 bg-black/20 dark:bg-black/40 flex items-center justify-center p-4">
+          <div className="max-w-4xl w-full">
+            <SubjectBulkUpload
+              onUploadComplete={(result) => {
+                if (result.success > 0) {
+                  showToast('success', `${result.success} subject${result.success !== 1 ? 's' : ''} created successfully`)
+                  fetchSubjects()
+                }
+                if (result.failed > 0) {
+                  showToast('error', `${result.failed} subject${result.failed !== 1 ? 's' : ''} failed to create`)
+                }
+                setShowBulkUpload(false)
+              }}
+              onCancel={() => setShowBulkUpload(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

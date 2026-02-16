@@ -4,7 +4,7 @@
  * Provides report generation and analytics for the Super Admin Communication Hub.
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7, 8.8
  */
-
+   
 import { prisma } from '../lib/db'
 import {
   ReportParams,
@@ -61,7 +61,7 @@ export class HubReportService {
     })
 
     // Build byChannel summary
-    const byChannel: Record<MessageChannel, number> = {
+    const byChannel: Record<string, number> = {
       [MessageChannel.SMS]: 0,
       [MessageChannel.WHATSAPP]: 0,
       [MessageChannel.EMAIL]: 0,
@@ -294,7 +294,7 @@ export class HubReportService {
     const overallStats = await this.calculateDeliveryStats(whereClause)
 
     // Get delivery statistics by channel
-    const byChannel: Record<MessageChannel, DeliveryStats> = {
+    const byChannel: Record<string, DeliveryStats> = {
       [MessageChannel.SMS]: await this.calculateDeliveryStats({
         ...whereClause,
         channel: MessageChannel.SMS,
@@ -471,7 +471,7 @@ export class HubReportService {
       },
     })
 
-    const byChannel: Record<MessageChannel, number> = {
+    const byChannel: Record<string, number> = {
       [MessageChannel.SMS]: 0,
       [MessageChannel.WHATSAPP]: 0,
       [MessageChannel.EMAIL]: 0,

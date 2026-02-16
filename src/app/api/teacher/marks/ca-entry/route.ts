@@ -13,7 +13,16 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Role } from '@/types/enums'
 import { gradingEngine } from '@/lib/grading-engine'
+import { marksAuditService } from '@/services/marks-audit.service'
 import { z } from 'zod'
+import { 
+  withErrorHandling, 
+  Errors, 
+  assertExists, 
+  assertOrThrow,
+  validateRequestBody 
+} from '@/lib/api-errors'
+import { formatApiError } from '@/lib/error-messages'
 
 // Validation schema for CA entry creation
 const CreateCAEntrySchema = z.object({
@@ -40,163 +49,135 @@ export interface CreateCAEntryRequest {
 
 /**
  * POST /api/teacher/marks/ca-entry
- * Create a new CA entry
+ * Create a new CA entry with enhanced error handling
  */
-export async function POST(request: NextRequest) {
-  try {
-    console.log('🔍 [API] /api/teacher/marks/ca-entry - POST - Starting request')
-    
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ 
-        error: 'Authentication required',
-        details: 'Please log in to create CA entries'
-      }, { status: 401 })
-    }
+export const POST = withErrorHandling(async (request: NextRequest) => {
+  console.log('🔍 [API] /api/teacher/marks/ca-entry - POST - Starting request')
+  
+  const session = await auth()
+  assertOrThrow(!!session?.user, Errors.Unauthorized())
 
-    // Verify user has appropriate role
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
-      return NextResponse.json(
-        { 
-          error: 'Access denied. Teacher role required.',
-          details: `Current role: ${userRole}. Teacher access required.`
-        },
-        { status: 403 }
-      )
-    }
+  // Verify user has appropriate role
+  const userRole = session.user.activeRole || session.user.role
+  assertOrThrow(
+    userRole === Role.TEACHER || userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY,
+    Errors.Forbidden('Teacher role required for marks entry')
+  )
 
-    const schoolId = session.user.schoolId
-    if (!schoolId) {
-      return NextResponse.json(
-        { 
-          error: 'No school context found',
-          details: 'Your account is not linked to a school. Please contact support.'
-        },
-        { status: 400 }
-      )
-    }
+  const schoolId = session.user.schoolId
+  assertOrThrow(!!schoolId, Errors.BadRequest('No school context found'))
 
-    // Get staff record
-    const staff = await prisma.staff.findFirst({
-      where: {
+  // Get staff record
+  const staff = await prisma.staff.findFirst({
+    where: {
+      schoolId,
+      userId: session.user.id,
+    },
+    select: {
+      id: true,
+    },
+  })
+
+  assertExists(staff, 'Staff profile')
+
+  // Parse and validate request body with enhanced error handling
+  const body = await request.json().catch(() => {
+    throw Errors.BadRequest('Invalid JSON in request body')
+  })
+
+  const data = validateRequestBody<CreateCAEntryRequest>(body, (data) => {
+    const result = CreateCAEntrySchema.safeParse(data)
+    return {
+      isValid: result.success,
+      errors: result.success ? {} : result.error.errors.reduce((acc, err) => {
+        const field = err.path.join('.')
+        if (!acc[field]) acc[field] = []
+        acc[field].push(err.message)
+        return acc
+      }, {} as Record<string, string[]>)
+    }
+  })
+
+  // Enhanced score validation with detailed error messages
+  const scoreValidation = gradingEngine.validateCAEntry(data.rawScore, data.maxScore)
+  if (!scoreValidation.isValid) {
+    throw Errors.ValidationError(
+      { rawScore: [scoreValidation.error || 'Invalid score'] },
+      'Score validation failed'
+    )
+  }
+
+  // Get current active term with better error handling
+  const currentTerm = await prisma.term.findFirst({
+    where: {
+      academicYear: {
         schoolId,
-        userId: session.user.id,
+        isCurrent: true,
       },
-      select: {
-        id: true,
-      },
-    })
+    },
+    orderBy: {
+      startDate: 'desc',
+    },
+  })
 
-    if (!staff) {
-      return NextResponse.json(
-        { 
-          error: 'No staff profile found',
-          details: 'Your staff profile is not set up. Please contact your school administrator.'
-        },
-        { status: 404 }
-      )
-    }
+  assertExists(currentTerm, 'Active academic term')
 
-    // Parse and validate request body
-    const body = await request.json()
-    const validationResult = CreateCAEntrySchema.safeParse(body)
-    
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
-        },
-        { status: 400 }
-      )
-    }
+  // Verify student exists and is accessible
+  const student = await prisma.student.findUnique({
+    where: {
+      id: data.studentId,
+    },
+    select: {
+      id: true,
+      classId: true,
+      schoolId: true,
+      firstName: true,
+      lastName: true,
+    },
+  })
 
-    const data = validationResult.data
+  assertExists(student, 'Student')
+  assertOrThrow(
+    student.schoolId === schoolId,
+    Errors.Forbidden('Student not accessible in your school')
+  )
 
-    // Validate score against maximum
-    const scoreValidation = gradingEngine.validateCAEntry(data.rawScore, data.maxScore)
-    if (!scoreValidation.isValid) {
-      return NextResponse.json(
-        {
-          error: 'Score validation failed',
-          details: scoreValidation.error
-        },
-        { status: 400 }
-      )
-    }
+  // Verify teacher has access to this student's class and subject
+  const hasAccess = await prisma.staffSubject.findFirst({
+    where: {
+      staffId: staff.id,
+      classId: student.classId,
+      subjectId: data.subjectId,
+    },
+  }) || await prisma.staffClass.findFirst({
+    where: {
+      staffId: staff.id,
+      classId: student.classId,
+    },
+  })
 
-    // Get current active term
-    const currentTerm = await prisma.term.findFirst({
-      where: {
-        academicYear: {
-          schoolId,
-          isCurrent: true,
-        },
-      },
-      orderBy: {
-        startDate: 'desc',
-      },
-    })
+  assertOrThrow(
+    !!hasAccess,
+    Errors.Forbidden(`Access denied for ${student.firstName} ${student.lastName} in this subject`)
+  )
 
-    if (!currentTerm) {
-      return NextResponse.json(
-        { 
-          error: 'No active term found',
-          details: 'No current academic term is active. Please contact your school administrator.'
-        },
-        { status: 400 }
-      )
-    }
+  // Check for duplicate CA entries with same name
+  const existingCA = await prisma.cAEntry.findFirst({
+    where: {
+      studentId: data.studentId,
+      subjectId: data.subjectId,
+      termId: currentTerm.id,
+      name: data.name,
+    },
+  })
 
-    // Verify student exists and is in teacher's accessible classes
-    const student = await prisma.student.findUnique({
-      where: {
-        id: data.studentId,
-      },
-      select: {
-        id: true,
-        classId: true,
-        schoolId: true,
-      },
-    })
+  if (existingCA) {
+    throw Errors.Conflict(`CA entry "${data.name}" already exists for this student and subject`)
+  }
 
-    if (!student || student.schoolId !== schoolId) {
-      return NextResponse.json(
-        { 
-          error: 'Student not found',
-          details: 'The specified student could not be found or is not in your school.'
-        },
-        { status: 404 }
-      )
-    }
-
-    // Verify teacher has access to this student's class and subject
-    const hasAccess = await prisma.staffSubject.findFirst({
-      where: {
-        staffId: staff.id,
-        classId: student.classId,
-        subjectId: data.subjectId,
-      },
-    }) || await prisma.staffClass.findFirst({
-      where: {
-        staffId: staff.id,
-        classId: student.classId,
-      },
-    })
-
-    if (!hasAccess) {
-      return NextResponse.json(
-        { 
-          error: 'Access denied',
-          details: 'You do not have permission to create CA entries for this student and subject.'
-        },
-        { status: 403 }
-      )
-    }
-
-    // Create CA entry
-    const caEntry = await prisma.cAEntry.create({
+  // Create CA entry with transaction for data integrity
+  const caEntry = await prisma.$transaction(async (tx) => {
+    const newCAEntry = await tx.cAEntry.create({
       data: {
         studentId: data.studentId,
         subjectId: data.subjectId,
@@ -213,28 +194,43 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('✅ [API] /api/teacher/marks/ca-entry - POST - Successfully created CA entry:', caEntry.id)
-    return NextResponse.json({ 
-      success: true,
-      caEntry: {
-        id: caEntry.id,
-        name: caEntry.name,
-        type: caEntry.type,
-        maxScore: caEntry.maxScore,
-        rawScore: caEntry.rawScore,
-        percentage: gradingEngine.calculateCAPercentage(caEntry.rawScore, caEntry.maxScore),
-      }
+    // Log audit entry for CA creation
+    // Requirement 32.1: Maintain complete audit trails for all grading activities
+    await marksAuditService.logCAEntryCreated({
+      schoolId,
+      entryId: newCAEntry.id,
+      studentId: data.studentId,
+      subjectId: data.subjectId,
+      classId: student.classId,
+      termId: currentTerm.id,
+      teacherId: staff.id,
+      caData: {
+        name: data.name,
+        type: data.type,
+        maxScore: data.maxScore,
+        rawScore: data.rawScore,
+        percentage: gradingEngine.calculateCAPercentage(data.rawScore, data.maxScore),
+        competencyId: data.competencyId,
+        competencyComment: data.competencyComment,
+      },
     })
 
-  } catch (error: any) {
-    console.error('❌ [API] /api/teacher/marks/ca-entry - POST - Error:', error)
-    
-    return NextResponse.json(
-      { 
-        error: 'Failed to create CA entry',
-        details: 'An unexpected error occurred. Please try again.'
-      },
-      { status: 500 }
-    )
-  }
-}
+    return newCAEntry
+  })
+
+  console.log('✅ [API] /api/teacher/marks/ca-entry - POST - Successfully created CA entry:', caEntry.id)
+  
+  return NextResponse.json({ 
+    success: true,
+    message: `CA entry "${data.name}" created successfully`,
+    caEntry: {
+      id: caEntry.id,
+      name: caEntry.name,
+      type: caEntry.type,
+      maxScore: caEntry.maxScore,
+      rawScore: caEntry.rawScore,
+      percentage: gradingEngine.calculateCAPercentage(caEntry.rawScore, caEntry.maxScore),
+      studentName: `${student.firstName} ${student.lastName}`,
+    }
+  })
+})

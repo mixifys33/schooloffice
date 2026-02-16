@@ -347,31 +347,28 @@ export default function TeacherStudentsReportsPage() {
       </Card>
 
       {/* Report Viewer */}
-      {selectedClass && selectedTerm && (
-        // For subject teachers, require subject selection
-        (classes.find(c => c.id === selectedClass)?.teacherRole === 'CLASS_TEACHER' || selectedSubject) ? (
-          <ReportViewer
-            classId={selectedClass}
-            subjectId={selectedSubject || undefined}
-            termId={selectedTerm}
-            onPrint={handlePrintReport}
-            onExport={handleExportReport}
-            showReportTypeSelector={true}
-            defaultReportType="FINAL_TERM"
-          />
-        ) : (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Subject Selection Required</h3>
-                <p className="text-muted-foreground">
-                  As a subject teacher, please select a subject to generate reports
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )
+      {selectedClass && selectedTerm && (classes.find(c => c.id === selectedClass)?.teacherRole === 'CLASS_TEACHER' || selectedSubject) ? (
+        <ReportViewer
+          classId={selectedClass}
+          subjectId={selectedSubject || undefined}
+          termId={selectedTerm}
+          onPrint={handlePrintReport}
+          onExport={handleExportReport}
+          showReportTypeSelector={true}
+          defaultReportType="FINAL_TERM"
+        />
+      ) : selectedClass && selectedTerm ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Subject Selection Required</h3>
+              <p className="text-muted-foreground">
+                As a subject teacher, please select a subject to generate reports
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="pt-6">

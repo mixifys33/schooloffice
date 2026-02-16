@@ -1,0 +1,1467 @@
+'use client'
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
+  ArrowLeft,
+  FileText,
+  Plus,
+  Edit3,
+  Trash2,
+  Save,
+  Send,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  Lock,
+  Cloud,
+  CloudOff,
+  Search,
+  Filter,
+  SortAsc,
+  X,
+  Menu,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { SkeletonLoader } from '@/components/ui/skeleton-loader'
+import { cn } from '@/lib/utils'
+import {
+  cardStyles,
+  typography,
+  spacing,
+  teacherColors,
+  transitions,
+  errorMessages
+} from '@/lib/teacher-ui-standards'
+
+/**
+ * Continuous Assessment (CA) Entry Page for Class Teacher Portal
+ * Requirements: 5.3, 5.4, 5.5, 5.6
+ * - Support multiple CA entries per subject
+ * - Proper CA calculation (20% of final grade)
+ * - CA-only workflow support
+ * - Submission and locking mechanisms
+ * - Enhanced with class management features
+ */
+
+interface StudentCA {
+  studentId: string
+  studentName: string
+  admissionNumber: string
+  score: number | null
+  maxScore: number
+  grade: string | null
+  isDraft: boolean
+}
+
+interface CAEntry {
+  id: string
+  name: string
+  maxScore: number
+  date: string
+  type: string
+  description: string
+  studentScores: StudentCA[]
+  isSubmitted: boolean
+  submittedAt: string | null
+}
+
+interface SubjectOption {
+  id: string
+  name: string
+}
+
+interface ClassOption {
+  id: string
+  name: string
+  streamName: string | null
+}
+
+interface CAData {
+  class: ClassOption
+  subject: SubjectOption
+  caEntries: CAEntry[]
+  isPublished: boolean
+  isTermActive: boolean
+  canEdit: boolean
+  lockMessage: string | null
+}
+
+interface AssignedClassSubject {
+  classId: string
+  className: string
+  subjectId: string
+  subjectName: string
+}
+
+export default function ClassTeacherCAEntryPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const classIdParam = searchParams.get('classId')
+  const subjectIdParam = searchParams.get('subjectId')
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  // Selection state
+  const [assignedClasses, setAssignedClasses] = useState<AssignedClassSubject[]>([])
+  const [selectedClassId, setSelectedClassId] = useState<string>(classIdParam || '')
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjectIdParam || '')
+
+  // CA data
+  const [caData, setCaData] = useState<CAData | null>(null)
+  const [activeCaId, setActiveCaId] = useState<string | null>(null)
+  const [editedScores, setEditedScores] = useState<Map<string, number | null>>(new Map())
+  const [hasChanges, setHasChanges] = useState(false)
+  
+  // Auto-save timer ref
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isUnmountingRef = useRef(false)
+
+  // CA creation form
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [newCaName, setNewCaName] = useState('')
+  const [newCaMaxScore, setNewCaMaxScore] = useState('10')
+  const [newCaType, setNewCaType] = useState('assignment')
+  const [newCaDescription, setNewCaDescription] = useState('')
+  
+  // Search, Sort, and Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'score-asc' | 'score-desc' | 'none'>('none')
+  const [filterBy, setFilterBy] = useState<'all' | 'no-scores' | 'with-scores'>('all')
+  
+  // Mobile UI state
+  const [showFilters, setShowFilters] = useState(false)
+  const [showCAList, setShowCAList] = useState(true)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table') // Mobile view toggle
+
+  // Load scores from localStorage on mount (backup in case of page reload)
+  useEffect(() => {
+    if (!activeCaId) return
+    
+    const storageKey = `ca-scores-${activeCaId}`
+    const savedScores = localStorage.getItem(storageKey)
+    
+    if (savedScores) {
+      try {
+        const parsed = JSON.parse(savedScores) as Record<string, number | null>
+        const scoresMap = new Map<string, number | null>(Object.entries(parsed))
+        setEditedScores(scoresMap)
+        setHasChanges(scoresMap.size > 0)
+        console.log('✅ Restored unsaved scores from localStorage')
+      } catch (err) {
+        console.error('Failed to restore scores from localStorage:', err)
+      }
+    }
+  }, [activeCaId])
+
+  // Save scores to localStorage whenever they change (backup)
+  useEffect(() => {
+    if (!activeCaId || editedScores.size === 0) return
+    
+    const storageKey = `ca-scores-${activeCaId}`
+    const scoresObj = Object.fromEntries(editedScores)
+    localStorage.setItem(storageKey, JSON.stringify(scoresObj))
+  }, [editedScores, activeCaId])
+
+  // Auto-save function with debouncing
+  const autoSaveScores = useCallback(async () => {
+    if (!caData || !activeCaId || editedScores.size === 0 || !caData.canEdit) return
+    
+    setAutoSaving(true)
+    
+    try {
+      const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+        studentId,
+        score,
+      }))
+
+      const response = await fetch('/api/class-teacher/assessments/ca/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caId: activeCaId,
+          scores: scoresToSave,
+          isDraft: true, // Always save as draft during auto-save
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Auto-save failed')
+      }
+
+      setLastSaved(new Date())
+      
+      // Clear localStorage backup after successful save
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
+      
+      console.log('✅ Auto-saved scores to database')
+    } catch (err) {
+      console.error('❌ Auto-save error:', err)
+      // Don't show error to user for auto-save failures
+    } finally {
+      setAutoSaving(false)
+    }
+  }, [caData, activeCaId, editedScores])
+
+  // Trigger auto-save when scores change (with 2-second debounce)
+  useEffect(() => {
+    if (!hasChanges || !caData?.canEdit) return
+    
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+    
+    // Set new timer for auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveScores()
+    }, 2000) // 2 seconds debounce
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [hasChanges, autoSaveScores, caData?.canEdit])
+
+  // Save on page unload/close (using beforeunload event)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges && !isUnmountingRef.current) {
+        // Try to save using sendBeacon (works even when page is closing)
+        if (activeCaId && editedScores.size > 0) {
+          const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+            studentId,
+            score,
+          }))
+          
+          const blob = new Blob([JSON.stringify({
+            caId: activeCaId,
+            scores: scoresToSave,
+            isDraft: true,
+          })], { type: 'application/json' })
+          
+          navigator.sendBeacon('/api/class-teacher/assessments/ca/scores', blob)
+        }
+        
+        // Show warning
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      isUnmountingRef.current = true
+    }
+  }, [hasChanges, activeCaId, editedScores])
+
+  // Fetch assigned classes and subjects on mount
+  useEffect(() => {
+    async function fetchAssignedClasses() {
+      try {
+        const response = await fetch('/api/class-teacher/assessments/classes')
+        if (!response.ok) {
+          throw new Error('Failed to fetch assigned classes')
+        }
+        const data = await response.json()
+        setAssignedClasses(data.classes || [])
+        
+        // Set defaults if params not provided
+        if (!classIdParam && data.classes?.length > 0) {
+          setSelectedClassId(data.classes[0].classId)
+        }
+        if (!subjectIdParam && data.classes?.length > 0) {
+          setSelectedSubjectId(data.classes[0].subjectId)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load classes')
+      }
+    }
+
+    fetchAssignedClasses()
+  }, [classIdParam, subjectIdParam])
+
+  // Fetch CA data when selections are made
+  useEffect(() => {
+    async function fetchCaData() {
+      if (!selectedClassId || !selectedSubjectId) {
+        setCaData(null)
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(
+          `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+        )
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch CA data')
+        }
+
+        const data = await response.json()
+        setCaData(data)
+        
+        // Set first CA as active if none selected
+        if (data.caEntries.length > 0 && !activeCaId) {
+          setActiveCaId(data.caEntries[0].id)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load CA data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCaData()
+  }, [selectedClassId, selectedSubjectId, activeCaId])
+
+  // Handle score change
+  const handleScoreChange = (studentId: string, value: string) => {
+    const numValue = value === '' ? null : parseFloat(value)
+
+    // Validate against max score
+    if (numValue !== null && caData && activeCaId) {
+      const activeCa = caData.caEntries.find(ca => ca.id === activeCaId)
+      if (activeCa && (numValue < 0 || (activeCa.maxScore !== undefined && numValue > activeCa.maxScore))) {
+        return // Invalid value, don't update
+      }
+    }
+
+    setEditedScores(prev => {
+      const newMap = new Map(prev)
+      newMap.set(studentId, numValue)
+      return newMap
+    })
+    setHasChanges(true)
+  }
+
+  // Get current score value for a student
+  const getScoreValue = (student: StudentCA): string => {
+    if (editedScores.has(student.studentId)) {
+      const edited = editedScores.get(student.studentId)
+      return edited === null || edited === undefined ? '' : edited.toString()
+    }
+    return student.score === null ? '' : student.score.toString()
+  }
+
+  // Save CA scores as draft (manual save)
+  const handleSaveDraft = async () => {
+    if (!caData || !activeCaId) return
+
+    // If no changes, just show success message
+    if (!hasChanges) {
+      setSuccessMessage('All scores are already saved')
+      setTimeout(() => setSuccessMessage(null), 2000)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+        studentId,
+        score,
+      }))
+
+      const response = await fetch('/api/class-teacher/assessments/ca/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caId: activeCaId,
+          scores: scoresToSave,
+          isDraft: true,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save scores')
+      }
+
+      // Clear localStorage backup after successful save
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+      }
+
+      setEditedScores(new Map())
+      setHasChanges(false)
+      setLastSaved(new Date())
+      setSuccessMessage('Scores saved as draft successfully')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save scores')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Submit final CA scores (changes status to SUBMITTED, but scores must be saved first)
+  const handleSubmitFinal = async () => {
+    if (!caData || !activeCaId) return
+
+    // Confirm submission
+    const confirmed = window.confirm(
+      'Are you sure you want to submit final scores? This will lock the scores and notify the administration. Scores cannot be changed without approval after submission.'
+    )
+    if (!confirmed) return
+
+    setSubmitting(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      // IMPORTANT: First save any pending changes as DRAFT
+      if (hasChanges && editedScores.size > 0) {
+        const scoresToSave = Array.from(editedScores.entries()).map(([studentId, score]) => ({
+          studentId,
+          score,
+        }))
+
+        const saveResponse = await fetch('/api/class-teacher/assessments/ca/scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            caId: activeCaId,
+            scores: scoresToSave,
+            isDraft: true, // Save as draft first
+          }),
+        })
+
+        if (!saveResponse.ok) {
+          throw new Error('Failed to save scores before submission')
+        }
+        
+        console.log('✅ Saved pending scores before submission')
+      }
+
+      // Now submit (changes status to SUBMITTED)
+      const response = await fetch('/api/class-teacher/assessments/ca/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caId: activeCaId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit scores')
+      }
+
+      // Clear localStorage backup after successful submission
+      const storageKey = `ca-scores-${activeCaId}`
+      localStorage.removeItem(storageKey)
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+      }
+
+      setEditedScores(new Map())
+      setHasChanges(false)
+      setSuccessMessage('Scores submitted successfully. Administration has been notified.')
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit scores')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Create new CA entry
+  const handleCreateCA = async () => {
+    if (!selectedClassId || !selectedSubjectId || !newCaName.trim()) return
+
+    try {
+      const response = await fetch('/api/class-teacher/assessments/ca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: selectedClassId,
+          subjectId: selectedSubjectId,
+          name: newCaName.trim(),
+          maxScore: parseFloat(newCaMaxScore),
+          type: newCaType,
+          description: newCaDescription.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create CA entry')
+      }
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+        
+        // Set the new CA as active
+        if (data.caEntries.length > 0) {
+          setActiveCaId(data.caEntries[data.caEntries.length - 1].id)
+        }
+      }
+
+      // Reset form
+      setNewCaName('')
+      setNewCaMaxScore('10')
+      setNewCaType('assignment')
+      setNewCaDescription('')
+      setShowCreateForm(false)
+      
+      setSuccessMessage('CA entry created successfully')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create CA entry')
+    }
+  }
+
+  // Delete CA entry
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  
+  const handleDeleteCA = async (caId: string) => {
+    const confirmed = window.confirm(
+      '⚠️ Delete CA Entry?\n\n' +
+      'This will permanently delete this CA entry and all associated scores.\n\n' +
+      'This action cannot be undone. Are you sure you want to continue?'
+    )
+    
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingId(caId)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/class-teacher/assessments/ca/${caId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete CA entry')
+      }
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+        
+        // If deleted CA was active, set first CA as active
+        if (caData?.caEntries.length === 1) {
+          setActiveCaId(null)
+        } else if (activeCaId === caId && data.caEntries.length > 0) {
+          setActiveCaId(data.caEntries[0].id)
+        }
+      }
+
+      setSuccessMessage('✅ CA entry deleted successfully')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete CA entry')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // Toggle CA entry status (Draft/Active/Inactive)
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
+  
+  const handleToggleStatus = async (caId: string, currentStatus: string) => {
+    setTogglingStatusId(caId)
+    setError(null)
+
+    try {
+      // Cycle through statuses: DRAFT -> SUBMITTED (Active) -> REJECTED (Inactive) -> DRAFT
+      let newStatus: string
+      if (currentStatus === 'DRAFT') {
+        newStatus = 'SUBMITTED' // Active
+      } else if (currentStatus === 'SUBMITTED') {
+        newStatus = 'REJECTED' // Inactive
+      } else {
+        newStatus = 'DRAFT' // Back to Draft
+      }
+
+      const response = await fetch(`/api/class-teacher/assessments/ca/${caId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update status')
+      }
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/class-teacher/assessments/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+      }
+
+      const statusLabel = newStatus === 'SUBMITTED' ? 'Active' : newStatus === 'REJECTED' ? 'Inactive' : 'Draft'
+      setSuccessMessage(`✅ CA entry status changed to ${statusLabel}`)
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setTogglingStatusId(null)
+    }
+  }
+
+  // Get active CA data (with safety check)
+  const activeCa = caData?.caEntries?.find(ca => ca.id === activeCaId)
+
+  // Handle class selection change
+  const handleClassChange = (classId: string) => {
+    setSelectedClassId(classId)
+    setSelectedSubjectId('')
+    setCaData(null)
+    setActiveCaId(null)
+  }
+
+  // Handle subject selection change
+  const handleSubjectChange = (subjectId: string) => {
+    setSelectedSubjectId(subjectId)
+    setCaData(null)
+    setActiveCaId(null)
+  }
+
+  return (
+    <div className="min-h-screen bg-[var(--bg-surface)] dark:bg-[var(--bg-main)]">
+      {/* Mobile-first responsive container */}
+      <div className="w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-5 lg:p-6">
+        {/* Back Navigation - Mobile-first */}
+        <Link
+          href="/dashboard/class-teacher/assessments"
+          className="inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] touch-manipulation active:scale-95 transition-all min-h-[44px] sm:min-h-0"
+          aria-label="Back to Assessments"
+        >
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+          <span className="hidden xs:inline sm:hidden">Back</span>
+          <span className="hidden sm:inline">Back to Assessments</span>
+        </Link>
+
+        {/* Page Header - Mobile-first responsive */}
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4 md:p-5 shadow-sm">
+          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 md:gap-4">
+            <div className="p-2 sm:p-2.5 md:p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg flex-shrink-0">
+              <FileText className="h-5 w-5 sm:h-5 sm:w-5 md:h-6 md:w-6 text-[var(--chart-green)] dark:text-[var(--chart-green)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)] truncate leading-tight">
+                Continuous Assessment
+              </h1>
+              <p className="text-xs sm:text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-0.5 sm:mt-1 line-clamp-2 leading-snug">
+                Record CA scores (20% of final grade)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Selection Controls - Mobile-first responsive */}
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4 md:p-5 shadow-sm">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+            {/* Class Selection */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <label 
+                htmlFor="class-select"
+                className="block text-xs sm:text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]"
+              >
+                Class
+              </label>
+              <select
+                id="class-select"
+                value={selectedClassId}
+                onChange={(e) => handleClassChange(e.target.value)}
+                className="w-full min-h-[44px] px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent touch-manipulation transition-colors"
+                aria-label="Select class"
+              >
+                <option value="">Select a class</option>
+                {Array.from(
+                  new Map(assignedClasses.map(c => [c.classId, { id: c.classId, name: c.className }])).values()
+                ).map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subject Selection */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <label 
+                htmlFor="subject-select"
+                className="block text-xs sm:text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]"
+              >
+                Subject
+              </label>
+              <select
+                id="subject-select"
+                value={selectedSubjectId}
+                onChange={(e) => handleSubjectChange(e.target.value)}
+                disabled={!selectedClassId}
+                className="w-full min-h-[44px] px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation transition-colors"
+                aria-label="Select subject"
+              >
+                <option value="">Select a subject</option>
+                {assignedClasses
+                  .filter(c => c.classId === selectedClassId)
+                  .map((c) => (
+                    <option key={c.subjectId} value={c.subjectId}>
+                      {c.subjectName}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        {/* Success Message - Mobile-first responsive with fixed positioning */}
+        {successMessage && (
+          <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-8 sm:w-96 z-50 bg-[var(--success-light)] dark:bg-[var(--success-dark)] border-l-4 border-[var(--chart-green)] rounded-lg p-3 sm:p-4 shadow-lg animate-in slide-in-from-top duration-300" role="alert" aria-live="polite">
+            <div className="flex items-start gap-2 sm:gap-2.5 text-[var(--chart-green)] dark:text-[var(--success)]">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="text-sm sm:text-base leading-snug flex-1">{successMessage}</span>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="ml-auto flex-shrink-0 p-1 hover:bg-[var(--success)] hover:bg-opacity-10 rounded touch-manipulation"
+                aria-label="Dismiss message"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message - Mobile-first responsive with fixed positioning */}
+        {error && (
+          <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-8 sm:w-96 z-50 bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border-l-4 border-[var(--chart-red)] rounded-lg p-3 sm:p-4 shadow-lg animate-in slide-in-from-top duration-300" role="alert" aria-live="assertive">
+            <div className="flex items-start gap-2 sm:gap-2.5 text-[var(--chart-red)] dark:text-[var(--danger)]">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="text-sm sm:text-base leading-snug break-words flex-1">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto flex-shrink-0 p-1 hover:bg-[var(--danger)] hover:bg-opacity-10 rounded touch-manipulation"
+                aria-label="Dismiss error"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+      {/* Loading State - Mobile-first responsive */}
+      {loading && selectedSubjectId && (
+        <div className="space-y-3 sm:space-y-4" aria-live="polite" aria-busy="true">
+          <SkeletonLoader variant="card" count={3} />
+          <span className="sr-only">Loading CA data...</span>
+        </div>
+      )}
+
+      {!loading && selectedClassId && selectedSubjectId && caData && (
+        <div className="space-y-6">
+          {/* CA Entries List */}
+          <Card className={cn(cardStyles.base, cardStyles.normal)}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className={cn(typography.sectionTitle)}>CA Entries</CardTitle>
+              <Button onClick={() => setShowCreateForm(!showCreateForm)} size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                New CA Entry
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Create CA Form - Mobile-first responsive */}
+              {showCreateForm && (
+                <div className="mb-4 sm:mb-6 p-3 sm:p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/30 shadow-sm">
+                  <h3 className={cn(typography.h3, 'mb-3 sm:mb-4 text-base sm:text-lg')}>Create New CA Entry</h3>
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="caName" className="text-xs sm:text-sm">CA Name</Label>
+                      <Input
+                        id="caName"
+                        value={newCaName}
+                        onChange={(e) => setNewCaName(e.target.value)}
+                        placeholder="e.g., Assignment 1, Quiz 2"
+                        className="min-h-[44px] text-sm sm:text-base touch-manipulation"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="caMaxScore" className="text-xs sm:text-sm">Max Score</Label>
+                      <Input
+                        id="caMaxScore"
+                        type="number"
+                        value={newCaMaxScore}
+                        onChange={(e) => setNewCaMaxScore(e.target.value)}
+                        min="1"
+                        step="0.5"
+                        className="min-h-[44px] text-sm sm:text-base touch-manipulation"
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="caType" className="text-xs sm:text-sm">CA Type</Label>
+                      <select
+                        id="caType"
+                        value={newCaType}
+                        onChange={(e) => setNewCaType(e.target.value)}
+                        className="w-full min-h-[44px] px-3 py-2 text-sm sm:text-base border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent touch-manipulation"
+                      >
+                        <option value="assignment">Assignment</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="project">Project</option>
+                        <option value="test">Test</option>
+                        <option value="practical">Practical</option>
+                        <option value="observation">Observation</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="caDescription" className="text-xs sm:text-sm">Description (Optional)</Label>
+                      <Input
+                        id="caDescription"
+                        value={newCaDescription}
+                        onChange={(e) => setNewCaDescription(e.target.value)}
+                        placeholder="Brief description"
+                        className="min-h-[44px] text-sm sm:text-base touch-manipulation"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-4">
+                    <Button 
+                      onClick={handleCreateCA} 
+                      disabled={!newCaName.trim()}
+                      className="min-h-[44px] w-full sm:w-auto touch-manipulation"
+                    >
+                      Create CA Entry
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowCreateForm(false)
+                        setNewCaName('')
+                        setNewCaMaxScore('10')
+                        setNewCaType('assignment')
+                        setNewCaDescription('')
+                      }}
+                      variant="outline"
+                      className="min-h-[44px] w-full sm:w-auto touch-manipulation"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* CA Entries - Mobile-first responsive cards */}
+              <div className="space-y-2 sm:space-y-3">
+                {caData.caEntries.length > 0 ? (
+                  caData.caEntries.map((ca) => {
+                    const isDeleting = deletingId === ca.id
+                    const isTogglingStatus = togglingStatusId === ca.id
+                    const statusLabel = ca.isSubmitted ? 'Active' : 'Draft'
+                    const statusColor = ca.isSubmitted 
+                      ? 'bg-[var(--success-light)] dark:bg-[var(--success-dark)] text-[var(--chart-green)] dark:text-[var(--success)]'
+                      : 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] text-[var(--warning-dark)] dark:text-[var(--warning)]'
+                    
+                    return (
+                      <div
+                        key={ca.id}
+                        className={cn(
+                          "p-3 sm:p-4 rounded-lg border transition-all shadow-sm",
+                          activeCaId === ca.id
+                            ? 'border-[var(--accent-primary)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] ring-2 ring-[var(--accent-primary)]/20'
+                            : 'border-[var(--border-default)] dark:border-[var(--border-strong)] hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 hover:shadow-md'
+                        )}
+                      >
+                        {/* Mobile layout - Stack vertically */}
+                        <div className="flex flex-col gap-3 sm:hidden">
+                          {/* Header row */}
+                          <div className="flex items-start gap-2.5">
+                            <div className="p-2 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg flex-shrink-0">
+                              <FileText className="h-4 w-4 text-[var(--chart-green)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-[var(--text-primary)] dark:text-[var(--white-pure)] line-clamp-2 leading-snug">
+                                {ca.name}
+                              </div>
+                              <div className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1 space-y-0.5">
+                                <div>Max: {ca.maxScore} • {ca.type}</div>
+                                <div>{ca.studentScores.length} students</div>
+                              </div>
+                            </div>
+                            <Badge 
+                              variant={ca.isSubmitted ? 'default' : 'outline'}
+                              className={cn(statusColor, "text-xs whitespace-nowrap flex-shrink-0")}
+                            >
+                              {statusLabel}
+                            </Badge>
+                          </div>
+                          
+                          {/* Action buttons row */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              size="sm"
+                              variant={activeCaId === ca.id ? 'default' : 'outline'}
+                              onClick={() => {
+                                setActiveCaId(ca.id)
+                                setEditedScores(new Map())
+                                setHasChanges(false)
+                              }}
+                              className="min-h-[40px] text-xs touch-manipulation"
+                            >
+                              {activeCaId === ca.id ? '✓ Selected' : 'Select'}
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteCA(ca.id)}
+                              disabled={ca.isSubmitted || isDeleting || isTogglingStatus}
+                              className="min-h-[40px] text-xs text-[var(--chart-red)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)] touch-manipulation"
+                              title={ca.isSubmitted ? 'Cannot delete active CA entries' : 'Delete CA entry'}
+                            >
+                              {isDeleting ? (
+                                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                  Delete
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Desktop layout - Horizontal */}
+                        <div className="hidden sm:flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="p-2 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg flex-shrink-0">
+                              <FileText className="h-4 w-4 text-[var(--chart-green)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm sm:text-base text-[var(--text-primary)] dark:text-[var(--white-pure)] truncate">
+                                {ca.name}
+                              </div>
+                              <div className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-0.5">
+                                Max: {ca.maxScore} • Type: {ca.type} • {ca.studentScores.length} students
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge 
+                              variant={ca.isSubmitted ? 'default' : 'outline'}
+                              className={cn(statusColor, "text-xs whitespace-nowrap")}
+                            >
+                              {statusLabel}
+                            </Badge>
+                            
+                            <Button
+                              size="sm"
+                              variant={activeCaId === ca.id ? 'default' : 'outline'}
+                              onClick={() => {
+                                setActiveCaId(ca.id)
+                                setEditedScores(new Map())
+                                setHasChanges(false)
+                              }}
+                              className="min-h-[36px] text-xs sm:text-sm whitespace-nowrap touch-manipulation"
+                            >
+                              {activeCaId === ca.id ? '✓ Selected' : 'Select'}
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteCA(ca.id)}
+                              disabled={ca.isSubmitted || isDeleting || isTogglingStatus}
+                              className="min-h-[36px] text-xs sm:text-sm text-[var(--chart-red)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)] touch-manipulation"
+                              title={ca.isSubmitted ? 'Cannot delete active CA entries' : 'Delete CA entry'}
+                            >
+                              {isDeleting ? (
+                                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8 sm:py-12">
+                    <FileText className="h-8 w-8 sm:h-10 sm:w-10 text-[var(--text-muted)] mx-auto mb-2 sm:mb-3" />
+                    <p className="text-sm sm:text-base text-[var(--text-muted)] dark:text-[var(--text-muted)] px-4">
+                      No CA entries created yet. Click "New CA Entry" to create one.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active CA Scores Entry */}
+          {activeCa && (
+            <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
+              {/* Lock/Status Banner - Mobile-first responsive */}
+              {caData.lockMessage && (
+                <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] border-b border-amber-200 dark:border-amber-800 p-3 sm:p-4">
+                  <div className="flex items-start gap-2 text-[var(--warning-dark)] dark:text-[var(--warning)] text-xs sm:text-sm leading-relaxed">
+                    <Lock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
+                    <span className="flex-1">{caData.lockMessage}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Submitted Status - Mobile-first responsive */}
+              {activeCa.submittedAt && !caData.isPublished && (
+                <div className="bg-[var(--info-light)] dark:bg-[var(--info-dark)] border-b border-[var(--info-light)] dark:border-[var(--info-dark)] p-3 sm:p-4">
+                  <div className="flex items-start gap-2 text-[var(--accent-hover)] dark:text-[var(--info)] text-xs sm:text-sm leading-relaxed">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
+                    <span className="flex-1">
+                      Scores submitted on {new Date(activeCa.submittedAt).toLocaleDateString('en-UG', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Banner - Mobile-first responsive */}
+              {caData.canEdit && (
+                <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] border-b border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4">
+                  <div className="flex items-start gap-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)] text-xs sm:text-sm leading-relaxed">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span className="flex-1">
+                      Enter scores out of {activeCa.maxScore}. Scores are auto-saved as you type (as drafts). Click "Submit Final" when ready to lock and notify administration.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Table Header - Mobile-first responsive */}
+              <div className="p-3 sm:p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base sm:text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] truncate">
+                      {activeCa.name} - {caData.subject.name}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-0.5 sm:mt-1">
+                      {caData.class.name} • {activeCa.studentScores.length} students • Max: {activeCa.maxScore}
+                    </p>
+                  </div>
+
+                  {/* Action Buttons - Mobile-first responsive */}
+                  {caData.canEdit && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      {/* Auto-save indicator - Full width on mobile */}
+                      <div className="flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm py-2 sm:py-0">
+                        {autoSaving ? (
+                          <>
+                            <Cloud className="h-4 w-4 text-blue-500 animate-pulse flex-shrink-0" />
+                            <span className="text-[var(--text-muted)]">Saving...</span>
+                          </>
+                        ) : lastSaved ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <span className="text-[var(--text-muted)]">
+                              Saved {lastSaved.toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </>
+                        ) : hasChanges ? (
+                          <>
+                            <CloudOff className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                            <span className="text-[var(--text-muted)]">Unsaved changes</span>
+                          </>
+                        ) : null}
+                      </div>
+                      
+                      {/* Action buttons - Stack on mobile, side by side on desktop */}
+                      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveDraft}
+                          disabled={saving || submitting}
+                          className="gap-1.5 sm:gap-2 min-h-[44px] sm:min-h-[36px] text-xs sm:text-sm touch-manipulation"
+                        >
+                          {saving ? (
+                            <>
+                              <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              <span className="hidden xs:inline">Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span>Save Now</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSubmitFinal}
+                          disabled={submitting || saving}
+                          className="gap-1.5 sm:gap-2 min-h-[44px] sm:min-h-[36px] text-xs sm:text-sm touch-manipulation"
+                        >
+                          {submitting ? (
+                            <>
+                              <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span className="hidden xs:inline">Submitting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span>Submit Final</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Search, Filter, and Sort Controls - Mobile optimized with collapsible design */}
+              <div className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                {/* Mobile: Collapsible header */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="w-full p-3 sm:p-4 flex items-center justify-between md:hidden touch-manipulation active:bg-[var(--bg-main)]"
+                >
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-[var(--text-muted)]" />
+                    <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                      Search & Filters
+                    </span>
+                    {(searchQuery || sortBy !== 'none' || filterBy !== 'all') && (
+                      <Badge variant="default" className="text-xs">Active</Badge>
+                    )}
+                  </div>
+                  {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+
+                {/* Controls container - Always visible on desktop, collapsible on mobile */}
+                <div className={cn(
+                  "p-3 sm:p-4 space-y-3 transition-all duration-200",
+                  !showFilters && "hidden md:block"
+                )}>
+                  {/* Search - Full width on mobile */}
+                  <div>
+                    <label htmlFor="search" className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1.5">
+                      Search Students
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                      <Input
+                        id="search"
+                        type="text"
+                        placeholder="Name, admission no., or score..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-10 pl-10 text-sm sm:text-base touch-manipulation"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-[var(--bg-surface)] rounded touch-manipulation"
+                        >
+                          <X className="h-4 w-4 text-[var(--text-muted)]" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sort and Filter - Side by side on mobile */}
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
+                    {/* Sort */}
+                    <div>
+                      <label htmlFor="sort" className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1.5">
+                        <SortAsc className="inline h-3 w-3 mr-1" />
+                        Sort
+                      </label>
+                      <select
+                        id="sort"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="w-full h-10 px-2 sm:px-3 py-1 text-xs sm:text-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent touch-manipulation"
+                      >
+                        <option value="none">Default</option>
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="name-desc">Name Z-A</option>
+                        <option value="score-desc">Score ↓</option>
+                        <option value="score-asc">Score ↑</option>
+                      </select>
+                    </div>
+
+                    {/* Filter */}
+                    <div>
+                      <label htmlFor="filter" className="block text-xs font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1.5">
+                        <Filter className="inline h-3 w-3 mr-1" />
+                        Filter
+                      </label>
+                      <select
+                        id="filter"
+                        value={filterBy}
+                        onChange={(e) => setFilterBy(e.target.value as any)}
+                        className="w-full h-10 px-2 sm:px-3 py-1 text-xs sm:text-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent touch-manipulation"
+                      >
+                        <option value="all">All</option>
+                        <option value="no-scores">No Scores</option>
+                        <option value="with-scores">With Scores</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Clear filters button - Mobile only */}
+                  {(searchQuery || sortBy !== 'none' || filterBy !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('')
+                        setSortBy('none')
+                        setFilterBy('all')
+                      }}
+                      className="w-full md:hidden py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] touch-manipulation active:scale-95 transition-transform"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Scores Table - Mobile optimized with horizontal scroll */}
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-[var(--border-default)] dark:divide-[var(--border-strong)]">
+                    <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] sticky top-0 z-10">
+                      <tr>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap">
+                          #
+                        </th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider min-w-[150px]">
+                          Student
+                        </th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                          Admission No.
+                        </th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap">
+                          Score
+                        </th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
+                          Grade
+                        </th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-default)] dark:divide-[var(--border-strong)] bg-[var(--bg-main)]">
+                      {(() => {
+                        Admission No.
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                        Score (/{activeCa.maxScore})
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                        Grade
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {(() => {
+                      // Get current score for a student (from editedScores or original score)
+                      const getCurrentScore = (student: StudentCA): number | null => {
+                        if (editedScores.has(student.studentId)) {
+                          return editedScores.get(student.studentId) ?? null
+                        }
+                        return student.score
+                      }
+
+                      // Filter students
+                      let filteredStudents = activeCa.studentScores.filter(student => {
+                        // Apply filter
+                        const currentScore = getCurrentScore(student)
+                        if (filterBy === 'no-scores' && currentScore !== null && currentScore > 0) {
+                          return false
+                        }
+                        if (filterBy === 'with-scores' && (currentScore === null || currentScore === 0)) {
+                          return false
+                        }
+
+                        // Apply search
+                        if (searchQuery.trim()) {
+                          const query = searchQuery.toLowerCase()
+                          const nameMatch = student.studentName.toLowerCase().includes(query)
+                          const admissionMatch = student.admissionNumber.toLowerCase().includes(query)
+                          const scoreMatch = currentScore !== null && currentScore.toString().includes(query)
+                          
+                          return nameMatch || admissionMatch || scoreMatch
+                        }
+
+                        return true
+                      })
+
+                      // Sort students
+                      if (sortBy !== 'none') {
+                        filteredStudents = [...filteredStudents].sort((a, b) => {
+                          if (sortBy === 'name-asc') {
+                            return a.studentName.localeCompare(b.studentName)
+                          }
+                          if (sortBy === 'name-desc') {
+                            return b.studentName.localeCompare(a.studentName)
+                          }
+                          if (sortBy === 'score-asc' || sortBy === 'score-desc') {
+                            const scoreA = getCurrentScore(a) ?? -1
+                            const scoreB = getCurrentScore(b) ?? -1
+                            return sortBy === 'score-asc' ? scoreA - scoreB : scoreB - scoreA
+                          }
+                          return 0
+                        })
+                      }
+
+                      // Render filtered and sorted students
+                      if (filteredStudents.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
+                              {searchQuery.trim() || filterBy !== 'all' 
+                                ? 'No students match your search or filter criteria'
+                                : 'No students found in this class'}
+                            </td>
+                          </tr>
+                        )
+                      }
+
+                      return filteredStudents.map((student, index) => (
+                      <tr key={student.studentId} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 transition-colors">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] font-medium">
+                          {index + 1}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm sm:text-base font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] line-clamp-2">
+                              {student.studentName}
+                            </span>
+                            {/* Show admission number on mobile (hidden column) */}
+                            <span className="text-xs text-[var(--text-muted)] mt-0.5 sm:hidden">
+                              {student.admissionNumber}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hidden sm:table-cell">
+                          {student.admissionNumber}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
+                          {caData.canEdit ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max={activeCa.maxScore}
+                              step="0.5"
+                              value={getScoreValue(student)}
+                              onChange={(e) => handleScoreChange(student.studentId, e.target.value)}
+                              className="w-16 sm:w-20 px-2 py-1.5 sm:py-1 text-sm sm:text-base border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent touch-manipulation"
+                              placeholder="-"
+                              inputMode="decimal"
+                            />
+                          ) : (
+                            <span className="text-sm sm:text-base text-[var(--text-primary)] dark:text-[var(--white-pure)] font-medium">
+                              {student.score !== null ? student.score : '-'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hidden lg:table-cell">
+                          {student.grade || '-'}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
+                          {student.isDraft ? (
+                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] text-[var(--warning-dark)] dark:text-[var(--warning)] whitespace-nowrap">
+                              Draft
+                            </span>
+                          ) : student.score !== null ? (
+                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium bg-[var(--success-light)] dark:bg-[var(--success-dark)] text-[var(--chart-green)] dark:text-[var(--success)] whitespace-nowrap">
+                              Saved
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-muted)] dark:text-[var(--text-muted)] whitespace-nowrap">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      ))
+                    })()}
+                  </tbody>
+                </table>
+                </div>
+              </div>
+
+              {/* Empty State */}
+              {activeCa.studentScores.length === 0 && (
+                <div className="p-8 text-center">
+                  <FileText className="h-8 w-8 text-[var(--text-muted)] mx-auto mb-3" />
+                  <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">No students found in this class</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

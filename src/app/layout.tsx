@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Rethink_Sans } from 'next/font/google'
 import './globals.css'
 import '../styles/themes.css'
-import { ToastProvider, SessionProvider, StaffOnboardingProvider } from '@/components/providers'
+import { ToastProvider, SessionProvider, StaffOnboardingProvider, ErrorBoundary } from '@/components/providers'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 // Import error handler to catch unhandled rejections
 import '@/lib/error-handler'
@@ -41,15 +41,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ToastProvider>
-          <ThemeProvider>
-            <SessionProvider>
-              <StaffOnboardingProvider>
-                {children}
-              </StaffOnboardingProvider>
-            </SessionProvider>
-          </ThemeProvider>
-        </ToastProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            <ThemeProvider>
+              <SessionProvider>
+                <StaffOnboardingProvider>
+                  {children}
+                </StaffOnboardingProvider>
+              </SessionProvider>
+            </ThemeProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

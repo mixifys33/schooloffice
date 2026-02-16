@@ -1,186 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { TimetableStatus } from '@/types/timetable';
+import { Role, StaffRole } from '@prisma/client';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+/**
+ * POST /api/dos/timetable/[id]/approve
+ * Approve a timetable (DoS approval)
+ * 
+ * Body:
+ * - notes?: string (approval notes)
+ * 
+ * Rules:
+ * - Only DoS can approve
+ * - Cannot approve locked timetables
+ * - Sets dosApproved = true, dosApprovedBy, dosApprovedAt
+ * - Changes status to APPROVED
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id: timetableId } = await params;
+    
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify DoS role
-    if (!session.user.roles?.includes('DOS') && session.user.role !== 'DOS') {
-      return NextResponse.json({
-        error: 'Only Director of Studies can approve timetables'
-      }, { status: 403 });
+    const schoolId = session.user.schoolId;
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 });
     }
 
-    const timetableId = params.id;
-    const body = await request.json();
-    const { approvalNotes, overrideCriticalConflicts } = body;
+    // Verify DoS access
+    const userRole = session.user.activeRole || session.user.role;
+    const isAdmin = userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY;
+    
+    let isDoS = false;
+    let staffId: string | null = null;
+    
+    if (!isAdmin) {
+      const staff = await prisma.staff.findFirst({
+        where: { schoolId, userId: session.user.id },
+        select: { id: true, primaryRole: true, secondaryRoles: true },
+      });
 
-    if (!timetableId) {
-      return NextResponse.json({ error: 'Timetable ID required' }, { status: 400 });
-    }
-
-    // Get the timetable to verify it belongs to the user's school
-    const timetable = await prisma.timetableDraft.findUnique({
-      where: { id: timetableId },
-      include: {
-        school: true,
-        conflicts: true
+      if (!staff) {
+        return NextResponse.json(
+          { error: 'Staff profile not found' },
+          { status: 404 }
+        );
       }
+
+      staffId = staff.id;
+      isDoS = staff.primaryRole === StaffRole.DOS ||
+        ((staff.secondaryRoles as string[]) || []).includes(StaffRole.DOS);
+    }
+
+    if (!isAdmin && !isDoS) {
+      return NextResponse.json(
+        { error: 'Director of Studies access required' },
+        { status: 403 }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    const { notes } = body;
+
+    // Fetch timetable
+    const timetable = await prisma.doSTimetable.findUnique({
+      where: { id: timetableId },
+      select: {
+        schoolId: true,
+        isLocked: true,
+        dosApproved: true,
+        status: true,
+        timetableName: true,
+      },
     });
 
-    if (!timetable || timetable.schoolId !== session.user.schoolId) {
-      return NextResponse.json({ error: 'Timetable not found or unauthorized' }, { status: 404 });
+    if (!timetable) {
+      return NextResponse.json(
+        { error: 'Timetable not found' },
+        { status: 404 }
+      );
     }
 
-    // Check for critical conflicts if not overriding
-    if (!overrideCriticalConflicts) {
-      const criticalConflicts = timetable.conflicts?.filter(
-        conflict => conflict.severity === 'CRITICAL'
-      ).length || 0;
-
-      if (criticalConflicts > 0) {
-        return NextResponse.json({
-          error: 'Cannot approve timetable with critical conflicts. Resolve conflicts first or use override option.',
-          criticalConflicts
-        }, { status: 400 });
-      }
+    // Verify school context
+    if (timetable.schoolId !== schoolId) {
+      return NextResponse.json(
+        { error: 'Timetable not found' },
+        { status: 404 }
+      );
     }
 
-    // Update timetable status to APPROVED
-    const updatedTimetable = await prisma.timetableDraft.update({
+    // Prevent approving locked timetables
+    if (timetable.isLocked) {
+      return NextResponse.json(
+        { error: 'Cannot approve locked timetable' },
+        { status: 400 }
+      );
+    }
+
+    // Check if already approved
+    if (timetable.dosApproved) {
+      return NextResponse.json(
+        { error: 'Timetable is already approved' },
+        { status: 400 }
+      );
+    }
+
+    // Approve timetable
+    const updated = await prisma.doSTimetable.update({
       where: { id: timetableId },
       data: {
-        status: TimetableStatus.APPROVED,
-        approvedBy: session.user.id,
-        approvedAt: new Date(),
-        approvalNotes: approvalNotes || null
+        dosApproved: true,
+        dosApprovedBy: staffId || session.user.id,
+        dosApprovedAt: new Date(),
+        status: 'APPROVED',
       },
       include: {
-        slots: {
-          include: {
-            class: true,
-            subject: true,
-            teacher: true
-          }
-        },
-        conflicts: true
-      }
-    });
-
-    // Log the approval action
-    await prisma.auditLog.create({
-      data: {
-        schoolId: timetable.schoolId,
-        userId: session.user.id,
-        action: 'TIMETABLE_APPROVED',
-        entityType: 'TIMETABLE_DRAFT',
-        entityId: timetableId,
-        details: {
-          action: 'APPROVED',
-          approvedBy: session.user.id,
-          approvalNotes: approvalNotes
-        },
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown'
-      }
+        class: { select: { name: true } },
+        term: { select: { name: true } },
+      },
     });
 
     return NextResponse.json({
-      success: true,
-      timetable: updatedTimetable,
-      message: 'Timetable approved successfully'
+      timetable: {
+        id: updated.id,
+        timetableName: updated.timetableName,
+        className: updated.class.name,
+        termName: updated.term.name,
+        status: updated.status,
+        dosApproved: updated.dosApproved,
+        dosApprovedAt: updated.dosApprovedAt,
+      },
+      message: `Timetable "${updated.timetableName}" approved successfully`,
     });
   } catch (error) {
-    console.error('Timetable approval error:', error);
+    console.error('[API] Error approving timetable:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify DoS role
-    if (!session.user.roles?.includes('DOS') && session.user.role !== 'DOS') {
-      return NextResponse.json({
-        error: 'Only Director of Studies can manage timetables'
-      }, { status: 403 });
-    }
-
-    const timetableId = params.id;
-    const body = await request.json();
-    const { action, reason } = body;
-
-    if (!timetableId) {
-      return NextResponse.json({ error: 'Timetable ID required' }, { status: 400 });
-    }
-
-    if (!action) {
-      return NextResponse.json({ error: 'Action required' }, { status: 400 });
-    }
-
-    // Get the timetable to verify it belongs to the user's school
-    const timetable = await prisma.timetableDraft.findUnique({
-      where: { id: timetableId },
-      include: { school: true }
-    });
-
-    if (!timetable || timetable.schoolId !== session.user.schoolId) {
-      return NextResponse.json({ error: 'Timetable not found or unauthorized' }, { status: 404 });
-    }
-
-    let updatedTimetable;
-
-    switch (action) {
-      case 'reject':
-        updatedTimetable = await prisma.timetableDraft.update({
-          where: { id: timetableId },
-          data: {
-            status: TimetableStatus.DRAFT,
-            approvedBy: null,
-            approvedAt: null,
-            approvalNotes: null
-          }
-        });
-        break;
-
-      case 'request_changes':
-        updatedTimetable = await prisma.timetableDraft.update({
-          where: { id: timetableId },
-          data: {
-            status: TimetableStatus.REVIEWED,
-            reviewNotes: reason || 'Changes requested by DoS',
-            reviewedBy: session.user.id,
-            reviewedAt: new Date()
-          }
-        });
-        break;
-
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      timetable: updatedTimetable,
-      message: `Timetable ${action} successfully`
-    });
-  } catch (error) {
-    console.error('Timetable action error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to approve timetable' },
       { status: 500 }
     );
   }

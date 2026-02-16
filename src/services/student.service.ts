@@ -2,7 +2,7 @@
  * Student Service
  * Handles student enrollment and profile management operations
  * Requirements: 4.1, 4.4, 19.1
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   Student,

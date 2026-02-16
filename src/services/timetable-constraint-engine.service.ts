@@ -4,7 +4,7 @@
  * This is the brain of the timetable system.
  * No UI magic, no drag-and-drop toys.
  * Pure constraint satisfaction with real algorithms.
- * 
+ *    
  * Architecture:
  * 1. Constraint Definition & Validation
  * 2. Genetic Algorithm for Generation
@@ -13,14 +13,9 @@
  */
 
 import { db } from '@/lib/db';
+import { ConflictSeverity } from '@/types/timetable';
 import type {
-  ConflictSeverity,
-  ConstraintType,
-  GenerationStatus
-} from '@/types/timetable';
-import type {
-  TimetableSlot,
-  TimetableConflictLog
+  TimetableSlot
 } from '@prisma/client';
 
 // ============================================
@@ -60,14 +55,14 @@ export interface SoftConstraint {
 export interface GenerationContext {
   schoolId: string;
   termId: string;
-  classes: any[];
-  subjects: any[];
-  teachers: any[];
-  rooms: any[];
-  timeStructure: any;
-  requirements: any[];
-  teacherConstraints: any[];
-  roomConstraints: any[];
+  classes: Record<string, unknown>[];
+  subjects: Record<string, unknown>[];
+  teachers: Record<string, unknown>[];
+  rooms: Record<string, unknown>[];
+  timeStructure: Record<string, unknown>;
+  requirements: Record<string, unknown>[];
+  teacherConstraints: Record<string, unknown>[];
+  roomConstraints: Record<string, unknown>[];
 }
 
 // ============================================
@@ -107,7 +102,7 @@ class HardConstraints {
               if (slots.length > 1) {
                 violations.push({
                   constraintId: 'no_teacher_clash',
-                  severity: 'CRITICAL',
+                  severity: ConflictSeverity.CRITICAL,
                   description: `Teacher ${teacherId} has ${slots.length} classes at ${timeKey}`,
                   affectedSlots: slots.map(s => s.id),
                   suggestedFixes: [
@@ -152,7 +147,7 @@ class HardConstraints {
               if (slots.length > 1) {
                 violations.push({
                   constraintId: 'no_class_clash',
-                  severity: 'CRITICAL',
+                  severity: ConflictSeverity.CRITICAL,
                   description: `Class ${classId} has ${slots.length} subjects at ${timeKey}`,
                   affectedSlots: slots.map(s => s.id),
                   suggestedFixes: [
@@ -198,7 +193,7 @@ class HardConstraints {
               if (slots.length > 1) {
                 violations.push({
                   constraintId: 'no_room_clash',
-                  severity: 'CRITICAL',
+                  severity: ConflictSeverity.CRITICAL,
                   description: `Room ${roomId} has ${slots.length} classes at ${timeKey}`,
                   affectedSlots: slots.map(s => s.id),
                   suggestedFixes: [
@@ -240,7 +235,7 @@ class HardConstraints {
             if (actualCount !== req.periodsPerWeek) {
               violations.push({
                 constraintId: 'subject_period_requirements',
-                severity: 'CRITICAL',
+                severity: ConflictSeverity.CRITICAL,
                 description: `Class ${req.classId} has ${actualCount} periods of Subject ${req.subjectId}, expected ${req.periodsPerWeek}`,
                 affectedSlots: [],
                 suggestedFixes: [
@@ -275,7 +270,7 @@ class HardConstraints {
             if (!isQualified) {
                violations.push({
                  constraintId: 'teacher_qualification',
-                 severity: 'CRITICAL',
+                 severity: ConflictSeverity.CRITICAL,
                  description: `Teacher is not qualified/assigned to teach Subject ${slot.subjectId} for Class ${slot.classId}`,
                  affectedSlots: [slot.id],
                  suggestedFixes: ['Assign qualified teacher']
@@ -752,7 +747,7 @@ export class TimetableConstraintEngine {
   async generateTimetable(
     schoolId: string,
     termId: string,
-    settings?: any
+    settings?: Record<string, unknown>
   ): Promise<TimetableSolution> {
     console.log(`Starting timetable generation for school ${schoolId}, term ${termId}`);
     
@@ -802,7 +797,7 @@ export class TimetableConstraintEngine {
     return totalWeight > 0 ? totalScore / totalWeight : 0;
   }
 
-  calculateTimetableQuality(timetable: any): number {
+  calculateTimetableQuality(timetable: TimetableSolution): number {
     // Calculate quality score based on constraints satisfaction
     const softConstraints = SoftConstraints.getConstraints();
     let totalScore = 0;
@@ -817,7 +812,7 @@ export class TimetableConstraintEngine {
     return totalWeight > 0 ? totalScore / totalWeight : 0;
   }
 
-  validateCompleteTimetable(timetable: any): ConstraintViolation[] {
+  validateCompleteTimetable(timetable: TimetableSolution): ConstraintViolation[] {
     const hardConstraints = HardConstraints.getConstraints({} as GenerationContext);
     const violations: ConstraintViolation[] = [];
     
@@ -829,7 +824,7 @@ export class TimetableConstraintEngine {
     return violations;
   }
 
-  validateHardConstraints(slot: any, timetable: any): ConstraintViolation[] {
+  validateHardConstraints(slot: TimetableSlot, timetable: TimetableSolution): ConstraintViolation[] {
     // Validate a single slot against hard constraints
     const hardConstraints = HardConstraints.getConstraints({} as GenerationContext);
     const violations: ConstraintViolation[] = [];

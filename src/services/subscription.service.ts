@@ -11,7 +11,7 @@ import type {
   CreateSubscriptionPaymentInput,
   SystemRules,
 } from '@/types'
-
+    
 // Default system rules
 const DEFAULT_SYSTEM_RULES: Omit<SystemRules, 'id' | 'updatedAt' | 'updatedBy'> = {
   gracePeriodDays: 14,
@@ -255,7 +255,6 @@ export class SubscriptionService {
 
     const features = {
       smsEnabled: !featuresToDisable.includes('SMS'),
-      whatsappEnabled: !featuresToDisable.includes('SMS'), // WhatsApp follows SMS
       paymentIntegration: true, // Always keep payment integration
       advancedReporting: !featuresToDisable.includes('REPORTS'),
       bulkMessaging: !featuresToDisable.includes('SMS'), // Bulk messaging follows SMS
@@ -322,7 +321,6 @@ export class SubscriptionService {
       case LicenseType.PREMIUM:
         return {
           smsEnabled: true,
-          whatsappEnabled: true,
           paymentIntegration: true,
           advancedReporting: true,
           bulkMessaging: true,
@@ -330,7 +328,6 @@ export class SubscriptionService {
       case LicenseType.BASIC:
         return {
           smsEnabled: true,
-          whatsappEnabled: true,
           paymentIntegration: true,
           advancedReporting: false,
           bulkMessaging: true,
@@ -338,7 +335,6 @@ export class SubscriptionService {
       default:
         return {
           smsEnabled: true,
-          whatsappEnabled: true,
           paymentIntegration: false,
           advancedReporting: false,
           bulkMessaging: false,

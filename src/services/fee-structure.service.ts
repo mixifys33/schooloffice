@@ -2,7 +2,7 @@
  * Fee Structure Service
  * Manages fee structure definitions per class, term, and student type
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8
- */
+ */    
 import { prisma } from '@/lib/db'
 import type {
   CreateFeeStructureInput,
@@ -165,7 +165,7 @@ export async function createFeeStructure(
       schoolId: data.schoolId,
       userId: data.createdBy,
       action: 'FEE_STRUCTURE_CREATED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: feeStructure.id,
       newValue: {
         classId: data.classId,
@@ -274,7 +274,7 @@ export async function updateFeeStructure(
       schoolId,
       userId,
       action: 'FEE_STRUCTURE_UPDATED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: id,
       previousValue,
       newValue: {
@@ -593,7 +593,7 @@ export async function deleteFeeStructure(
       schoolId,
       userId,
       action: 'FEE_STRUCTURE_UPDATED',
-      resourceType: 'FeeStructure',
+      resource: "FeeStructure",
       resourceId: id,
       previousValue: { isActive: true },
       newValue: { isActive: false },

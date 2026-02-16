@@ -14,36 +14,150 @@ export async function GET(request: NextRequest) {
     const classFilter = searchParams.get('class')
     const termFilter = searchParams.get('term')
 
+    // Get current active term (the one that includes today's date)
+    const today = new Date()
+    const currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYear: {
+          schoolId: session.user.schoolId,
+          isActive: true
+        },
+        startDate: { lte: today },
+        endDate: { gte: today }
+      },
+      include: {
+        academicYear: true
+      }
+    })
+
+    // If no term matches today's date, get the most recent term that has started
+    const fallbackTerm = !currentTerm ? await prisma.term.findFirst({
+      where: {
+        academicYear: {
+          schoolId: session.user.schoolId,
+          isActive: true
+        },
+        startDate: { lte: today }
+      },
+      include: {
+        academicYear: true
+      },
+      orderBy: {
+        startDate: 'desc'
+      }
+    }) : null
+
+    const activeTerm = currentTerm || fallbackTerm
+
+    console.log('Current term found:', activeTerm ? {
+      id: activeTerm.id,
+      name: activeTerm.name,
+      academicYear: activeTerm.academicYear.name,
+      startDate: activeTerm.startDate,
+      endDate: activeTerm.endDate
+    } : 'None')
+
+    if (!activeTerm) {
+      return NextResponse.json(
+        { error: 'No active term found. Please create an academic year and term first.' },
+        { status: 400 }
+      )
+    }
+
     // Get all students in the school
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.user.schoolId,
-        status: 'active'
+        status: 'ACTIVE'
       },
       include: {
         class: true,
+        stream: true,
         payments: {
-          orderBy: { paymentDate: 'desc' }
+          where: {
+            termId: activeTerm.id
+          },
+          orderBy: { receivedAt: 'desc' }
         }
       }
     })
 
-    // Get fee structures
+    console.log('Students found:', students.length)
+
+    // Get all fee structures for the current term
     const feeStructures = await prisma.feeStructure.findMany({
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId,
+        termId: activeTerm.id,
+        isActive: true
+      },
+      include: {
+        term: true,
+        class: true
       }
     })
 
+    console.log('Fee structures found for current term:', feeStructures.length)
+    
+    // Also check all fee structures regardless of term
+    const allFeeStructures = await prisma.feeStructure.findMany({
+      where: {
+        schoolId: session.user.schoolId,
+        isActive: true
+      },
+      include: {
+        term: true,
+        class: true
+      }
+    })
+    
+    console.log('All active fee structures:', allFeeStructures.length)
+    console.log('All fee structures details:', allFeeStructures.map(fs => ({
+      className: fs.class.name,
+      termName: fs.term.name,
+      termId: fs.termId,
+      currentTermId: activeTerm.id,
+      matches: fs.termId === activeTerm.id,
+      studentType: fs.studentType,
+      totalAmount: fs.totalAmount
+    })))
+
     // Process student data with financial information
     const processedStudents = students.map(student => {
-      // Find fee structure for this student's class
-      const feeStructure = feeStructures.find(fs => fs.classId === student.classId)
-      const totalDue = feeStructure?.totalAmount || 0 // Changed from amount to totalAmount
+      // Default to DAY if studentType is not set
+      const studentType = student.studentType || 'DAY'
       
-      // Calculate total payments for this student
+      // Find the fee structure for this student's class and student type
+      const feeStructure = feeStructures.find(fs => 
+        fs.classId === student.classId && 
+        fs.studentType === studentType
+      )
+
+      const totalDue = feeStructure?.totalAmount || 0
+      
+      // Calculate total payments for this student for current term
       const totalPaid = student.payments.reduce((sum, payment) => sum + payment.amount, 0)
       const balance = totalDue - totalPaid
+
+      // Log for first student to debug
+      if (students.indexOf(student) === 0) {
+        console.log('First student debug:', {
+          name: `${student.firstName} ${student.lastName}`,
+          classId: student.classId,
+          studentType: studentType,
+          feeStructureFound: !!feeStructure,
+          feeStructureDetails: feeStructure ? {
+            id: feeStructure.id,
+            classId: feeStructure.classId,
+            termId: feeStructure.termId,
+            studentType: feeStructure.studentType,
+            totalAmount: feeStructure.totalAmount
+          } : null,
+          totalDue,
+          totalPaid,
+          balance
+        })
+      }
 
       // Determine payment status
       let paymentStatus: 'not_paid' | 'partially_paid' | 'fully_paid' = 'not_paid'
@@ -58,15 +172,21 @@ export async function GET(request: NextRequest) {
       return {
         id: student.id,
         name: `${student.firstName} ${student.lastName}`,
+        admissionNumber: student.admissionNumber,
         classId: student.classId,
         className: student.class?.name || 'Unknown',
-        stream: student.class?.stream || null,
+        stream: student.stream?.name || null,
+        streamId: student.streamId,
+        studentType: studentType,
         status: student.status as 'active' | 'transferred' | 'left',
         totalDue,
         totalPaid,
         balance,
-        lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null, // Changed from paymentDate to receivedAt
-        paymentStatus
+        lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null,
+        paymentStatus,
+        feeStructureId: feeStructure?.id || null,
+        currentTerm: activeTerm.name,
+        currentAcademicYear: activeTerm.academicYear.name
       }
     })
 
@@ -74,17 +194,17 @@ export async function GET(request: NextRequest) {
     let filteredStudents = processedStudents
 
     if (classFilter && classFilter !== 'all') {
-      filteredStudents = filteredStudents.filter(s => s.className === classFilter)
-    }
-
-    if (termFilter && termFilter !== 'all') {
-      // Note: This assumes students have a term property; adjust as needed
-      // For now, we'll skip term filtering since students don't have a direct term property
+      filteredStudents = filteredStudents.filter(s => s.classId === classFilter)
     }
 
     return NextResponse.json({
       success: true,
-      students: filteredStudents
+      students: filteredStudents,
+      currentTerm: {
+        id: activeTerm.id,
+        name: activeTerm.name,
+        academicYear: activeTerm.academicYear.name
+      }
     })
   } catch (error) {
     console.error('Error fetching students:', error)

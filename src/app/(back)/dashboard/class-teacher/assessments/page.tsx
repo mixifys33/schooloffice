@@ -203,8 +203,8 @@ export default function ClassTeacherAssessmentsPage() {
                   {classPerformance.finalAverage}%
                 </p>
               </div>
-              <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                <BarChart3 className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+              <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                <BarChart3 className={cn('h-5 w-5', teacherColors.info.text)} />
               </div>
             </div>
           </CardContent>
@@ -234,7 +234,7 @@ export default function ClassTeacherAssessmentsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className={cn(typography.sectionTitle)}>My Classes</CardTitle>
               <Link
-                href="/dashboard/class-teacher/my-class"
+                href="/class-teacher/class-details"
                 className={cn(typography.caption, 'hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors')}
               >
                 View all →
@@ -258,13 +258,13 @@ export default function ClassTeacherAssessmentsPage() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/dashboard/class-teacher/assessments/ca?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
+                          <Link href={`/class-teacher/assessments/ca?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
                             <Button size="sm" variant="outline">
                               <FileText className="h-4 w-4 mr-1" />
                               CA
                             </Button>
                           </Link>
-                          <Link href={`/dashboard/class-teacher/assessments/exam?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
+                          <Link href={`/class-teacher/assessments/exam?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
                             <Button size="sm" variant="outline">
                               <TrendingUp className="h-4 w-4 mr-1" />
                               Exam
@@ -370,7 +370,7 @@ export default function ClassTeacherAssessmentsPage() {
                       </div>
                       <div className="flex gap-2">
                         <Badge variant="outline">{assessment.status}</Badge>
-                        <Link href={`/dashboard/class-teacher/assessments/${assessment.type}?classId=${assessment.classId}&subjectId=${assessment.subjectId}&assessmentId=${assessment.id}`}>
+                        <Link href={`/class-teacher/assessments/${assessment.type}?classId=${assessment.classId}&subjectId=${assessment.subjectId}&assessmentId=${assessment.id}`}>
                           <Button size="sm" variant="outline">
                             <Edit3 className="h-4 w-4" />
                           </Button>
@@ -454,7 +454,7 @@ export default function ClassTeacherAssessmentsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/dashboard/class-teacher/assessments/ca/new">
+            <Link href="/class-teacher/assessments/ca/new">
               <Card className={cn(
                 cardStyles.base,
                 'hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all cursor-pointer',
@@ -473,7 +473,7 @@ export default function ClassTeacherAssessmentsPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/class-teacher/assessments/exam/new">
+            <Link href="/class-teacher/assessments/exam/new">
               <Card className={cn(
                 cardStyles.base,
                 'hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all cursor-pointer',
@@ -492,15 +492,15 @@ export default function ClassTeacherAssessmentsPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/class-teacher/assessments/report">
+            <Link href="/class-teacher/assessments/report">
               <Card className={cn(
                 cardStyles.base,
                 'hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all cursor-pointer',
                 transitions.color
               )}>
                 <CardContent className="p-6 flex flex-col items-center text-center">
-                  <div className={cn('p-3 rounded-lg mb-3', teacherColors.chart.blue.bg)}>
-                    <BarChart3 className={cn('h-6 w-6', teacherColors.chart.blue.text)} />
+                  <div className={cn('p-3 rounded-lg mb-3', teacherColors.info.bg)}>
+                    <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
                   </div>
                   <h3 className={cn(typography.h3, 'mb-1')}>Assessment Report</h3>
                   <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-3')}>

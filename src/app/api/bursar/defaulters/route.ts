@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
           }
         },
         payments: {
-          orderBy: { paymentDate: 'desc' }
+          orderBy: { receivedAt: 'desc' }
         }
       }
     })
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         if (balance <= 0) return null
 
         // Calculate days overdue (from last payment or enrollment date)
-        const lastPaymentDate = student.payments[0]?.paymentDate || student.createdAt
+        const lastPaymentDate = student.payments[0]?.receivedAt || student.createdAt
         const daysOverdue = Math.floor(
           (Date.now() - lastPaymentDate.getTime()) / (1000 * 60 * 60 * 24)
         )
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           totalPaid,
           balance,
           daysOverdue,
-          lastPaymentDate: student.payments[0]?.paymentDate.toISOString() || null,
+          lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null,
           contactInfo
         }
       })

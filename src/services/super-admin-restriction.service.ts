@@ -10,7 +10,7 @@ import { Role, AuthEventType } from '@/types/enums'
 // TYPES
 // ============================================
 
-/**
+/**  
  * Restricted operations that Super Admin cannot perform directly
  * Requirements: 5.5
  */

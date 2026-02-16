@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
     // Fetch all curriculum subjects (class-subject relationships)
     const curriculumSubjects = await prisma.curriculumSubject.findMany({
       where: {
+        schoolId,
         isActive: true,
         class: {
-          schoolId,
           isActive: true
         },
         subject: {

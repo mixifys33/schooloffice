@@ -2,7 +2,7 @@
  * Guardian Portal Access Service
  * Handles guardian portal access management, session control, and password reset
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import { hashPassword, verifyPassword } from '@/lib/auth'
 import {
@@ -420,7 +420,7 @@ export class GuardianPortalAccessService {
       data: {
         token,
         guardianId,
-        resourceType: 'PASSWORD_RESET',
+        resource: "PASSWORD_RESET",
         resourceId: portalAccess.id,
         expiresAt,
       },

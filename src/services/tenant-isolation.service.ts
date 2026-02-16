@@ -2,7 +2,7 @@
  * Tenant Isolation Service
  * Ensures complete data isolation between school tenants
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
- */
+ */    
 
 import { prisma } from '@/lib/db'
 import { Role } from '@/types/enums'
@@ -220,7 +220,7 @@ export class TenantIsolationService {
           resource: 'SECURITY',
           resourceId: attemptedSchoolId,
           previousValue: null,
-          newValue: logEntry,
+          newValue: logEntry as any,
           ipAddress: additionalInfo?.ipAddress,
           userAgent: additionalInfo?.userAgent,
         },

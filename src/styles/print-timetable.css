@@ -1,0 +1,173 @@
+/* Print Styles for Timetable Page */
+
+@media print {
+  /* Hide all UI elements that shouldn't be printed */
+  button,
+  .no-print,
+  [role="dialog"],
+  header,
+  nav,
+  aside,
+  footer {
+    display: none !important;
+  }
+
+  /* Hide specific UI elements */
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ensure timetable grid is visible and properly formatted */
+  table {
+    page-break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+    font-size: 10pt;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold;
+  }
+
+  /* Ensure colors are printed */
+  .bg-blue-600,
+  .text-blue-600 {
+    color: #2563eb !important;
+  }
+
+  .bg-gray-600,
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+
+  .bg-yellow-50 {
+    background-color: #fefce8 !important;
+  }
+
+  /* Hide action buttons in cells */
+  td button {
+    display: none !important;
+  }
+
+  /* Show only the timetable content */
+  .print-hide-sidebar {
+    display: none !important;
+  }
+
+  .print-full-width {
+    grid-column: span 4 !important;
+  }
+
+  /* Ensure card content is visible */
+  .border,
+  .rounded-lg,
+  .shadow {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Print header with timetable info */
+  .print-header {
+    display: block !important;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* Hide badges and status indicators */
+  .badge,
+  [class*="Badge"] {
+    display: none !important;
+  }
+
+  /* Ensure legend is visible */
+  .legend {
+    page-break-inside: avoid;
+    margin-top: 20px;
+  }
+
+  /* Hide tooltips */
+  [role="tooltip"] {
+    display: none !important;
+  }
+
+  /* Optimize spacing for print */
+  .p-6 {
+    padding: 0 !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 10px !important;
+  }
+
+  /* Ensure grid is readable */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Hide scroll indicators */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Ensure text is black for readability */
+  .text-gray-400,
+  .text-gray-500 {
+    color: #000 !important;
+  }
+
+  /* Hide empty slot indicators */
+  .text-center.text-gray-400 {
+    display: none !important;
+  }
+
+  /* Show subject codes and teacher codes prominently */
+  .font-bold.text-blue-600 {
+    font-weight: bold !important;
+    color: #000 !important;
+  }
+
+  /* Ensure room numbers are visible */
+  .text-xs.text-gray-500 {
+    color: #000 !important;
+    font-size: 9pt !important;
+  }
+}
+
+/* Print-specific classes that can be added to elements */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block !important;
+  }
+}
+
+.print-hide {
+  display: block;
+}
+
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+}

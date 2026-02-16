@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Users, GraduationCap, Calendar, ClipboardList, BookOpen, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react'
+import { ArrowLeft, Users, GraduationCap, Calendar, ClipboardList, BookOpen, AlertCircle, CheckCircle, BarChart3, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessagePanel } from '@/components/teacher'
@@ -197,7 +197,7 @@ export default function ClassTeacherStudentsPage() {
         </Link>
 
         <Link
-          href={hasContextError ? '#' : '/class-teacher/marks'}
+          href={hasContextError ? '#' : '/class-teacher/assessments'}
           className={cn(
             'flex-1 min-w-[200px] p-4 rounded-lg border transition-colors',
             hasContextError 
@@ -213,9 +213,9 @@ export default function ClassTeacherStudentsPage() {
               <BookOpen className={cn('h-6 w-6', teacherColors.success.text)} />
             </div>
             <div>
-              <h3 className={typography.label}>Enter Marks</h3>
+              <h3 className={typography.label}>Enter Assessments</h3>
               <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                Record student assessments
+                Record CA and Exam scores
               </p>
             </div>
           </div>
@@ -234,8 +234,8 @@ export default function ClassTeacherStudentsPage() {
           onClick={hasContextError ? (e) => e.preventDefault() : undefined}
         >
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-              <BarChart3 className={cn('h-6 w-6', teacherColors.chart.blue.text)} />
+            <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+              <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
             </div>
             <div>
               <h3 className={typography.label}>View Reports</h3>
@@ -363,7 +363,7 @@ export default function ClassTeacherStudentsPage() {
                         <ClipboardList className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
                       </Link>
                       <Link
-                        href={`/class-teacher/marks?studentId=${student.id}`}
+                        href={`/class-teacher/assessments?studentId=${student.id}`}
                         className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
                       >
                         <BookOpen className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />

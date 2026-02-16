@@ -62,8 +62,8 @@ const roleRoutes: Record<string, string[]> = {
   '/dashboard/teacher': ['TEACHER', 'SCHOOL_ADMIN', 'DEPUTY', 'SUPER_ADMIN'],
   // Class teacher dashboard - accessible by class teachers (teachers with class assignments)
   '/dashboard/class-teacher': ['TEACHER', 'SCHOOL_ADMIN', 'DEPUTY', 'SUPER_ADMIN'],
-  // DOS dashboard - accessible by DOS role
-  '/dashboard/dos': ['SCHOOL_ADMIN', 'DEPUTY', 'SUPER_ADMIN'],
+  // DOS portal - accessible by DOS role
+  '/dos': ['SCHOOL_ADMIN', 'DEPUTY', 'SUPER_ADMIN'],
   // Bursar dashboard - accessible by accountants/bursars
   '/dashboard/bursar': ['ACCOUNTANT', 'SCHOOL_ADMIN', 'SUPER_ADMIN'],
   // Hostel dashboard - accessible by hostel staff

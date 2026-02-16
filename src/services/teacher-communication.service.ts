@@ -4,10 +4,10 @@
  * Requirements: 5.1-5.8
  * 
  * Core principle: Teachers have restricted communication capabilities.
- * - SMS and WhatsApp are disabled by default
+ * - SMS is disabled by default
  * - Teachers can only message recipients within their academic assignment scope
  * - Bulk messages, fee messages, and announcements are restricted
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   ChannelConfig,
@@ -85,7 +85,7 @@ export interface ChannelValidationResult {
 export class TeacherCommunicationService {
   /**
    * Configure communication channels for a teacher
-   * Requirements 5.1, 5.2: Channel configuration with SMS/WhatsApp disabled by default
+   * Requirements 5.1, 5.2: Channel configuration with SMS disabled by default
    * 
    * @param teacherId - The teacher's ID
    * @param schoolId - The school's ID for tenant isolation
@@ -135,7 +135,6 @@ export class TeacherCommunicationService {
     const previousConfig: ChannelConfig = {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
 
@@ -143,7 +142,6 @@ export class TeacherCommunicationService {
     const newConfig: ChannelConfig = {
       inAppMessaging: channels.inAppMessaging ?? previousConfig.inAppMessaging,
       sms: channels.sms ?? previousConfig.sms,
-      whatsapp: channels.whatsapp ?? previousConfig.whatsapp,
       email: channels.email ?? previousConfig.email,
     }
 
@@ -153,7 +151,6 @@ export class TeacherCommunicationService {
       data: {
         inAppMessagingEnabled: newConfig.inAppMessaging,
         smsEnabled: newConfig.sms,
-        // whatsappEnabled removed from schema
         emailEnabled: newConfig.email,
       },
     })
@@ -179,7 +176,7 @@ export class TeacherCommunicationService {
 
   /**
    * Get default channel configuration for new teachers
-   * Requirement 5.2: SMS and WhatsApp disabled by default
+   * Requirement 5.2: SMS disabled by default
    */
   getDefaultChannelConfig(): ChannelConfig {
     return { ...DEFAULT_CHANNEL_CONFIG }
@@ -200,7 +197,6 @@ export class TeacherCommunicationService {
       select: {
         inAppMessagingEnabled: true,
         smsEnabled: true,
-        // whatsappEnabled removed from schema
         emailEnabled: true,
       },
     })
@@ -212,7 +208,6 @@ export class TeacherCommunicationService {
     return {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
   }
@@ -809,28 +804,6 @@ export class TeacherCommunicationService {
     return this.configureChannels(teacherId, schoolId, { sms: false }, disabledBy)
   }
 
-  /**
-   * Enable WhatsApp channel for a teacher (admin action)
-   * Requirement 5.1: Allow configuration of WhatsApp channel
-   */
-  async enableWhatsAppChannel(
-    teacherId: string,
-    schoolId: string,
-    enabledBy: string
-  ): Promise<ChannelConfigResult> {
-    return this.configureChannels(teacherId, schoolId, { whatsapp: true }, enabledBy)
-  }
-
-  /**
-   * Disable WhatsApp channel for a teacher (admin action)
-   */
-  async disableWhatsAppChannel(
-    teacherId: string,
-    schoolId: string,
-    disabledBy: string
-  ): Promise<ChannelConfigResult> {
-    return this.configureChannels(teacherId, schoolId, { whatsapp: false }, disabledBy)
-  }
 }
 
 // Export singleton instance

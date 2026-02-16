@@ -47,6 +47,7 @@ interface EvidenceFile {
   fileName: string
   fileType: 'document' | 'image' | 'video' | 'other'
   fileSize: string
+  fileUrl?: string // ImageKit URL
   uploadDate: string
   description: string
   linkedCompetencies: string[]
@@ -320,8 +321,8 @@ export default function ClassTeacherLearningEvidencePage() {
                   {Array.from(new Set(data.classes.map(c => c.subjectId))).length}
                 </p>
               </div>
-              <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                <BookOpen className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+              <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                <BookOpen className={cn('h-5 w-5', teacherColors.info.text)} />
               </div>
             </div>
           </CardContent>
@@ -463,10 +464,18 @@ export default function ClassTeacherLearningEvidencePage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => window.open(`/api/class-teacher/evidence/${file.id}/download`, '_blank')}
+                            >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => window.open(file.fileUrl || '#', '_blank')}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button 

@@ -2,7 +2,7 @@
  * Guardian Data Quality Service
  * Handles data quality validation, duplicate detection, and merge suggestions
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
- */
+ */  
 import { prisma } from '@/lib/db'
 import {
   DataQualityIssue,
@@ -128,7 +128,7 @@ export class GuardianDataQualityService {
         field: 'secondaryPhone',
         issue: 'INVALID',
         message: 'Secondary phone number format is invalid',
-        severity: 'WARNING',
+        severity: ConflictSeverity.WARNING,
       })
     }
 
@@ -158,7 +158,7 @@ export class GuardianDataQualityService {
         field: 'email',
         issue: 'MISSING',
         message: 'Email address is not provided',
-        severity: 'WARNING',
+        severity: ConflictSeverity.WARNING,
       })
     }
 
@@ -168,7 +168,7 @@ export class GuardianDataQualityService {
         field: 'address',
         issue: 'MISSING',
         message: 'Physical address is not provided',
-        severity: 'WARNING',
+        severity: ConflictSeverity.WARNING,
       })
     }
 
@@ -178,7 +178,7 @@ export class GuardianDataQualityService {
         field: 'nationalId',
         issue: 'MISSING',
         message: 'National ID is not provided',
-        severity: 'WARNING',
+        severity: ConflictSeverity.WARNING,
       })
     }
 

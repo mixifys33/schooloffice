@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { MessageChannel, PilotType } from '../../src/types/enums'
-
+  
 // ============================================
 // SMS LIMITS CONFIGURATION
 // ============================================

@@ -225,9 +225,39 @@ export default function LoginPage() {
         if (result?.ok) {
           setToast({ type: 'success', message: 'Login successful! Redirecting...' })
           
+          // Get user session to determine redirect based on role
+          const sessionResponse = await fetch('/api/auth/session')
+          const session = await sessionResponse.json()
+          
+          // Determine redirect URL based on user role
+          let redirectUrl = '/dashboard'
+          
+          if (session?.user) {
+            const activeRole = session.user.activeRole || session.user.role
+            
+            // Role-based redirects
+            if (activeRole === 'SUPER_ADMIN') {
+              redirectUrl = '/super-admin'
+            } else if (activeRole === 'CLASS_TEACHER') {
+              redirectUrl = '/class-teacher'
+            } else if (activeRole === 'DOS') {
+              redirectUrl = '/dos'
+            } else if (activeRole === 'BURSAR') {
+              redirectUrl = '/dashboard/bursar'
+            } else if (activeRole === 'TEACHER') {
+              redirectUrl = '/dashboard/teacher'
+            } else if (activeRole === 'PARENT') {
+              redirectUrl = '/dashboard/parent'
+            } else if (activeRole === 'STUDENT') {
+              redirectUrl = '/dashboard/student'
+            } else if (activeRole === 'SCHOOL_ADMIN' || activeRole === 'DEPUTY') {
+              redirectUrl = '/dashboard'
+            }
+          }
+          
           // Force a hard redirect to ensure session is properly loaded
           setTimeout(() => {
-            window.location.href = '/dashboard'
+            window.location.href = redirectUrl
           }, 500)
         }
       } catch (error: unknown) {
@@ -282,8 +312,39 @@ export default function LoginPage() {
       
       if (result?.ok) {
         setToast({ type: 'success', message: 'Login successful! Redirecting...' })
+        
+        // Get user session to determine redirect based on role
+        const sessionResponse = await fetch('/api/auth/session')
+        const session = await sessionResponse.json()
+        
+        // Determine redirect URL based on user role
+        let redirectUrl = '/dashboard'
+        
+        if (session?.user) {
+          const activeRole = session.user.activeRole || session.user.role
+          
+          // Role-based redirects
+          if (activeRole === 'SUPER_ADMIN') {
+            redirectUrl = '/super-admin'
+          } else if (activeRole === 'CLASS_TEACHER') {
+            redirectUrl = '/class-teacher'
+          } else if (activeRole === 'DOS') {
+            redirectUrl = '/dos'
+          } else if (activeRole === 'BURSAR') {
+            redirectUrl = '/dashboard/bursar'
+          } else if (activeRole === 'TEACHER') {
+            redirectUrl = '/dashboard/teacher'
+          } else if (activeRole === 'PARENT') {
+            redirectUrl = '/dashboard/parent'
+          } else if (activeRole === 'STUDENT') {
+            redirectUrl = '/dashboard/student'
+          } else if (activeRole === 'SCHOOL_ADMIN' || activeRole === 'DEPUTY') {
+            redirectUrl = '/dashboard'
+          }
+        }
+        
         setTimeout(() => {
-          window.location.href = '/dashboard'
+          window.location.href = redirectUrl
         }, 500)
       }
     } catch (error: unknown) {

@@ -7,7 +7,7 @@
  * Property 1: Evidence Presentation Clarity
  * For any financial dispute, the system SHALL present all evidence in a clear, 
  * chronological, and easily understandable format.
- * 
+ *    
  * Property 2: Rapid Dispute Resolution
  * For any financial dispute, the system SHALL provide all necessary evidence 
  * to resolve the dispute within 60 seconds.

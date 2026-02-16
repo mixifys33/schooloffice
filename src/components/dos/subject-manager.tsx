@@ -17,7 +17,7 @@ export default function SubjectManager() {
   useEffect(() => {
     // Auto-redirect after 5 seconds
     const timer = setTimeout(() => {
-      router.push('/dashboard/dos/subjects');
+      router.push('/dos/subjects');
     }, 5000);
 
     return () => clearTimeout(timer);
@@ -44,7 +44,7 @@ export default function SubjectManager() {
               that provides academic oversight, performance tracking, and intervention capabilities.
             </p>
             <div className="flex items-center space-x-4">
-              <Button onClick={() => handleRedirect('/dashboard/dos/subjects')} style={createThemeStyle.button('primary')}>
+              <Button onClick={() => handleRedirect('/dos/subjects')} style={createThemeStyle.button('primary')}>
                 <ArrowRight className="h-4 w-4 mr-2" />
                 Go to Subject Control Center
               </Button>
@@ -57,7 +57,7 @@ export default function SubjectManager() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dashboard/dos/subjects')}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dos/subjects')}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BookOpen className="h-5 w-5" style={{ color: 'var(--info)' }} />
@@ -77,7 +77,7 @@ export default function SubjectManager() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dashboard/dos/subjects/performance')}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dos/subjects/performance')}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5" style={{ color: 'var(--success)' }} />
@@ -97,7 +97,7 @@ export default function SubjectManager() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dashboard/dos/subjects/interventions')}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dos/subjects/interventions')}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Shield className="h-5 w-5" style={{ color: 'var(--warning)' }} />
@@ -117,7 +117,7 @@ export default function SubjectManager() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dashboard/dos/subjects/management')}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleRedirect('/dos/subjects/management')}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Settings className="h-5 w-5" style={{ color: 'var(--accent-primary)' }} />

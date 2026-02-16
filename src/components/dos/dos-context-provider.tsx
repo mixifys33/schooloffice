@@ -10,6 +10,13 @@ interface DoSContextData {
     startDate: string;
     endDate: string;
   } | null;
+  academicYear: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isCurrent: boolean;
+  } | null;
   schoolStatus: 'OPEN' | 'EXAM_PERIOD' | 'REPORTING' | 'CLOSED';
   permissions: {
     canApproveCurriculum: boolean;
@@ -38,6 +45,7 @@ interface DoSContextProviderProps {
 export function DoSContextProvider({ children }: DoSContextProviderProps) {
   const [contextData, setContextData] = useState<DoSContextData>({
     currentTerm: null,
+    academicYear: null,
     schoolStatus: 'OPEN',
     permissions: {
       canApproveCurriculum: true,
@@ -52,11 +60,16 @@ export function DoSContextProvider({ children }: DoSContextProviderProps) {
   const fetchContextData = async () => {
     try {
       const response = await fetch('/api/dos/context');
+      if (!response.ok) {
+        console.error('Failed to fetch DoS context:', response.status);
+        return;
+      }
       const data = await response.json();
       
       setContextData(prev => ({
         ...prev,
         currentTerm: data.currentTerm,
+        academicYear: data.academicYear,
         schoolStatus: data.schoolStatus,
         permissions: data.permissions,
       }));

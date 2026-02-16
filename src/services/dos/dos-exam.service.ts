@@ -118,7 +118,7 @@ export class DoSExamService {
       schoolId: curriculumSubject.schoolId,
       userId: input.createdBy,
       action: 'CREATE_EXAM',
-      resourceType: 'DoSExam',
+      resource: "DoSExam",
       resourceId: exam.id,
       resourceName: `${input.examName} - ${curriculumSubject.subject.name} - ${curriculumSubject.class.name}`,
       newValue: exam
@@ -176,7 +176,7 @@ export class DoSExamService {
       schoolId: existing.curriculumSubject.schoolId,
       userId: approval.dosUserId,
       action: 'APPROVE_EXAM',
-      resourceType: 'DoSExam',
+      resource: "DoSExam",
       resourceId: id,
       resourceName: `${existing.examName} - ${existing.curriculumSubject.subject.name}`,
       reason: approval.reason,
@@ -189,17 +189,34 @@ export class DoSExamService {
   }
 
   /**
-   * Get exams for a curriculum subject and term
+   * Get exams for a school with optional filters
    */
-  async getExams(
-    curriculumSubjectId: string,
-    termId: string
-  ): Promise<DoSExam[]> {
+  async getExams(filters: {
+    schoolId: string;
+    termId?: string;
+    examType?: DoSExamType;
+    classId?: string;
+  }): Promise<DoSExam[]> {
+    const where: any = {
+      curriculumSubject: {
+        schoolId: filters.schoolId
+      }
+    };
+
+    if (filters.termId) {
+      where.termId = filters.termId;
+    }
+
+    if (filters.examType) {
+      where.examType = filters.examType;
+    }
+
+    if (filters.classId) {
+      where.curriculumSubject.classId = filters.classId;
+    }
+
     return prisma.doSExam.findMany({
-      where: {
-        curriculumSubjectId,
-        termId
-      },
+      where,
       include: {
         curriculumSubject: {
           include: {

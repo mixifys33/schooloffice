@@ -2,7 +2,7 @@
  * URL Shortener Service
  * Generates shortened tracking URLs for SMS messages
  * Requirements: 21.3
- */
+ */  
 import { prisma } from '@/lib/db'
 import { MessageChannel } from '@/types/enums'
 import crypto from 'crypto'
@@ -10,7 +10,7 @@ import crypto from 'crypto'
 // ============================================
 // TYPES
 // ============================================
-
+    
 export interface ShortUrl {
   id: string
   code: string
@@ -334,10 +334,11 @@ export class UrlShortenerService {
     await prisma.$transaction([
       prisma.shortUrlClick.create({
         data: {
+          schoolId: shortUrl.schoolId || '',
           shortUrlId: shortUrl.id,
-          ipAddress: trackingData?.ipAddress,
-          userAgent: trackingData?.userAgent,
-          referer: trackingData?.referer,
+          ipAddress: trackingData?.ipAddress ?? undefined,
+          userAgent: trackingData?.userAgent ?? undefined,
+          referer: trackingData?.referer ?? undefined,
         },
       }),
       prisma.shortUrl.update({
@@ -370,8 +371,8 @@ export class UrlShortenerService {
     // Calculate unique clicks by IP
     const uniqueIps = new Set(
       shortUrl.clicks
-        .filter((c: any) => c.ipAddress)
-        .map((c: any) => c.ipAddress)
+        .filter((c: { ipAddress: string | null }) => c.ipAddress)
+        .map((c: { ipAddress: string | null }) => c.ipAddress)
     )
 
     // Group clicks by day
@@ -463,7 +464,7 @@ export class UrlShortenerService {
 
     return shortUrls.map(mapPrismaShortUrlToDomain)
   }
-
+   
   /**
    * Get all short URLs for a student
    */

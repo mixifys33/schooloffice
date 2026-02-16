@@ -371,15 +371,6 @@ export default function DoSDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {pendingApprovals.curriculumSubjects > 0 && (
-                <Link href="/dos/curriculum" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-[var(--chart-blue)]" />
-                    <span>Curriculum Subjects</span>
-                  </div>
-                  <Badge variant="outline">{pendingApprovals.curriculumSubjects}</Badge>
-                </Link>
-              )}
               {pendingApprovals.assessmentPlans > 0 && (
                 <Link href="/dos/assessments" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
                   <div className="flex items-center gap-2">

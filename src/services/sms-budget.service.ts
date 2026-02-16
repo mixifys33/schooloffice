@@ -2,7 +2,7 @@
  * SMS Budget Service
  * Handles SMS cost tracking, budget controls, and alerts
  * Requirements: 23.1, 23.2, 23.3, 23.4, 31.1, 31.2, 31.3, 31.4, 31.5
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   SMSBudgetUsage,
@@ -12,7 +12,7 @@ import {
   CreateSMSBudgetUsageInput,
   LogSMSCostInput,
   SMSBudgetCheckResult,
-} from '@/types'
+} from '@/types/entities'
 import { SMSBudgetAlertType } from '@/types/enums'
 
 // ============================================
@@ -745,14 +745,13 @@ export class SMSBudgetService {
 
   /**
    * Get term communication cost summary
-   * Requirement 23.3: Generate communication cost summary showing total SMS, WhatsApp, and Email volumes
+   * Requirement 23.3: Generate communication cost summary showing total SMS and Email volumes
    */
   async getTermCostSummary(
     schoolId: string,
     termId: string
   ): Promise<{
     sms: { count: number; cost: number }
-    whatsapp: { count: number; cost: number }
     email: { count: number; cost: number }
     total: { count: number; cost: number }
   }> {
@@ -774,20 +773,17 @@ export class SMSBudgetService {
     })
 
     const smsCount = messageCounts.find(m => m.channel === 'SMS')?._count ?? 0
-    const whatsappCount = messageCounts.find(m => m.channel === 'WHATSAPP')?._count ?? 0
     const emailCount = messageCounts.find(m => m.channel === 'EMAIL')?._count ?? 0
 
     const smsCost = usage?.usedAmount ?? smsCount * SMS_COST_UGX
-    const whatsappCost = 0 // WhatsApp is typically free or bundled
     const emailCost = 0 // Email is typically free or bundled
 
     return {
       sms: { count: smsCount, cost: smsCost },
-      whatsapp: { count: whatsappCount, cost: whatsappCost },
       email: { count: emailCount, cost: emailCost },
       total: {
-        count: smsCount + whatsappCount + emailCount,
-        cost: smsCost + whatsappCost + emailCost,
+        count: smsCount + emailCount,
+        cost: smsCost + emailCost,
       },
     }
   }

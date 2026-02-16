@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   FolderOpen,
   Upload,
@@ -47,6 +48,7 @@ interface EvidenceFile {
   fileName: string
   fileType: 'document' | 'image' | 'video' | 'other'
   fileSize: string
+  fileUrl: string
   uploadDate: string
   description: string
   linkedCompetencies: string[]
@@ -71,6 +73,7 @@ interface EvidenceData {
 }
 
 export default function ClassTeacherLearningEvidencePage() {
+  const router = useRouter()
   const [data, setData] = useState<EvidenceData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +82,7 @@ export default function ClassTeacherLearningEvidencePage() {
 
   // Upload form state
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
+  const [selectedFilesArray, setSelectedFilesArray] = useState<File[]>([])
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [selectedSubject, setSelectedSubject] = useState<string>('')
   const [fileDescription, setFileDescription] = useState('')
@@ -107,16 +111,69 @@ export default function ClassTeacherLearningEvidencePage() {
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      const filesArray = Array.from(e.target.files)
       setSelectedFiles(e.target.files)
+      setSelectedFilesArray(filesArray)
     }
   }
+
+  // Remove a selected file
+  const handleRemoveFile = (index: number) => {
+    const newFilesArray = selectedFilesArray.filter((_, i) => i !== index)
+    setSelectedFilesArray(newFilesArray)
+    
+    // Create new FileList
+    const dataTransfer = new DataTransfer()
+    newFilesArray.forEach(file => dataTransfer.items.add(file))
+    setSelectedFiles(dataTransfer.files)
+  }
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  }
+
+  // Validate file size (max 50MB per file)
+  const validateFileSize = (files: File[]): { valid: boolean; message?: string } => {
+    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+    const invalidFiles = files.filter(file => file.size > maxSize)
+    
+    if (invalidFiles.length > 0) {
+      const fileNames = invalidFiles.map(f => `${f.name} (${formatFileSize(f.size)})`).join(', ')
+      return {
+        valid: false,
+        message: `The following files exceed the 50MB limit: ${fileNames}. Please select smaller files or compress them before uploading.`
+      }
+    }
+    
+    return { valid: true }
+  }
+
+  // Upload loading state
+  const [uploading, setUploading] = useState(false)
 
   // Handle file upload
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0 || !selectedClass || !selectedSubject) {
       setError('Please select files and class/subject')
+      setTimeout(() => setError(null), 5000)
       return
     }
+
+    // Validate file sizes
+    const validation = validateFileSize(selectedFilesArray)
+    if (!validation.valid) {
+      setError(validation.message || 'File size validation failed')
+      setTimeout(() => setError(null), 8000)
+      return
+    }
+
+    setUploading(true)
+    setError(null)
 
     const formData = new FormData()
     for (let i = 0; i < selectedFiles.length; i++) {
@@ -138,6 +195,8 @@ export default function ClassTeacherLearningEvidencePage() {
         throw new Error(errorData.error || 'Failed to upload files')
       }
 
+      const result = await response.json()
+
       // Refresh data
       const refreshResponse = await fetch('/api/class-teacher/evidence')
       if (refreshResponse.ok) {
@@ -147,16 +206,21 @@ export default function ClassTeacherLearningEvidencePage() {
 
       // Reset form
       setSelectedFiles(null)
+      setSelectedFilesArray([])
       setSelectedClass('')
       setSelectedSubject('')
       setFileDescription('')
       setLinkedCompetencies([])
       setShowUploadModal(false)
 
-      setSuccessMessage('Files uploaded successfully')
-      setTimeout(() => setSuccessMessage(null), 3000)
+      setSuccessMessage(`Successfully uploaded ${result.count} file(s)`)
+      setTimeout(() => setSuccessMessage(null), 5000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload files')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload files'
+      setError(errorMessage)
+      setTimeout(() => setError(null), 8000)
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -184,10 +248,42 @@ export default function ClassTeacherLearningEvidencePage() {
       }
 
       setSuccessMessage('File deleted successfully')
-      setTimeout(() => setSuccessMessage(null), 3000)
+      setTimeout(() => setSuccessMessage(null), 5000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete file')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete file'
+      setError(errorMessage)
+      setTimeout(() => setError(null), 5000)
     }
+  }
+
+  // Handle file download
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      // Fetch the file
+      const response = await fetch(fileUrl)
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download error:', error)
+      // Fallback: open in new tab
+      window.open(fileUrl, '_blank')
+    }
+  }
+
+  // Handle file view
+  const handleViewFile = (fileId: string) => {
+    router.push(`/dashboard/class-teacher/evidence/view/${fileId}`)
   }
 
   // Get file icon based on type
@@ -320,8 +416,8 @@ export default function ClassTeacherLearningEvidencePage() {
                   {Array.from(new Set(data.classes.map(c => c.subjectId))).length}
                 </p>
               </div>
-              <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-                <BookOpen className={cn('h-5 w-5', teacherColors.chart.blue.text)} />
+              <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+                <BookOpen className={cn('h-5 w-5', teacherColors.info.text)} />
               </div>
             </div>
           </CardContent>
@@ -463,10 +559,20 @@ export default function ClassTeacherLearningEvidencePage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDownload(file.fileUrl, file.fileName)}
+                              title="Download file"
+                            >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleViewFile(file.id)}
+                              title="View file"
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button 
@@ -474,6 +580,7 @@ export default function ClassTeacherLearningEvidencePage() {
                               variant="outline" 
                               onClick={() => handleDelete(file.id)}
                               className="text-[var(--chart-red)] dark:text-[var(--danger)] hover:text-[var(--chart-red)] dark:hover:text-[var(--danger)]"
+                              title="Delete file"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -542,7 +649,41 @@ export default function ClassTeacherLearningEvidencePage() {
                     >
                       Choose Files
                     </label>
-                    {selectedFiles && (
+                    {selectedFilesArray.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <p className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
+                          Selected Files ({selectedFilesArray.length}):
+                        </p>
+                        {selectedFilesArray.map((file, index) => (
+                          <div 
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <FileText className="h-4 w-4 text-[var(--text-secondary)] flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[var(--text-primary)] dark:text-[var(--white-pure)] truncate">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                                  {formatFileSize(file.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveFile(index)}
+                              className="text-[var(--chart-red)] hover:text-[var(--chart-red)] hover:bg-[var(--danger-light)] flex-shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {selectedFilesArray.length === 0 && selectedFiles && (
                       <p className="mt-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                         {selectedFiles.length} file(s) selected
                       </p>
@@ -629,16 +770,32 @@ export default function ClassTeacherLearningEvidencePage() {
                     onClick={() => {
                       setShowUploadModal(false)
                       setSelectedFiles(null)
+                      setSelectedFilesArray([])
                       setSelectedClass('')
                       setSelectedSubject('')
                       setFileDescription('')
                       setLinkedCompetencies([])
                     }}
+                    disabled={uploading}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleUpload} disabled={!selectedFiles || !selectedClass || !selectedSubject}>
-                    Upload Files
+                  <Button 
+                    onClick={handleUpload} 
+                    disabled={!selectedFiles || !selectedClass || !selectedSubject || uploading}
+                    className="gap-2"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload Files
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

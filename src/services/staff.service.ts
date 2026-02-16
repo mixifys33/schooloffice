@@ -8,7 +8,7 @@ import {
   Staff,
   CreateStaffInput,
   Subject,
-  Class,
+  Class,   
 } from '@/types'
 import { Role, StaffStatus } from '@/types/enums'
 import { auditService, AuditAction, AuditResource } from './audit.service'

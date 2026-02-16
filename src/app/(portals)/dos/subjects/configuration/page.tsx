@@ -33,7 +33,7 @@ export default function SubjectConfigurationPage() {
   const [saving, setSaving] = useState(false);
 
   const handleBack = () => {
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   const handleSave = async () => {

@@ -1,331 +1,207 @@
+/**
+ * Timetable Configuration API
+ * 
+ * Handles school-wide timetable configuration (start/end times, period duration, special periods)
+ * Requirements: 1.1-1.8, 7.1-7.7, 12.10, 14.1-14.7
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { 
-  SchoolTimeStructure, 
-  TimetableGenerationSettings,
-  SubjectPeriodRequirement,
-  TeacherConstraint
-} from '@/types/timetable';
+import { Role, StaffRole } from '@prisma/client';
+import { validateConfiguration } from '@/services/timetable-time-slot.service';
 
+/**
+ * GET /api/dos/timetable/config
+ * Fetch timetable configuration for the school
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const schoolId = searchParams.get('schoolId');
-    const termId = searchParams.get('termId');
-
+    const schoolId = session.user.schoolId;
     if (!schoolId) {
-      return NextResponse.json({ error: 'School ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'School context required' }, { status: 400 });
     }
 
-    const action = searchParams.get('action') || searchParams.get('configType');
+    // Verify DoS access
+    const userRole = session.user.activeRole || session.user.role;
+    const isAdmin = userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY;
 
-    switch (action) {
-      case 'time-structure':
-        const timeStructure = await prisma.schoolTimeStructure.findFirst({
-          where: { schoolId, isActive: true }
-        });
+    // Check if user has DoS role
+    const staff = await prisma.staff.findFirst({
+      where: {
+        schoolId,
+        userId: session.user.id,
+      },
+      select: {
+        primaryRole: true,
+        secondaryRoles: true,
+      },
+    });
 
-        return NextResponse.json({ structure: timeStructure });
+    const isDoS =
+      staff &&
+      (staff.primaryRole === StaffRole.DOS ||
+        ((staff.secondaryRoles as string[]) || []).includes(StaffRole.DOS));
 
-      case 'generation-settings':
-        const settings = await prisma.timetableGenerationSettings.findUnique({
-          where: { schoolId }
-        });
-
-        return NextResponse.json({ settings });
-
-      case 'subject-requirements':
-        const subjectRequirements = await prisma.subjectPeriodRequirement.findMany({
-          where: { schoolId },
-          include: {
-            subject: true,
-            class: true
-          }
-        });
-
-        return NextResponse.json({ requirements: subjectRequirements });
-
-      case 'teacher-constraints':
-        const teacherConstraints = await prisma.teacherConstraint.findMany({
-          where: { schoolId },
-          include: {
-            teacher: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
-          }
-        });
-
-        return NextResponse.json({ constraints: teacherConstraints });
-
-      case 'all':
-        // Get all configuration at once
-        const [
-          timeStruct,
-          genSettings,
-          subjReqs,
-          teachConst
-        ] = await Promise.all([
-          prisma.schoolTimeStructure.findFirst({ where: { schoolId, isActive: true } }),
-          prisma.timetableGenerationSettings.findUnique({ where: { schoolId } }),
-          prisma.subjectPeriodRequirement.findMany({
-            where: { schoolId },
-            include: { subject: true, class: true }
-          }),
-          prisma.teacherConstraint.findMany({
-            where: { schoolId },
-            include: {
-              teacher: {
-                select: {
-                  firstName: true,
-                  lastName: true
-                }
-              }
-            }
-          })
-        ]);
-
-        return NextResponse.json({
-          timeStructure: timeStruct,
-          generationSettings: genSettings,
-          subjectRequirements: subjReqs,
-          teacherConstraints: teachConst
-        });
-
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    if (!isAdmin && !isDoS) {
+      return NextResponse.json(
+        { error: 'Director of Studies access required' },
+        { status: 403 }
+      );
     }
+
+    // Fetch configuration
+    const config = await prisma.timetableConfiguration.findUnique({
+      where: { schoolId },
+    });
+
+    if (!config) {
+      // Return default configuration
+      return NextResponse.json({
+        exists: false,
+        config: {
+          startTime: '08:00',
+          endTime: '16:00',
+          periodDurationMinutes: 40,
+          specialPeriods: [],
+        },
+      });
+    }
+
+    console.log('✅ [Timetable Config] Configuration fetched successfully');
+
+    return NextResponse.json({
+      exists: true,
+      config: {
+        startTime: config.startTime,
+        endTime: config.endTime,
+        periodDurationMinutes: config.periodDurationMinutes,
+        specialPeriods: config.specialPeriods,
+      },
+    });
   } catch (error) {
-    console.error('Timetable config GET error:', error);
+    console.error('❌ [Timetable Config] Error fetching configuration:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch configuration' },
       { status: 500 }
     );
   }
 }
 
+/**
+ * POST /api/dos/timetable/config
+ * Save timetable configuration
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify DoS role
-    if (!session.user.roles?.includes('DOS') && session.user.role !== 'DOS') {
-      return NextResponse.json({
-        error: 'Only Director of Studies can manage timetable configuration'
-      }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const { schoolId, configType, ...configData } = body;
-
+    const schoolId = session.user.schoolId;
     if (!schoolId) {
-      return NextResponse.json({ error: 'School ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'School context required' }, { status: 400 });
     }
 
-    switch (configType) {
-      case 'time-structure':
-        // Validate required fields
-        if (!configData.startTime || !configData.endTime || !configData.periodsPerDay) {
-          return NextResponse.json({ error: 'Missing required time structure fields' }, { status: 400 });
-        }
+    // Verify DoS access
+    const userRole = session.user.activeRole || session.user.role;
+    const isAdmin = userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY;
 
-        // Update or create time structure
-        const updatedTimeStructure = await prisma.schoolTimeStructure.upsert({
-          where: { schoolId },
-          update: {
-            ...configData,
-            updatedAt: new Date(),
-            updatedBy: session.user.id
-          },
-          create: {
-            ...configData,
-            schoolId,
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            updatedBy: session.user.id
-          }
-        });
+    const staff = await prisma.staff.findFirst({
+      where: {
+        schoolId,
+        userId: session.user.id,
+      },
+      select: {
+        primaryRole: true,
+        secondaryRoles: true,
+      },
+    });
 
-        return NextResponse.json({ 
-          success: true, 
-          structure: updatedTimeStructure,
-          message: 'Time structure updated successfully'
-        });
+    const isDoS =
+      staff &&
+      (staff.primaryRole === StaffRole.DOS ||
+        ((staff.secondaryRoles as string[]) || []).includes(StaffRole.DOS));
 
-      case 'generation-settings':
-        // Validate required fields
-        if (typeof configData.hardConstraintWeight !== 'number') {
-          return NextResponse.json({ error: 'Missing required generation settings fields' }, { status: 400 });
-        }
-
-        // Update or create generation settings
-        const updatedSettings = await prisma.timetableGenerationSettings.upsert({
-          where: { schoolId },
-          update: {
-            ...configData,
-            updatedAt: new Date(),
-            updatedBy: session.user.id
-          },
-          create: {
-            ...configData,
-            schoolId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            updatedBy: session.user.id
-          }
-        });
-
-        return NextResponse.json({ 
-          success: true, 
-          settings: updatedSettings,
-          message: 'Generation settings updated successfully'
-        });
-
-      case 'subject-requirements':
-        // Process bulk update of subject requirements
-        if (!Array.isArray(configData.requirements)) {
-          return NextResponse.json({ error: 'Requirements must be an array' }, { status: 400 });
-        }
-
-        // For each requirement, update or create
-        const updatedRequirements = [];
-        for (const req of configData.requirements) {
-          const updatedReq = await prisma.subjectPeriodRequirement.upsert({
-            where: {
-              schoolId_subjectId_classId: {
-                schoolId,
-                subjectId: req.subjectId,
-                classId: req.classId
-              }
-            },
-            update: {
-              ...req,
-              updatedAt: new Date()
-            },
-            create: {
-              ...req,
-              schoolId,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          });
-          updatedRequirements.push(updatedReq);
-        }
-
-        return NextResponse.json({ 
-          success: true, 
-          requirements: updatedRequirements,
-          message: `${updatedRequirements.length} subject requirements updated successfully`
-        });
-
-      case 'teacher-constraints':
-        // Process bulk update of teacher constraints
-        if (!Array.isArray(configData.constraints)) {
-          return NextResponse.json({ error: 'Constraints must be an array' }, { status: 400 });
-        }
-
-        // For each constraint, update or create
-        const updatedConstraints = [];
-        for (const constraint of configData.constraints) {
-          const updatedConstraint = await prisma.teacherConstraint.upsert({
-            where: {
-              schoolId_teacherId: {
-                schoolId,
-                teacherId: constraint.teacherId
-              }
-            },
-            update: {
-              ...constraint,
-              updatedAt: new Date()
-            },
-            create: {
-              ...constraint,
-              schoolId,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          });
-          updatedConstraints.push(updatedConstraint);
-        }
-
-        return NextResponse.json({ 
-          success: true, 
-          constraints: updatedConstraints,
-          message: `${updatedConstraints.length} teacher constraints updated successfully`
-        });
-
-      default:
-        return NextResponse.json({ error: 'Invalid configuration type' }, { status: 400 });
-    }
-  } catch (error) {
-    console.error('Timetable config POST error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify DoS role
-    if (!session.user.roles?.includes('DOS') && session.user.role !== 'DOS') {
-      return NextResponse.json({
-        error: 'Only Director of Studies can manage timetable configuration'
-      }, { status: 403 });
+    if (!isAdmin && !isDoS) {
+      return NextResponse.json(
+        { error: 'Director of Studies access required' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
-    const { schoolId, configType, updates } = body;
+    const { startTime, endTime, periodDurationMinutes, specialPeriods } = body;
 
-    if (!schoolId || !configType || !updates) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    console.log('🔍 [Timetable Config] Received configuration:', {
+      startTime,
+      endTime,
+      periodDurationMinutes,
+      specialPeriodsCount: (specialPeriods || []).length,
+      specialPeriods: JSON.stringify(specialPeriods, null, 2),
+    });
+
+    // Validate configuration
+    const validation = validateConfiguration({
+      startTime,
+      endTime,
+      periodDurationMinutes,
+      specialPeriods: specialPeriods || [],
+    });
+
+    if (!validation.isValid) {
+      return NextResponse.json(
+        {
+          error: 'Invalid configuration',
+          details: validation.errors,
+        },
+        { status: 400 }
+      );
     }
 
-    switch (configType) {
-      case 'activate-time-structure':
-        // Deactivate all other time structures for this school
-        await prisma.schoolTimeStructure.updateMany({
-          where: { schoolId },
-          data: { isActive: false }
-        });
+    console.log('🔧 [Timetable Config] Saving configuration...');
 
-        // Activate the specified one
-        const activatedStructure = await prisma.schoolTimeStructure.update({
-          where: { id: updates.id },
-          data: { isActive: true }
-        });
+    // Upsert configuration
+    const config = await prisma.timetableConfiguration.upsert({
+      where: { schoolId },
+      create: {
+        schoolId,
+        startTime,
+        endTime,
+        periodDurationMinutes,
+        specialPeriods: specialPeriods || [],
+      },
+      update: {
+        startTime,
+        endTime,
+        periodDurationMinutes,
+        specialPeriods: specialPeriods || [],
+      },
+    });
 
-        return NextResponse.json({ 
-          success: true, 
-          structure: activatedStructure,
-          message: 'Time structure activated successfully'
-        });
+    console.log('✅ [Timetable Config] Configuration saved successfully');
 
-      default:
-        return NextResponse.json({ error: 'Invalid configuration type for PUT' }, { status: 400 });
-    }
+    return NextResponse.json({
+      success: true,
+      config: {
+        startTime: config.startTime,
+        endTime: config.endTime,
+        periodDurationMinutes: config.periodDurationMinutes,
+        specialPeriods: config.specialPeriods,
+      },
+    });
   } catch (error) {
-    console.error('Timetable config PUT error:', error);
+    console.error('❌ [Timetable Config] Error saving configuration:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to save configuration' },
       { status: 500 }
     );
   }

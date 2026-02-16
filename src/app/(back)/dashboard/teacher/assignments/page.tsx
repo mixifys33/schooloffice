@@ -1,326 +1,739 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
-  RefreshCw,
+  ArrowLeft,
   BookOpen,
-  Building2,
-  GraduationCap,
-  Eye,
-  Calendar,
-  Users,
-  CheckCircle
+  AlertCircle,
+  Save,
+  Send,
+  Lock,
+  CheckCircle,
+  Info,
+  Plus,
+  Trash2,
+  Edit3
 } from 'lucide-react'
-import { AlertBanner } from '@/components/ui/alert-banner'
-import { SkeletonLoader, Skeleton } from '@/components/ui/skeleton-loader'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 
 /**
- * TEACHER ASSIGNMENTS VIEW
- * 
- * Read-only view for teachers to see their teaching assignments.
- * Teachers cannot negotiate assignments in software.
- * 
- * Teachers can see:
- * - Their assigned classes and subjects
- * - What they are expected to teach
- * - Clear ownership boundaries
- * 
- * Teachers cannot:
- * - Modify assignments
- * - See other teachers' assignments
- * - Request assignment changes through the system
+ * Continuous Assessment Entry Page for Teacher Portal
+ * Requirements: New functionality for CA entries
+ * - Support multiple CA entries per subject
+ * - Proper CA (20%) calculation
+ * - Link to competencies
  */
 
-interface TeacherAssignment {
-  classId: string
-  className: string
-  level: number
-  subjects: {
-    subjectId: string
-    subjectName: string
-    subjectCode: string
-    isPrimary: boolean
-    isActive: boolean
-    studentCount: number
-  }[]
+interface CaEntry {
+  id: string;
+  type: 'assignment' | 'test' | 'project' | 'practical' | 'observation';
+  title: string;
+  maxScore: number;
+  date: string;
+  linkedCompetency: string;
+  studentScores: {
+    studentId: string;
+    score: number | null;
+  }[];
 }
 
-interface AssignmentStats {
-  totalClasses: number
-  totalSubjects: number
-  primarySubjects: number
-  coTeachingSubjects: number
-  totalStudents: number
+interface Student {
+  id: string;
+  name: string;
+  admissionNumber: string;
 }
 
-export default function TeacherAssignmentsPage() {
+interface SubjectOption {
+  id: string;
+  name: string;
+}
+
+interface ClassOption {
+  id: string;
+  name: string;
+  streamName: string | null;
+}
+
+interface CaEntryData {
+  class: ClassOption;
+  subject: SubjectOption;
+  caEntries: CaEntry[];
+  students: Student[];
+  isPublished: boolean;
+  isTermActive: boolean;
+  canEdit: boolean;
+  lockMessage: string | null;
+}
+
+interface AssignedClassSubject {
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+}
+
+export default function ContinuousAssessmentPage() {
+  const searchParams = useSearchParams()
+  const classIdParam = searchParams.get('classId')
+  const subjectIdParam = searchParams.get('subjectId')
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
-  const [assignments, setAssignments] = useState<TeacherAssignment[]>([])
-  const [stats, setStats] = useState<AssignmentStats>({
-    totalClasses: 0,
-    totalSubjects: 0,
-    primarySubjects: 0,
-    coTeachingSubjects: 0,
-    totalStudents: 0
-  })
+  const [saving, setSaving] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const loadAssignments = useCallback(async () => {
-    try {
+  // Selection state
+  const [assignedClasses, setAssignedClasses] = useState<AssignedClassSubject[]>([])
+  const [selectedClassId, setSelectedClassId] = useState<string>(classIdParam || '')
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjectIdParam || '')
+
+  // CA data
+  const [caData, setCaData] = useState<CaEntryData | null>(null)
+  const [currentCaEntry, setCurrentCaEntry] = useState<CaEntry | null>(null)
+  const [editingScores, setEditingScores] = useState<Record<string, number | null>>({})
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Fetch assigned classes and subjects on mount
+  useEffect(() => {
+    async function fetchAssignedClasses() {
+      try {
+        const response = await fetch('/api/teacher/marks/classes')
+        if (!response.ok) {
+          throw new Error('Failed to fetch assigned classes')
+        }
+        const data = await response.json()
+        setAssignedClasses(data.classes || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load classes')
+      }
+    }
+
+    fetchAssignedClasses()
+  }, [])
+
+  // Fetch CA data when selections are made
+  useEffect(() => {
+    async function fetchCaData() {
+      if (!selectedClassId || !selectedSubjectId) {
+        setCaData(null)
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/teacher/assignments')
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to load assignments')
+      try {
+        const response = await fetch(
+          `/api/teacher/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+        )
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch CA data')
+        }
+
+        const data = await response.json()
+        setCaData(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load CA data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCaData()
+  }, [selectedClassId, selectedSubjectId])
+
+  // Handle score change
+  const handleScoreChange = (studentId: string, value: string) => {
+    const numValue = value === '' ? null : parseFloat(value)
+
+    // Validate against max score if we have current entry
+    if (numValue !== null && currentCaEntry) {
+      if (numValue < 0 || numValue > currentCaEntry.maxScore) {
+        return // Invalid value, don't update
+      }
+    }
+
+    setEditingScores(prev => ({
+      ...prev,
+      [studentId]: numValue
+    }))
+    setHasChanges(true)
+  }
+
+  // Create a new CA entry
+  const handleCreateCaEntry = () => {
+    const newEntry: CaEntry = {
+      id: `ca-${Date.now()}`,
+      type: 'assignment',
+      title: 'New Assignment',
+      maxScore: 20,
+      date: new Date().toISOString().split('T')[0],
+      linkedCompetency: '',
+      studentScores: caData?.students.map(student => ({
+        studentId: student.id,
+        score: null
+      })) || []
+    }
+    setCurrentCaEntry(newEntry)
+    setEditingScores({})
+    setHasChanges(false)
+  }
+
+  // Edit an existing CA entry
+  const handleEditCaEntry = (entry: CaEntry) => {
+    setCurrentCaEntry(entry)
+    // Initialize editing scores with current values
+    const scores: Record<string, number | null> = {}
+    entry.studentScores.forEach(score => {
+      scores[score.studentId] = score.score
+    })
+    setEditingScores(scores)
+    setHasChanges(false)
+  }
+
+  // Save CA entry
+  const handleSaveCaEntry = async () => {
+    if (!currentCaEntry || !caData) return
+
+    setSaving(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      // Update scores with edited values
+      const updatedScores = currentCaEntry.studentScores.map(score => ({
+        ...score,
+        score: editingScores[score.studentId] ?? score.score
+      }))
+
+      const updatedEntry = {
+        ...currentCaEntry,
+        studentScores: updatedScores
       }
 
-      const data = await response.json()
-      setAssignments(data.assignments)
-      setStats(data.stats)
+      const response = await fetch('/api/teacher/ca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: selectedClassId,
+          subjectId: selectedSubjectId,
+          caEntry: updatedEntry,
+          isDraft: true,
+        }),
+      })
 
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save CA entry')
+      }
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/teacher/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+      }
+
+      setEditingScores({})
+      setHasChanges(false)
+      setSuccessMessage('CA entry saved successfully')
+      setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
-      console.error('Error loading assignments:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load assignments')
+      setError(err instanceof Error ? err.message : 'Failed to save CA entry')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
-  }, [])
+  }
 
-  useEffect(() => {
-    loadAssignments()
-  }, [loadAssignments])
+  // Submit final CA entry
+  const handleSubmitCaEntry = async () => {
+    if (!currentCaEntry || !caData) return
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-        <SkeletonLoader rows={6} />
-      </div>
+    // Confirm submission
+    const confirmed = window.confirm(
+      'Are you sure you want to submit this CA entry? This will notify the administration and scores cannot be changed without approval.'
     )
+    if (!confirmed) return
+
+    setSubmitting(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      // Update scores with edited values
+      const updatedScores = currentCaEntry.studentScores.map(score => ({
+        ...score,
+        score: editingScores[score.studentId] ?? score.score
+      }))
+
+      const updatedEntry = {
+        ...currentCaEntry,
+        studentScores: updatedScores
+      }
+
+      // Submit final CA entry
+      const response = await fetch('/api/teacher/ca/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: selectedClassId,
+          subjectId: selectedSubjectId,
+          caEntry: updatedEntry,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit CA entry')
+      }
+
+      // Refresh CA data
+      const refreshResponse = await fetch(
+        `/api/teacher/ca?classId=${selectedClassId}&subjectId=${selectedSubjectId}`
+      )
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setCaData(data)
+      }
+
+      setEditingScores({})
+      setHasChanges(false)
+      setCurrentCaEntry(null)
+      setSuccessMessage('CA entry submitted successfully. Administration has been notified.')
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit CA entry')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setCurrentCaEntry(null)
+    setEditingScores({})
+    setHasChanges(false)
+  }
+
+  // Get unique classes from assigned class-subject combinations
+  const uniqueClasses = Array.from(
+    new Map(assignedClasses.map(c => [c.classId, { id: c.classId, name: c.className }])).values()
+  )
+
+  // Get subjects for selected class
+  const subjectsForClass = assignedClasses
+    .filter(c => c.classId === selectedClassId)
+    .map(c => ({ id: c.subjectId, name: c.subjectName }))
+
+  // Handle class selection change
+  const handleClassChange = (classId: string) => {
+    setSelectedClassId(classId)
+    setSelectedSubjectId('')
+    setCaData(null)
+    setCurrentCaEntry(null)
+  }
+
+  // Handle subject selection change
+  const handleSubjectChange = (subjectId: string) => {
+    setSelectedSubjectId(subjectId)
+    setCaData(null)
+    setCurrentCaEntry(null)
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">My Teaching Assignments</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Your assigned classes and subjects</p>
-          <div className="mt-2 p-3 bg-[var(--info-light)] border border-[var(--info-light)] rounded-lg">
-            <p className="text-sm text-[var(--info-dark)]">
-              <Eye className="w-4 h-4 inline mr-1" />
-              <strong>Teacher View:</strong> These are your official teaching responsibilities. 
-              Contact Admin for any assignment changes.
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Back Navigation */}
+      <Link
+        href="/teacher"
+        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--White-pure)]"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </Link>
+
+      {/* Page Header */}
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg">
+            <BookOpen className="h-6 w-6 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+              Continuous Assessment (CA)
+            </h1>
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
+              Manage CA entries contributing to 20% of final grade
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={loadAssignments}
-          disabled={loading}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
-      {/* Error Banner */}
-      {error && (
-        <AlertBanner
-          type="error"
-          title="Error"
-          message={error}
-          onDismiss={() => setError(null)}
-        />
-      )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center">
-            <Building2 className="w-8 h-8 text-[var(--chart-green)]" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Classes</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.totalClasses}</p>
-            </div>
+      {/* Selection Controls */}
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-5">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {/* Class Selection */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
+              Class
+            </label>
+            <select
+              value={selectedClassId}
+              onChange={(e) => handleClassChange(e.target.value)}
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+            >
+              <option value="">Select a class</option>
+              {uniqueClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center">
-            <BookOpen className="w-8 h-8 text-[var(--chart-purple)]" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Subjects</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.totalSubjects}</p>
-            </div>
+          {/* Subject Selection */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-2">
+              Subject
+            </label>
+            <select
+              value={selectedSubjectId}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+              disabled={!selectedClassId}
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select a subject</option>
+              {subjectsForClass.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center">
-            <CheckCircle className="w-8 h-8 text-[var(--chart-blue)]" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Primary</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.primarySubjects}</p>
-            </div>
+          {/* Create New CA Entry Button */}
+          <div className="flex items-end">
+            <button
+              className="w-full bg-[var(--accent-hover)] text-white p-2 rounded hover:bg-[var(--accent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={!selectedClassId || !selectedSubjectId}
+              onClick={handleCreateCaEntry}
+            >
+              <Plus className="h-4 w-4" />
+              New CA Entry
+            </button>
           </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center">
-            <GraduationCap className="w-8 h-8 text-[var(--chart-yellow)]" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Co-Teaching</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.coTeachingSubjects}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center">
-            <Users className="w-8 h-8 text-[var(--chart-purple)]" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Students</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.totalStudents}</p>
-            </div>
-          </div>
-        </Card>
+        </div>
       </div>
 
-      {/* No Assignments Message */}
-      {assignments.length === 0 ? (
-        <Card className="p-8 text-center">
-          <Calendar className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">No Teaching Assignments</h3>
-          <p className="text-[var(--text-secondary)] mb-4">
-            You currently have no teaching assignments for this term.
-          </p>
-          <p className="text-sm text-[var(--text-muted)]">
-            Contact your Admin if you believe this is incorrect.
-          </p>
-        </Card>
-      ) : (
-        /* Assignments List */
-        <div className="space-y-4">
-          {assignments.map((assignment) => (
-            <Card key={assignment.classId} className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Building2 className="w-6 h-6 text-[var(--chart-green)] mr-3" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">{assignment.className}</h3>
-                    <p className="text-sm text-[var(--text-secondary)]">Level {assignment.level}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {assignment.subjects.length} Subject{assignment.subjects.length !== 1 ? 's' : ''}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {assignment.subjects.reduce((sum, s) => sum + s.studentCount, 0)} Students
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {assignment.subjects.map((subject) => (
-                  <div
-                    key={subject.subjectId}
-                    className="p-4 border rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-surface)] transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <GraduationCap className="w-4 h-4 text-[var(--chart-purple)] mr-2" />
-                        <span className="font-medium text-[var(--text-primary)]">{subject.subjectName}</span>
-                      </div>
-                      {subject.isPrimary ? (
-                        <Badge variant="success" size="sm">Primary</Badge>
-                      ) : (
-                        <Badge variant="outline" size="sm">Co-Teacher</Badge>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Code: {subject.subjectCode}
-                      </p>
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Students: {subject.studentCount}
-                      </p>
-                      {!subject.isActive && (
-                        <Badge variant="destructive" size="sm">Inactive</Badge>
-                      )}
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-[var(--border-default)]">
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {subject.isPrimary ? (
-                          <>
-                            <CheckCircle className="w-3 h-3 inline mr-1" />
-                            You can enter marks and take attendance
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="w-3 h-3 inline mr-1" />
-                            You can assist but cannot enter marks
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)] border border-[var(--success-light)] dark:border-[var(--success-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-green)] dark:text-[var(--success)]">
+            <CheckCircle className="h-5 w-5" />
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 
-      {/* Quick Actions */}
-      {assignments.length > 0 && (
-        <Card className="p-6 bg-[var(--info-light)] border-[var(--info-light)]">
-          <h3 className="text-lg font-semibold text-[var(--info-dark)] mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => window.location.href = '/dashboard/teacher/attendance'}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Take Attendance
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => window.location.href = '/dashboard/teacher/marks'}
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              Enter Marks
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => window.location.href = '/dashboard/teacher/classes'}
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              View Classes
-            </Button>
+      {/* Error Message */}
+      {error && (
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+            <AlertCircle className="h-5 w-5" />
+            <span>{error}</span>
           </div>
-        </Card>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && selectedSubjectId && (
+        <div className="space-y-4">
+          <SkeletonLoader variant="card" count={3} />
+        </div>
+      )}
+
+      {/* CA Entry Editing View */}
+      {currentCaEntry && caData && (
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
+          {/* CA Entry Details */}
+          <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+                  {currentCaEntry.title}
+                </h2>
+                <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                  {caData.class.name} - {caData.subject.name} • {currentCaEntry.type}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              {caData.canEdit && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveCaEntry}
+                    disabled={!hasChanges || saving || submitting}
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Saving...' : 'Save Draft'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitCaEntry}
+                    disabled={submitting || saving}
+                    className="gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    {submitting ? 'Submitting...' : 'Submit Final'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEdit}
+                    className="gap-2"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={currentCaEntry.title}
+                  onChange={(e) => setCurrentCaEntry({...currentCaEntry, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                  Max Score (out of {currentCaEntry.maxScore})
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={currentCaEntry.maxScore}
+                  onChange={(e) => setCurrentCaEntry({...currentCaEntry, maxScore: parseInt(e.target.value) || 20})}
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={currentCaEntry.date}
+                  onChange={(e) => setCurrentCaEntry({...currentCaEntry, date: e.target.value})}
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
+                  Linked Competency
+                </label>
+                <input
+                  type="text"
+                  value={currentCaEntry.linkedCompetency}
+                  onChange={(e) => setCurrentCaEntry({...currentCaEntry, linkedCompetency: e.target.value})}
+                  placeholder="e.g., Basic Algebra Concepts"
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Student Scores Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    #
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Admission No.
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Score (/{currentCaEntry.maxScore})
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {caData.students.map((student, index) => {
+                  const currentScore = currentCaEntry.studentScores.find(s => s.studentId === student.id)?.score;
+                  const editedScore = editingScores[student.id];
+                  const displayScore = editedScore !== undefined ? editedScore : currentScore;
+
+                  return (
+                    <tr key={student.id} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
+                      <td className="px-4 py-3 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+                          {student.name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                        {student.admissionNumber}
+                      </td>
+                      <td className="px-4 py-3">
+                        {caData.canEdit ? (
+                          <input
+                            type="number"
+                            min="0"
+                            max={currentCaEntry.maxScore}
+                            step="0.5"
+                            value={displayScore !== null ? displayScore : ''}
+                            onChange={(e) => handleScoreChange(student.id, e.target.value)}
+                            className="w-20 px-2 py-1 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--White-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                            placeholder="-"
+                          />
+                        ) : (
+                          <span className="text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+                            {displayScore !== null ? displayScore : '-'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* CA Entries List View */}
+      {caData && !currentCaEntry && !loading && (
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)]">
+          <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+                  {caData.class.name} - {caData.subject.name}
+                </h2>
+                <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+                  {caData.caEntries.length} CA entries • {caData.students.length} students
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CA Entries Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Max Score
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Linked Competency
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {caData.caEntries.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
+                    <td className="px-4 py-3 font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)]">
+                      {entry.title}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                      {entry.type.charAt(0).toUpperCase() + entry.type.slice(1)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      {entry.maxScore}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                      {new Date(entry.date).toLocaleDateString('en-UG')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                      {entry.linkedCompetency || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => handleEditCaEntry(entry)}
+                          className="p-1.5 rounded hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
+                          title="Edit"
+                        >
+                          <Edit3 className="h-4 w-4 text-[var(--text-secondary)] dark:text-[var(--text-muted)]" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-[var(--chart-red)] dark:text-[var(--danger)]" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Grading Logic Info */}
+          <div className="p-4 border-t border-[var(--border-default)] dark:border-[var(--border-strong)] bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/30">
+            <h3 className="font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)] mb-2">Grading Logic</h3>
+            <div className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+              <p>• CA entries contribute to 20% of the final grade</p>
+              <p>• Each entry is converted to a percentage of its maximum score</p>
+              <p>• Percentages are averaged to calculate the CA contribution</p>
+              <p>• Formula: (Sum of all CA percentages) ÷ (Number of CA entries) × 20</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Selection State */}
+      {!selectedSubjectId && !loading && (
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8 text-center">
+          <BookOpen className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--White-pure)] mb-2">
+            Select Class and Subject
+          </h3>
+          <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+            Choose a class and subject from the dropdowns above to start managing CA entries.
+          </p>
+        </div>
       )}
     </div>
   )

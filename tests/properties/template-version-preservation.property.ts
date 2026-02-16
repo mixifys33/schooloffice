@@ -5,7 +5,7 @@
  * 
  * For any template update operation, the previous version's content SHALL be preserved 
  * in the version history and remain retrievable by version ID.
- */
+ */   
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { MessageChannel } from '../../src/types/communication-hub'

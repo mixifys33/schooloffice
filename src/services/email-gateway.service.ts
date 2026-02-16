@@ -9,7 +9,7 @@ import { MessageStatus } from '@/types/enums'
 // ============================================
 // TYPES
 // ============================================
-
+     
 export interface EmailConfig {
   apiKey: string
   fromEmail: string

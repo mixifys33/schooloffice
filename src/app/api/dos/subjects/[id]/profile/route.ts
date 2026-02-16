@@ -7,11 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+// GET /api/dos/subjects/[id]/profile - Get detailed subject profile
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: subjectId } = await params;
     const session = await auth();
     
     if (!session?.user) {
@@ -37,7 +39,6 @@ export async function GET(
       );
     }
 
-    const subjectId = params.id;
     const { searchParams } = new URL(request.url);
     const termId = searchParams.get('termId');
 

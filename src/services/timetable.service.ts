@@ -1,5 +1,5 @@
 // ============================================ // TIMETABLE SERVICE // Main service for timetable generation and management // ============================================
-
+   
 import { db } from '@/lib/db';
 import { TimetableConstraintEngine } from './timetable-constraint-engine.service';
 import {
@@ -12,8 +12,9 @@ import {
   TimetableGenerationSettings,
   GenerateTimetableRequest,
   GenerateTimetableResponse,
-  ConflictType,
-  ConflictSeverity
+  ConflictSeverity,
+  SubjectPeriodRequirement,
+  SchoolTimeStructure
 } from '@/types/timetable';
 
 export class TimetableService {
@@ -87,7 +88,18 @@ export class TimetableService {
     }
   }
 
-  private static async loadGenerationConfiguration(schoolId: string) {
+  private static async loadGenerationConfiguration(schoolId: string): Promise<{
+    success: boolean;
+    error?: string;
+    settings: TimetableGenerationSettings;
+    timeStructure: SchoolTimeStructure;
+    subjectRequirements: SubjectPeriodRequirement[];
+    teacherConstraints: Record<string, unknown>[];
+    roomConstraints: Record<string, unknown>[];
+    classes: Record<string, unknown>[];
+    subjects: Record<string, unknown>[];
+    teachers: Record<string, unknown>[];
+  } | { success: false; error: string }> {
     try {
       // Load all required configuration data
       const [
@@ -158,7 +170,16 @@ export class TimetableService {
 
   private static async runGenerationAlgorithm(
     engine: TimetableConstraintEngine,
-    config: any,
+    config: {
+      settings: TimetableGenerationSettings;
+      timeStructure: SchoolTimeStructure;
+      subjectRequirements: SubjectPeriodRequirement[];
+      teacherConstraints: Record<string, unknown>[];
+      roomConstraints: Record<string, unknown>[];
+      classes: Record<string, unknown>[];
+      subjects: Record<string, unknown>[];
+      teachers: Record<string, unknown>[];
+    },
     customSettings?: Partial<TimetableGenerationSettings>
   ): Promise<GenerationResult> {
     const settings = { ...config.settings, ...customSettings };
@@ -199,7 +220,26 @@ export class TimetableService {
       }
     }
 
-    const conflicts = engine.validateCompleteTimetable(bestTimetable);
+    const violations = engine.validateCompleteTimetable(bestTimetable);
+    
+    // Convert ConstraintViolations to TimetableConflicts
+    const conflicts: TimetableConflict[] = violations.map((violation) => ({
+      id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timetableId: '', // Will be set when creating the draft
+      conflictType: 'CONSTRAINT_VIOLATION' as 'TEACHER_CLASH' | 'ROOM_CLASH' | 'CLASS_CLASH' | 'SUBJECT_PERIODS' | 'TEACHER_OVERLOAD' | 'CONSTRAINT_VIOLATION',
+      severity: violation.severity,
+      title: violation.constraintId,
+      description: violation.description,
+      affectedSlots: violation.affectedSlots,
+      suggestedFix: violation.suggestedFixes.length > 0 ? {
+        type: 'MOVE_SLOT' as const,
+        description: violation.suggestedFixes[0],
+        actions: []
+      } : undefined,
+      isResolved: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
     
     return {
       success: bestTimetable.length > 0 && bestQuality >= settings.minAcceptableQuality,
@@ -213,10 +253,10 @@ export class TimetableService {
   }
 
   private static generateRequiredSlots(
-    subjectRequirements: any[],
-    classes: any[],
-    subjects: any[],
-    teachers: any[]
+    subjectRequirements: SubjectPeriodRequirement[],
+    classes: Record<string, unknown>[],
+    subjects: Record<string, unknown>[],
+    teachers: Record<string, unknown>[]
   ): Partial<TimetableSlot>[] {
     const slots: Partial<TimetableSlot>[] = [];
     
@@ -227,7 +267,7 @@ export class TimetableService {
       if (!subject || !classInfo) continue;
       
       // Find qualified teachers for this subject
-      const qualifiedTeachers = teachers.filter(t => 
+      const qualifiedTeachers = teachers.filter(() => 
         // This would check teacher-subject assignments
         // For now, assume all teachers can teach all subjects
         true
@@ -241,7 +281,7 @@ export class TimetableService {
           id: `slot_${requirement.subjectId}_${requirement.classId}_${i}`,
           classId: requirement.classId,
           subjectId: requirement.subjectId,
-          teacherId: qualifiedTeachers[0].id, // Will be optimized during placement
+          teacherId: String(qualifiedTeachers[0].id), // Will be optimized during placement
           dayOfWeek: 0, // Will be assigned during placement
           period: 0, // Will be assigned during placement
           duration: 40,
@@ -258,7 +298,10 @@ export class TimetableService {
   private static async attemptSlotPlacement(
     requiredSlots: Partial<TimetableSlot>[],
     engine: TimetableConstraintEngine,
-    config: any
+    config: {
+      timeStructure: SchoolTimeStructure;
+      [key: string]: unknown;
+    }
   ): Promise<TimetableSlot[]> {
     const timetable: TimetableSlot[] = [];
     const timeStructure = config.timeStructure;
@@ -322,6 +365,7 @@ export class TimetableService {
     // Create the draft
     const draft = await db.timetableDraft.create({
       data: {
+        name: `Timetable v${version}`,
         schoolId: data.schoolId,
         termId: data.termId,
         version,
@@ -337,7 +381,8 @@ export class TimetableService {
     // Create slots
     const slotsWithTimetableId = data.slots.map(slot => ({
       ...slot,
-      timetableId: draft.id
+      timetableId: draft.id,
+      schoolId: data.schoolId
     }));
     
     await db.timetableSlot.createMany({
@@ -346,8 +391,22 @@ export class TimetableService {
     
     // Create conflicts
     const conflictsWithTimetableId = data.conflicts.map(conflict => ({
-      ...conflict,
-      timetableId: draft.id
+      id: conflict.id,
+      timetableId: draft.id,
+      schoolId: data.schoolId,
+      conflictType: conflict.conflictType,
+      severity: conflict.severity,
+      title: conflict.title,
+      description: conflict.description,
+      affectedSlots: conflict.affectedSlots,
+      suggestedFix: conflict.suggestedFix ? JSON.parse(JSON.stringify(conflict.suggestedFix)) : undefined, // JSON type
+      isResolved: conflict.isResolved,
+      resolvedAt: conflict.resolvedAt,
+      resolvedBy: conflict.resolvedBy,
+      dismissedAt: conflict.dismissedAt,
+      dismissedBy: conflict.dismissedBy,
+      createdAt: conflict.createdAt,
+      updatedAt: conflict.updatedAt
     }));
     
     if (conflictsWithTimetableId.length > 0) {
@@ -511,9 +570,21 @@ export class TimetableService {
       
       const slots = draft.slots;
       
+      // Map slots to proper type
+      const mappedSlots: TimetableSlot[] = slots.map(slot => ({
+        ...slot,
+        roomId: slot.roomId ?? undefined,
+        roomName: slot.roomName ?? undefined,
+        notes: slot.notes ?? undefined
+      }));
+      
       // Calculate teacher workload stats
-      const teacherWorkloadStats: Record<string, any> = {};
-      for (const slot of slots) {
+      const teacherWorkloadStats: Record<string, {
+        periodsPerWeek: number;
+        maxPeriodsPerDay: number;
+        utilization: number;
+      }> = {};
+      for (const slot of mappedSlots) {
         if (!teacherWorkloadStats[slot.teacherId]) {
           teacherWorkloadStats[slot.teacherId] = {
             periodsPerWeek: 0,
@@ -528,7 +599,7 @@ export class TimetableService {
       for (const teacherId of Object.keys(teacherWorkloadStats)) {
         let maxDaily = 0;
         for (let day = 1; day <= 5; day++) {
-          const dailyCount = slots.filter((s: any) => s.teacherId === teacherId && s.dayOfWeek === day).length;
+          const dailyCount = mappedSlots.filter((s) => s.teacherId === teacherId && s.dayOfWeek === day).length;
           maxDaily = Math.max(maxDaily, dailyCount);
         }
         teacherWorkloadStats[teacherId].maxPeriodsPerDay = maxDaily;
@@ -536,28 +607,48 @@ export class TimetableService {
       }
       
       // Calculate subject distribution
-      const subjectDistribution: Record<string, any> = {};
-      for (const slot of slots) {
+      const subjectDistribution: Record<string, {
+        totalPeriods: number;
+        classCount: number;
+        teacherCount: number;
+      }> = {};
+      for (const slot of mappedSlots) {
         if (!subjectDistribution[slot.subjectId]) {
           subjectDistribution[slot.subjectId] = {
             totalPeriods: 0,
-            classCount: new Set(),
-            teacherCount: new Set()
+            classCount: 0,
+            teacherCount: 0
           };
         }
         subjectDistribution[slot.subjectId].totalPeriods++;
-        subjectDistribution[slot.subjectId].classCount.add(slot.classId);
-        subjectDistribution[slot.subjectId].teacherCount.add(slot.teacherId);
+      }
+      
+      // Calculate unique classes and teachers per subject
+      const subjectClasses = new Map<string, Set<string>>();
+      const subjectTeachers = new Map<string, Set<string>>();
+      
+      for (const slot of mappedSlots) {
+        if (!subjectClasses.has(slot.subjectId)) {
+          subjectClasses.set(slot.subjectId, new Set());
+        }
+        if (!subjectTeachers.has(slot.subjectId)) {
+          subjectTeachers.set(slot.subjectId, new Set());
+        }
+        subjectClasses.get(slot.subjectId)!.add(slot.classId);
+        subjectTeachers.get(slot.subjectId)!.add(slot.teacherId);
       }
       
       // Convert sets to counts
       for (const subjectId of Object.keys(subjectDistribution)) {
-        subjectDistribution[subjectId].classCount = subjectDistribution[subjectId].classCount.size;
-        subjectDistribution[subjectId].teacherCount = subjectDistribution[subjectId].teacherCount.size;
+        subjectDistribution[subjectId].classCount = subjectClasses.get(subjectId)?.size || 0;
+        subjectDistribution[subjectId].teacherCount = subjectTeachers.get(subjectId)?.size || 0;
       }
       
       // Calculate room utilization (simplified)
-      const roomUtilization: Record<string, any> = {};
+      const roomUtilization: Record<string, {
+        utilizationPercent: number;
+        peakHours: number[];
+      }> = {};
       // This would be more complex in real implementation
       
       // Calculate quality metrics
@@ -578,12 +669,12 @@ export class TimetableService {
         subjectDistribution,
         roomUtilization,
         qualityScore,
-        constraintViolations: conflicts.filter((c: any) => c.severity === ConflictSeverity.CRITICAL).length,
+        constraintViolations: conflicts.filter((c) => c.severity === ConflictSeverity.CRITICAL).length,
         softConstraintScore: qualityScore, // Simplified
         teacherLoadBalance: this.calculateTeacherLoadBalance(teacherWorkloadStats),
         subjectSpreadScore: qualityScore, // Simplified
-        morningSlotUsage: this.calculateMorningSlotUsage(slots),
-        afternoonSlotUsage: this.calculateAfternoonSlotUsage(slots),
+        morningSlotUsage: this.calculateMorningSlotUsage(mappedSlots),
+        afternoonSlotUsage: this.calculateAfternoonSlotUsage(mappedSlots),
         calculatedAt: new Date()
       };
       
@@ -636,8 +727,12 @@ export class TimetableService {
     });
   }
 
-  private static calculateTeacherLoadBalance(teacherStats: Record<string, any>): number {
-    const workloads = Object.values(teacherStats).map((stats: any) => stats.periodsPerWeek);
+  private static calculateTeacherLoadBalance(teacherStats: Record<string, {
+    periodsPerWeek: number;
+    maxPeriodsPerDay: number;
+    utilization: number;
+  }>): number {
+    const workloads = Object.values(teacherStats).map((stats) => stats.periodsPerWeek);
     if (workloads.length === 0) return 0;
     
     const mean = workloads.reduce((sum, load) => sum + load, 0) / workloads.length;
@@ -646,13 +741,13 @@ export class TimetableService {
     return Math.sqrt(variance);
   }
 
-  private static calculateMorningSlotUsage(slots: any[]): number {
+  private static calculateMorningSlotUsage(slots: TimetableSlot[]): number {
     const morningSlots = slots.filter(slot => slot.period <= 4); // Assuming first 4 periods are morning
     const totalMorningCapacity = 4 * 5; // 4 periods × 5 days
     return (morningSlots.length / totalMorningCapacity) * 100;
   }
 
-  private static calculateAfternoonSlotUsage(slots: any[]): number {
+  private static calculateAfternoonSlotUsage(slots: TimetableSlot[]): number {
     const afternoonSlots = slots.filter(slot => slot.period > 4);
     const totalAfternoonCapacity = 4 * 5; // Assuming last 4 periods are afternoon
     return (afternoonSlots.length / totalAfternoonCapacity) * 100;
@@ -674,7 +769,7 @@ export class TimetableService {
           ]
         }
       });
-      
+       
       return true;
     } catch (error) {
       console.error('Error removing inactive teacher from timetable:', error);

@@ -2,15 +2,31 @@
  * Class and Stream Service
  * Handles class and stream management operations
  * Requirements: 2.3
- */
+ */  
 import { prisma } from '@/lib/db'
-import {
-  Class,
-  CreateClassInput,
-  Stream,
-  CreateStreamInput,
-  Subject,
-} from '@/types'
+import type { Class, Subject, Term } from '@/types'
+
+// Define local types since they're not exported from @/types
+interface CreateClassInput {
+  schoolId: string
+  name: string
+  level: number
+}
+
+interface Stream {
+  id: string
+  schoolId: string
+  classId: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface CreateStreamInput {
+  schoolId: string
+  classId: string
+  name: string
+}
 
 /**
  * Map Prisma Class to domain Class type
@@ -38,6 +54,7 @@ function mapPrismaClassToDomain(prismaClass: {
  */
 function mapPrismaStreamToDomain(prismaStream: {
   id: string
+  schoolId: string
   classId: string
   name: string
   createdAt: Date
@@ -45,6 +62,7 @@ function mapPrismaStreamToDomain(prismaStream: {
 }): Stream {
   return {
     id: prismaStream.id,
+    schoolId: prismaStream.schoolId,
     classId: prismaStream.classId,
     name: prismaStream.name,
     createdAt: prismaStream.createdAt,
@@ -60,7 +78,7 @@ function mapPrismaSubjectToDomain(prismaSubject: {
   schoolId: string
   name: string
   code: string
-  gradingSystemId: string | null
+  isActive: boolean
   createdAt: Date
   updatedAt: Date
 }): Subject {
@@ -69,7 +87,6 @@ function mapPrismaSubjectToDomain(prismaSubject: {
     schoolId: prismaSubject.schoolId,
     name: prismaSubject.name,
     code: prismaSubject.code,
-    gradingSystemId: prismaSubject.gradingSystemId ?? undefined,
     createdAt: prismaSubject.createdAt,
     updatedAt: prismaSubject.updatedAt,
   }
@@ -241,6 +258,7 @@ export class ClassService {
 
     const stream = await prisma.stream.create({
       data: {
+        schoolId: data.schoolId,
         classId: data.classId,
         name: data.name,
       },
@@ -337,7 +355,6 @@ export class ClassService {
   /**
    * Assign subjects to a class
    * Requirement 2.3: Allow assignment of subjects to classes
-   * Note: Each subject must have a defined grading system (Requirement 2.4)
    */
   async assignSubjectsToClass(classId: string, subjectIds: string[]): Promise<void> {
     // Validate class exists
@@ -363,13 +380,6 @@ export class ClassService {
       throw new Error(`Subjects not found or not in same school: ${missingIds.join(', ')}`)
     }
 
-    // Validate each subject has a grading system (Requirement 2.4)
-    const subjectsWithoutGrading = subjects.filter(s => !s.gradingSystemId)
-    if (subjectsWithoutGrading.length > 0) {
-      const names = subjectsWithoutGrading.map(s => s.name).join(', ')
-      throw new Error(`Subjects must have a grading system before assignment: ${names}`)
-    }
-
     // Remove existing assignments for this class
     await prisma.classSubject.deleteMany({
       where: { classId },
@@ -379,6 +389,7 @@ export class ClassService {
     if (subjectIds.length > 0) {
       await prisma.classSubject.createMany({
         data: subjectIds.map(subjectId => ({
+          schoolId: classRecord.schoolId,
           classId,
           subjectId,
         })),
@@ -424,11 +435,6 @@ export class ClassService {
       throw new Error('Subject must belong to the same school as the class')
     }
 
-    // Validate subject has a grading system (Requirement 2.4)
-    if (!subject.gradingSystemId) {
-      throw new Error(`Subject "${subject.name}" must have a grading system before assignment`)
-    }
-
     // Check if already assigned
     const existingAssignment = await prisma.classSubject.findUnique({
       where: {
@@ -445,6 +451,7 @@ export class ClassService {
 
     await prisma.classSubject.create({
       data: {
+        schoolId: classRecord.schoolId,
         classId,
         subjectId,
       },

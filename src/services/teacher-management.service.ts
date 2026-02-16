@@ -5,7 +5,7 @@
  * 
  * Core principle: A teacher is a role-bound institutional entity, not a user account.
  * Teachers are created as records first, then optionally granted system access.
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   Teacher,
@@ -112,7 +112,6 @@ function mapPrismaTeacherToDomain(prismaTeacher: {
   const channelConfig: ChannelConfig = {
     inAppMessaging: prismaTeacher.inAppMessagingEnabled,
     sms: prismaTeacher.smsEnabled,
-    whatsapp: false, // WhatsApp removed from schema
     email: prismaTeacher.emailEnabled,
   }
 
@@ -387,7 +386,7 @@ export class TeacherManagementService {
         canEnterMarks: DEFAULT_TEACHER_PERMISSIONS.canEnterMarks,
         canViewReports: DEFAULT_TEACHER_PERMISSIONS.canViewReports,
         canSendMessages: DEFAULT_TEACHER_PERMISSIONS.canSendMessages,
-        forcePasswordReset: true,
+        forcePasswordReset: false,
         inAppMessagingEnabled: DEFAULT_CHANNEL_CONFIG.inAppMessaging,
         smsEnabled: DEFAULT_CHANNEL_CONFIG.sms,
         emailEnabled: DEFAULT_CHANNEL_CONFIG.email,
@@ -403,7 +402,7 @@ export class TeacherManagementService {
     })
 
     // Log audit trail
-    await this.logTeacherHistory(teacher.id, TeacherEventType.CREATED, createdBy, undefined, {
+    await this.logTeacherHistory(teacher.id, schoolId, TeacherEventType.CREATED, createdBy, undefined, {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
@@ -602,6 +601,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.UPDATED,
       updatedBy,
       JSON.stringify(previousValue),
@@ -781,6 +781,7 @@ export class TeacherManagementService {
    */
   private async logTeacherHistory(
     teacherId: string,
+    schoolId: string,
     eventType: TeacherEventType,
     performedBy: string,
     previousValue?: string,
@@ -789,6 +790,7 @@ export class TeacherManagementService {
   ): Promise<void> {
     await prisma.teacherHistoryEntry.create({
       data: {
+        schoolId,
         teacherId,
         eventType,
         previousValue,
@@ -892,6 +894,7 @@ export class TeacherManagementService {
     // Log history entry (Requirement 2.9 - preserve historical data)
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.STATUS_CHANGED,
       updatedBy,
       previousStatus,
@@ -925,6 +928,7 @@ export class TeacherManagementService {
     if (isBecomingInactive && existingTeacher.hasSystemAccess) {
       await this.logTeacherHistory(
         teacherId,
+        schoolId,
         TeacherEventType.ACCESS_REVOKED,
         updatedBy,
         JSON.stringify({ hasSystemAccess: true, accessLevel: existingTeacher.accessLevel }),
@@ -982,6 +986,7 @@ export class TeacherManagementService {
       // Log the access revocation
       await this.logTeacherHistory(
         teacherId,
+        schoolId,
         TeacherEventType.ACCESS_REVOKED,
         changedBy,
         JSON.stringify({ hasSystemAccess: true, accessLevel: teacher.accessLevel }),
@@ -1072,6 +1077,7 @@ export class TeacherManagementService {
       // Create a history entry for the exclusion
       await this.logTeacherHistory(
         teacherId,
+        schoolId,
         TeacherEventType.UPDATED,
         'SYSTEM',
         undefined,
@@ -1503,7 +1509,7 @@ export class TeacherManagementService {
           role: userRole,
           roles: [userRole],
           isActive: true,
-          forcePasswordReset: true, // Always force reset on initial grant (Requirement 4.5)
+          forcePasswordReset: false, // No forced password reset on initial grant
         },
       })
 
@@ -1518,7 +1524,7 @@ export class TeacherManagementService {
           canEnterMarks: accessData.permissions.canEnterMarks,
           canViewReports: accessData.permissions.canViewReports,
           canSendMessages: accessData.permissions.canSendMessages,
-          forcePasswordReset: true,
+          forcePasswordReset: false,
           inAppMessagingEnabled: accessData.channelConfig.inAppMessaging,
           smsEnabled: accessData.channelConfig.sms,
           // whatsappEnabled removed from schema
@@ -1535,6 +1541,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.ACCESS_GRANTED,
       grantedBy,
       JSON.stringify({ hasSystemAccess: false, accessLevel: TeacherAccessLevel.NONE }),
@@ -1559,7 +1566,7 @@ export class TeacherManagementService {
         hasSystemAccess: true,
         accessLevel: accessData.accessLevel,
         userId: result.user.id,
-        forcePasswordReset: true,
+        forcePasswordReset: false,
       },
     })
 
@@ -1697,6 +1704,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.ACCESS_REVOKED,
       revokedBy,
       JSON.stringify({
@@ -1808,6 +1816,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PERMISSIONS_UPDATED,
       updatedBy,
       JSON.stringify(previousPermissions),
@@ -1896,6 +1905,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PERMISSIONS_UPDATED,
       updatedBy,
       JSON.stringify({ accessLevel: previousAccessLevel }),
@@ -1953,7 +1963,6 @@ export class TeacherManagementService {
     const previousChannelConfig: import('@/types/teacher').ChannelConfig = {
       inAppMessaging: existingTeacher.inAppMessagingEnabled,
       sms: existingTeacher.smsEnabled,
-      whatsapp: false, // WhatsApp removed from schema
       email: existingTeacher.emailEnabled,
     }
 
@@ -1974,6 +1983,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PERMISSIONS_UPDATED,
       updatedBy,
       JSON.stringify({ channelConfig: previousChannelConfig }),
@@ -2084,7 +2094,6 @@ export class TeacherManagementService {
     return {
       inAppMessaging: teacher.inAppMessagingEnabled,
       sms: teacher.smsEnabled,
-      whatsapp: false, // WhatsApp removed from schema
       email: teacher.emailEnabled,
     }
   }
@@ -2395,6 +2404,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PAYROLL_UPDATED,
       updatedBy,
       JSON.stringify(previousPayrollInfo),
@@ -2536,6 +2546,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PAYROLL_UPDATED,
       updatedBy,
       JSON.stringify({ paymentStatus: previousStatus }),
@@ -2734,6 +2745,7 @@ export class TeacherManagementService {
     // Log history entry
     await this.logTeacherHistory(
       teacherId,
+      schoolId,
       TeacherEventType.PAYROLL_UPDATED,
       clearedBy,
       JSON.stringify(previousPayrollInfo),

@@ -10,13 +10,17 @@ import {
   BookOpen, 
   Edit2,
   Layers,
-  UserCheck
+  UserCheck,
+  X,
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { AlertBanner } from '@/components/ui/alert-banner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { cn } from '@/lib/utils'
 
 /**
  * Class Detail Page
@@ -51,10 +55,18 @@ interface ClassDetail {
   id: string
   name: string
   level: number
+  levelType?: 'O_LEVEL' | 'A_LEVEL' | null
   streams: StreamDetail[]
   classTeacher: TeacherInfo | null
   subjectTeachers: SubjectTeacher[]
   studentCount: number
+  assignedSubjects?: {
+    id: string
+    subjectId: string
+    subjectName: string
+    subjectCode: string
+    isCompulsory: boolean
+  }[]
 }
 
 export default function ClassDetailPage() {
@@ -65,6 +77,10 @@ export default function ClassDetailPage() {
   const [classData, setClassData] = useState<ClassDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showSubjectDialog, setShowSubjectDialog] = useState(false)
+  const [availableSubjects, setAvailableSubjects] = useState<any[]>([])
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([])
+  const [savingSubjects, setSavingSubjects] = useState(false)
 
   const fetchClassDetails = useCallback(async () => {
     try {
@@ -109,6 +125,56 @@ export default function ClassDetailPage() {
 
   const handleAssignTeacher = () => {
     router.push(`/dashboard/classes/${classId}/assign-teacher`)
+  }
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await fetch('/api/subjects')
+      if (response.ok) {
+        const subjects = await response.json()
+        // Filter only O-Level subjects
+        const oLevelSubjects = subjects.filter((s: any) => s.levelType === 'O_LEVEL')
+        setAvailableSubjects(oLevelSubjects)
+      }
+    } catch (err) {
+      console.error('Error fetching subjects:', err)
+    }
+  }
+
+  const handleManageSubjects = () => {
+    fetchAvailableSubjects()
+    // Pre-select already assigned subjects
+    const assigned = classData?.assignedSubjects?.map(s => s.subjectId) || []
+    setSelectedSubjects(assigned)
+    setShowSubjectDialog(true)
+  }
+
+  const handleToggleSubject = (subjectId: string) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subjectId)
+        ? prev.filter(id => id !== subjectId)
+        : [...prev, subjectId]
+    )
+  }
+
+  const handleSaveSubjects = async () => {
+    try {
+      setSavingSubjects(true)
+      const response = await fetch(`/api/classes/${classId}/subjects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectIds: selectedSubjects })
+      })
+
+      if (response.ok) {
+        setShowSubjectDialog(false)
+        fetchClassDetails() // Refresh to show updated subjects
+      }
+    } catch (err) {
+      console.error('Error saving subjects:', err)
+    } finally {
+      setSavingSubjects(false)
+    }
   }
 
   if (loading) {
@@ -250,6 +316,54 @@ export default function ClassDetailPage() {
         </Card>
       </div>
 
+      {/* Subject Configuration Section - Only for O-Level classes */}
+      {classData.levelType === 'O_LEVEL' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-[var(--accent-primary)]" />
+                <CardTitle className="text-lg">Subject Configuration</CardTitle>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleManageSubjects} className="gap-1">
+                <Edit2 className="h-4 w-4" />
+                Manage Subjects
+              </Button>
+            </div>
+            <CardDescription>
+              Subjects assigned to this O-Level class
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {classData.assignedSubjects && classData.assignedSubjects.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {classData.assignedSubjects.map((subject) => (
+                  <div 
+                    key={subject.id}
+                    className="p-3 rounded-lg border bg-card flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{subject.subjectName}</p>
+                        <p className="text-xs text-muted-foreground">{subject.subjectCode}</p>
+                      </div>
+                    </div>
+                    <Badge variant={subject.isCompulsory ? 'default' : 'secondary'} className="text-xs">
+                      {subject.isCompulsory ? 'Compulsory' : 'Optional'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No subjects assigned yet. Click "Manage Subjects" to add subjects to this class.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Subject Teachers Section */}
       <Card>
         <CardHeader>
@@ -294,6 +408,102 @@ export default function ClassDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Subject Management Dialog */}
+      <DialogPrimitive.Root open={showSubjectDialog} onOpenChange={setShowSubjectDialog}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay
+            className={cn(
+              'fixed inset-0 z-50 bg-black/20 dark:bg-black/40',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
+            )}
+          />
+          <DialogPrimitive.Content
+            className={cn(
+              'fixed left-[50%] top-[50%] z-50 w-full max-w-2xl max-h-[80vh]',
+              'translate-x-[-50%] translate-y-[-50%]',
+              'bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-lg p-6',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+              'duration-200 overflow-y-auto'
+            )}
+          >
+            <DialogPrimitive.Close
+              className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"
+              onClick={() => setShowSubjectDialog(false)}
+            >
+              <X className="h-4 w-4" />
+            </DialogPrimitive.Close>
+
+            <DialogPrimitive.Title className="text-lg font-semibold mb-4">
+              Manage Class Subjects
+            </DialogPrimitive.Title>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Select O-Level subjects to assign to this class. Students will be able to choose from these subjects.
+            </p>
+
+            <div className="space-y-2 mb-6">
+              {availableSubjects.length > 0 ? (
+                availableSubjects.map((subject) => (
+                  <div
+                    key={subject.id}
+                    className={cn(
+                      'flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors',
+                      selectedSubjects.includes(subject.id)
+                        ? 'bg-primary/10 border-primary'
+                        : 'hover:bg-muted'
+                    )}
+                    onClick={() => handleToggleSubject(subject.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'h-5 w-5 rounded border-2 flex items-center justify-center',
+                        selectedSubjects.includes(subject.id)
+                          ? 'bg-primary border-primary'
+                          : 'border-muted-foreground'
+                      )}>
+                        {selectedSubjects.includes(subject.id) && (
+                          <Check className="h-3 w-3 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{subject.name}</p>
+                        <p className="text-xs text-muted-foreground">{subject.code}</p>
+                      </div>
+                    </div>
+                    <Badge variant={subject.isCompulsory ? 'default' : 'secondary'} className="text-xs">
+                      {subject.isCompulsory ? 'Compulsory' : 'Optional'}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No O-Level subjects available. Create O-Level subjects first.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSubjectDialog(false)}
+                disabled={savingSubjects}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveSubjects}
+                disabled={savingSubjects || availableSubjects.length === 0}
+              >
+                {savingSubjects ? 'Saving...' : `Save (${selectedSubjects.length} selected)`}
+              </Button>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </div>
   )
 }

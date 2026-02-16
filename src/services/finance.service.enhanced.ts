@@ -6,7 +6,7 @@
  * - Issue #11: No Overpayment Protection
  * 
  * All payment operations are now fully transactional and use decimal math
- */
+ */  
 import { prisma } from '@/lib/db'
 import type {
   PaymentMethod,
@@ -299,7 +299,7 @@ export async function recordPayment(data: RecordPaymentInput): Promise<PaymentRe
           schoolId: data.schoolId,
           userId: data.receivedBy,
           action: 'PAYMENT_RECORDED',
-          resourceType: 'Payment',
+          resource: "Payment",
           resourceId: payment.id,
           newValue: {
             amount: data.amount,
@@ -457,7 +457,7 @@ export async function reversePayment(
           schoolId,
           userId,
           action: 'PAYMENT_REVERSED',
-          resourceType: 'Payment',
+          resource: "Payment",
           resourceId: paymentId,
           previousValue,
           newValue: {

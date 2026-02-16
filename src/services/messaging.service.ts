@@ -2,9 +2,9 @@
  * Messaging Service
  * Handles direct parent-school communication
  * Requirements: 36.1, 36.2, 36.3, 36.4, 36.5
- */
+ */   
 import { prisma } from '@/lib/db'
-import {
+import type {
   Conversation,
   DirectMessage,
   CreateConversationInput,
@@ -12,12 +12,13 @@ import {
   ConversationWithMessages,
   ConversationSummary,
   MessageNotificationResult,
-} from '@/types'
+} from '@/types/entities'
 import {
   DirectMessageStatus,
   ConversationParticipantType,
   Role,
   MessageChannel,
+  MessageTemplateType,
 } from '@/types/enums'
 
 /**
@@ -314,6 +315,7 @@ export class MessagingService {
 
     const message = await prisma.directMessage.create({
       data: {
+        schoolId: conversation.schoolId,
         conversationId: input.conversationId,
         senderId: input.senderId,
         senderType: input.senderType,
@@ -357,7 +359,7 @@ export class MessagingService {
       } else {
         const guardian = await prisma.guardian.findUnique({
           where: { id: conversation.guardianId },
-          select: { preferredChannel: true, phone: true, email: true, whatsappNumber: true },
+          select: { preferredChannel: true, phone: true, email: true },
         })
 
         if (!guardian) {
@@ -368,7 +370,7 @@ export class MessagingService {
         
         const result = await communicationService.sendMessage({
           studentId: conversation.studentId,
-          templateType: 'GENERAL_ANNOUNCEMENT' as any,
+          templateType: MessageTemplateType.GENERAL_ANNOUNCEMENT,
           data: {
             content: 'You have a new message from your child\'s school. Please check your messages.',
           },
@@ -688,23 +690,19 @@ export class MessagingService {
   determineNotificationChannel(
     preferredChannel: MessageChannel,
     hasPhone: boolean,
-    hasEmail: boolean,
-    hasWhatsApp: boolean
+    hasEmail: boolean
   ): MessageChannel | null {
     switch (preferredChannel) {
       case MessageChannel.SMS:
         if (hasPhone) return MessageChannel.SMS
-        break
-      case MessageChannel.WHATSAPP:
-        if (hasWhatsApp) return MessageChannel.WHATSAPP
         break
       case MessageChannel.EMAIL:
         if (hasEmail) return MessageChannel.EMAIL
         break
     }
 
+    // Fallback priority: SMS > EMAIL
     if (hasPhone) return MessageChannel.SMS
-    if (hasWhatsApp) return MessageChannel.WHATSAPP
     if (hasEmail) return MessageChannel.EMAIL
 
     return null

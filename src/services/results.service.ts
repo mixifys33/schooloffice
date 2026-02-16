@@ -4,8 +4,8 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  */
 import { prisma } from '@/lib/db'
-import { Result, Mark, GradeRange, PublishedReportCard, PublishReportCardInput, ReportCardAccessResult } from '@/types'
-
+import { Result, GradeRange, PublishedReportCard, PublishReportCardInput, ReportCardAccessResult } from '@/types'
+   
 /**
  * Map Prisma Result to domain Result type
  */
@@ -227,34 +227,18 @@ export class ResultsService {
         examId: { in: examIds },
       },
       include: {
-        subject: {
-          include: {
-            gradingSystem: {
-              include: { grades: true },
-            },
-          },
-        },
+        subject: true,
       },
     })
 
     // Aggregate marks by subject (sum scores across exams)
     const subjectMarks = new Map<
       string,
-      { subjectId: string; subjectName: string; totalScore: number; totalMaxScore: number; gradeRanges: GradeRange[] }
+      { subjectId: string; subjectName: string; totalScore: number; totalMaxScore: number }
     >()
 
     for (const mark of marks) {
       const existing = subjectMarks.get(mark.subjectId)
-      const gradeRanges: GradeRange[] = mark.subject.gradingSystem?.grades.map((g) => ({
-        id: g.id,
-        gradingSystemId: g.gradingSystemId,
-        grade: g.grade,
-        minScore: g.minScore,
-        maxScore: g.maxScore,
-        points: g.points,
-        remarks: g.remarks ?? undefined,
-        createdAt: g.createdAt,
-      })) ?? []
 
       if (existing) {
         existing.totalScore += mark.score
@@ -265,7 +249,6 @@ export class ResultsService {
           subjectName: mark.subject.name,
           totalScore: mark.score,
           totalMaxScore: mark.maxScore,
-          gradeRanges,
         })
       }
     }
@@ -273,14 +256,13 @@ export class ResultsService {
     // Calculate percentages and grades
     const subjectResults = Array.from(subjectMarks.values()).map((sm) => {
       const percentage = this.calculatePercentage(sm.totalScore, sm.totalMaxScore)
-      const grade = this.determineGrade(percentage, sm.gradeRanges)
       return {
         subjectId: sm.subjectId,
         subjectName: sm.subjectName,
         score: sm.totalScore,
         maxScore: sm.totalMaxScore,
         percentage,
-        grade,
+        grade: undefined, // Grade calculation requires grading system - to be implemented
       }
     })
 
@@ -288,10 +270,8 @@ export class ResultsService {
     const totalMaxMarks = subjectResults.reduce((sum, s) => sum + s.maxScore, 0)
     const average = this.calculateAverage(totalMarks, subjectResults.length)
 
-    // Get overall grade based on average percentage
-    const overallPercentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0
-    const defaultGradeRanges = subjectResults[0]?.grade ? subjectMarks.values().next().value?.gradeRanges : []
-    const overallGrade = this.determineGrade(overallPercentage, defaultGradeRanges || [])
+    // Get overall grade - to be implemented with grading system
+    const overallGrade = undefined
 
     return {
       studentId,
@@ -346,16 +326,18 @@ export class ResultsService {
     // Calculate positions
     const withPositions = this.calculatePositions(studentSummaries)
 
-    // Get grade for each student
-    const resultsWithGrades = await Promise.all(
-      withPositions.map(async (r) => {
-        const summary = await this.getStudentMarksSummary(r.studentId, termId)
-        return {
-          ...r,
-          grade: summary?.overallGrade,
-        }
-      })
-    )
+    // Add grade and complete student info
+    const resultsWithGrades = withPositions.map((r) => {
+      const studentInfo = studentSummaries.find(s => s.studentId === r.studentId)
+      return {
+        studentId: r.studentId,
+        studentName: studentInfo?.studentName || '',
+        totalMarks: studentInfo?.totalMarks || 0,
+        average: r.average,
+        position: r.position,
+        grade: undefined,
+      }
+    })
 
     return {
       classId,
@@ -371,6 +353,7 @@ export class ResultsService {
    */
   async saveResults(
     termId: string,
+    schoolId: string,
     results: { studentId: string; totalMarks: number; average: number; position: number; totalStudents: number; grade?: string }[]
   ): Promise<Result[]> {
     const savedResults: Result[] = []
@@ -393,6 +376,7 @@ export class ResultsService {
         create: {
           studentId: result.studentId,
           termId,
+          schoolId,
           totalMarks: result.totalMarks,
           average: result.average,
           position: result.position,
@@ -410,7 +394,7 @@ export class ResultsService {
   /**
    * Process and save results for a class
    */
-  async processAndSaveClassResults(classId: string, termId: string): Promise<Result[]> {
+  async processAndSaveClassResults(classId: string, termId: string, schoolId: string): Promise<Result[]> {
     const summary = await this.processClassResults(classId, termId)
 
     const resultsToSave = summary.results.map((r) => ({
@@ -422,7 +406,7 @@ export class ResultsService {
       grade: r.grade,
     }))
 
-    return this.saveResults(termId, resultsToSave)
+    return this.saveResults(termId, schoolId, resultsToSave)
   }
 
   /**

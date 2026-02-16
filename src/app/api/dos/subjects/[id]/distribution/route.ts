@@ -7,11 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+// GET /api/dos/subjects/[id]/distribution - Get subject distribution data
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: subjectId } = await params;
     const session = await auth();
     
     if (!session?.user) {

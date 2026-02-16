@@ -9,7 +9,7 @@
  * - Any attempt to modify or delete hub audit entries will throw HubAuditImmutabilityError
  * - This ensures complete audit trail integrity for Super Admin accountability
  */
-
+  
 import { prisma } from '../lib/db'
 import { 
   HubAuditService as IHubAuditService,

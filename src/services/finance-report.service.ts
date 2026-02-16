@@ -2,7 +2,7 @@
  * Finance Report Service
  * Generates comprehensive finance reports with accurate aggregations
  * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8
- *
+ *   
  * Property 18: Report Total Consistency
  * For any generated report, the totals SHALL match the sum of actual receipt records for the same period.
  */

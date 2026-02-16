@@ -10,6 +10,7 @@ export interface ClassDetailResponse {
   id: string
   name: string
   level: number
+  levelType?: 'O_LEVEL' | 'A_LEVEL' | null
   streams: {
     id: string
     name: string
@@ -32,6 +33,13 @@ export interface ClassDetailResponse {
     }[]
   }[]
   studentCount: number
+  assignedSubjects?: {
+    id: string
+    subjectId: string
+    subjectName: string
+    subjectCode: string
+    isCompulsory: boolean
+  }[]
 }
 
 // GET: Get class details with teachers
@@ -127,6 +135,17 @@ export async function GET(
       },
     })
 
+    // Prepare assigned subjects for O-Level classes
+    const assignedSubjects = classRecord.levelType === 'O_LEVEL' 
+      ? classSubjects.map(cs => ({
+          id: cs.id,
+          subjectId: cs.subject.id,
+          subjectName: cs.subject.name,
+          subjectCode: cs.subject.code,
+          isCompulsory: cs.subject.isCompulsory ?? true,
+        }))
+      : undefined
+
     // Get staff who teach subjects in this class
     const subjectIds = classSubjects.map(cs => cs.subjectId)
     const staffSubjects = await prisma.staffSubject.findMany({
@@ -186,6 +205,7 @@ export async function GET(
       id: classRecord.id,
       name: classRecord.name,
       level: classRecord.level,
+      levelType: classRecord.levelType,
       streams: classRecord.streams.map(s => ({
         id: s.id,
         name: s.name,
@@ -199,6 +219,7 @@ export async function GET(
       } : null,
       subjectTeachers: Array.from(teacherSubjectsMap.values()),
       studentCount: totalStudentCount,
+      assignedSubjects,
     }
 
     return NextResponse.json(result)
@@ -236,7 +257,15 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, level, classTeacherId } = body
+    const { name, level, levelType, classTeacherId } = body
+
+    // Validate levelType if provided
+    if (levelType && !['O_LEVEL', 'A_LEVEL'].includes(levelType)) {
+      return NextResponse.json(
+        { error: 'Invalid level type. Must be O_LEVEL or A_LEVEL' },
+        { status: 400 }
+      )
+    }
 
     // Verify class belongs to school
     const existingClass = await prisma.class.findFirst({
@@ -269,9 +298,10 @@ export async function PUT(
     }
 
     // Update class
-    const updateData: { name?: string; level?: number } = {}
+    const updateData: { name?: string; level?: number; levelType?: string } = {}
     if (name) updateData.name = name
     if (level !== undefined) updateData.level = level
+    if (levelType) updateData.levelType = levelType
 
     const updatedClass = await prisma.class.update({
       where: { id },

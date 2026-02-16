@@ -117,7 +117,7 @@ export class DoSAssessmentService {
       schoolId: curriculumSubject.schoolId,
       userId: input.createdBy,
       action: 'CREATE_ASSESSMENT_PLAN',
-      resourceType: 'DoSAssessmentPlan',
+      resource: "DoSAssessmentPlan",
       resourceId: assessmentPlan.id,
       resourceName: `${input.assessmentName} - ${curriculumSubject.subject.name} - ${curriculumSubject.class.name}`,
       newValue: assessmentPlan
@@ -175,7 +175,7 @@ export class DoSAssessmentService {
       schoolId: existing.curriculumSubject.schoolId,
       userId: approval.dosUserId,
       action: 'APPROVE_ASSESSMENT_PLAN',
-      resourceType: 'DoSAssessmentPlan',
+      resource: "DoSAssessmentPlan",
       resourceId: id,
       resourceName: `${existing.assessmentName} - ${existing.curriculumSubject.subject.name}`,
       reason: approval.reason,
@@ -233,7 +233,7 @@ export class DoSAssessmentService {
       schoolId: existing.curriculumSubject.schoolId,
       userId: lockedBy,
       action: 'LOCK_ASSESSMENT_PLAN',
-      resourceType: 'DoSAssessmentPlan',
+      resource: "DoSAssessmentPlan",
       resourceId: id,
       resourceName: `${existing.assessmentName} - ${existing.curriculumSubject.subject.name}`,
       reason,
@@ -324,7 +324,7 @@ export class DoSAssessmentService {
         schoolId: assessmentPlan.curriculumSubject.schoolId,
         userId: input.teacherId,
         action: 'UPDATE_CONTINUOUS_ASSESSMENT',
-        resourceType: 'DoSContinuousAssessment',
+        resource: "DoSContinuousAssessment",
         resourceId: assessment.id,
         resourceName: `${assessmentPlan.assessmentName} - ${assessment.student.admissionNumber}`,
         previousValue: existing,
@@ -364,7 +364,7 @@ export class DoSAssessmentService {
         schoolId: assessmentPlan.curriculumSubject.schoolId,
         userId: input.teacherId,
         action: 'CREATE_CONTINUOUS_ASSESSMENT',
-        resourceType: 'DoSContinuousAssessment',
+        resource: "DoSContinuousAssessment",
         resourceId: assessment.id,
         resourceName: `${assessmentPlan.assessmentName} - ${assessment.student.admissionNumber}`,
         newValue: assessment
@@ -590,6 +590,117 @@ export class DoSAssessmentService {
       scaledCAScore,
       assessmentBreakdown
     };
+  }
+
+  /**
+   * Get assessments with filters (for API compatibility)
+   */
+  async getAssessments(filters: {
+    schoolId: string;
+    classId?: string;
+    subjectId?: string;
+    termId?: string;
+    type?: string;
+  }) {
+    const where: any = {
+      curriculumSubject: { schoolId: filters.schoolId }
+    };
+
+    if (filters.termId) {
+      where.termId = filters.termId;
+    }
+
+    if (filters.classId) {
+      where.curriculumSubject.classId = filters.classId;
+    }
+
+    if (filters.subjectId) {
+      where.curriculumSubject.subjectId = filters.subjectId;
+    }
+
+    if (filters.type) {
+      where.assessmentType = filters.type;
+    }
+
+    return prisma.doSAssessmentPlan.findMany({
+      where,
+      include: {
+        curriculumSubject: {
+          include: {
+            subject: { select: { name: true, code: true } },
+            class: { select: { name: true } }
+          }
+        },
+        term: { select: { name: true } },
+        assessments: {
+          select: {
+            id: true,
+            studentId: true,
+            score: true,
+            submittedAt: true
+          }
+        }
+      },
+      orderBy: { dueDate: 'desc' }
+    });
+  }
+
+  /**
+   * Create assessment (for API compatibility)
+   */
+  async createAssessment(input: {
+    schoolId: string;
+    title: string;
+    description?: string;
+    subjectId: string;
+    classId: string;
+    termId: string;
+    assessmentType: string;
+    totalMarks: number;
+    passingMarks: number;
+    dueDate: string;
+    instructions?: string;
+    isActive?: boolean;
+    createdBy: string;
+  }) {
+    // Find or create curriculum subject
+    let curriculumSubject = await prisma.doSCurriculumSubject.findFirst({
+      where: {
+        schoolId: input.schoolId,
+        classId: input.classId,
+        subjectId: input.subjectId
+      }
+    });
+
+    if (!curriculumSubject) {
+      // Create curriculum subject if it doesn't exist
+      curriculumSubject = await prisma.doSCurriculumSubject.create({
+        data: {
+          schoolId: input.schoolId,
+          classId: input.classId,
+          subjectId: input.subjectId,
+          caWeight: 20,
+          examWeight: 80,
+          isCore: false,
+          periodsPerWeek: 5,
+          dosApproved: false
+        }
+      });
+    }
+
+    // Create assessment plan
+    return this.createAssessmentPlan({
+      curriculumSubjectId: curriculumSubject.id,
+      termId: input.termId,
+      assessmentType: input.assessmentType as any,
+      assessmentName: input.title,
+      maxScore: input.totalMarks,
+      weightPercentage: 5, // Default 5% weight
+      dueDate: new Date(input.dueDate),
+      instructions: input.instructions,
+      evidenceRequired: false,
+      createdBy: input.createdBy
+    });
   }
 
   /**

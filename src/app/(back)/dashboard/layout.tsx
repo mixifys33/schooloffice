@@ -542,7 +542,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   }
 
   // Check if we're in routes that have their own standalone layouts
-  const isDosRoute = pathname.startsWith('/dashboard/dos')
+  const isDosRoute = pathname.startsWith('/dos')
   const isBursarRoute = pathname.startsWith('/dashboard/bursar')
   
   // If this is a route with its own layout, render children without the admin dashboard layout
@@ -563,7 +563,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
         brandText="SchoolOffice"
         subtitle={getSubtitleForRole(currentRole)}
         headerContent={
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
             {/* Context Display - Requirements: 9.4, 18.5 */}
             {/* Temporarily disabled to debug React error */}
             {/* <InlineContextDisplay className="hidden md:flex" /> */}
@@ -584,14 +584,17 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             {/* Temporarily disabled to debug React error */}
             {/* <StaffOnboardingButton /> */}
             
-            <ThemeToggle />
+            {/* Theme toggle - hidden on very small screens to save space */}
+            <div className="hidden xs:block">
+              <ThemeToggle />
+            </div>
             <Button 
               variant="ghost" 
               size="touch-icon" 
-              className="relative"
+              className="relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => router.push('/dashboard/notifications')}
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
               {notificationCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] text-[var(--white-pure)]">
                   {notificationCount > 99 ? '99+' : notificationCount}
@@ -601,9 +604,10 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             <Button 
               variant="ghost" 
               size="touch-icon"
+              className="h-9 w-9 sm:h-10 sm:w-10"
               onClick={() => router.push('/dashboard/profile')}
             >
-              <User className="h-5 w-5" />
+              <User className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         }

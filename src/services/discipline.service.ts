@@ -9,7 +9,7 @@ import {
   CreateDisciplineCaseInput,
 } from '@/types'
 import { DisciplineType, DisciplineAction, MessageTemplateType } from '@/types/enums'
-
+   
 /**
  * Map Prisma DisciplineCase to domain DisciplineCase type
  */

@@ -10,7 +10,7 @@
  * Gmail (SMTP) is the primary/default email gateway.
  * SendGrid is the fallback when Gmail fails or has errors.
  * The active provider can be switched in the super admin dashboard (Communication section).
- */
+ */  
 
 import { MessageStatus } from '@/types/enums'
 import nodemailer from 'nodemailer'

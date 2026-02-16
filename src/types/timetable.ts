@@ -132,7 +132,7 @@ export interface TimetableSlot {
 export interface TimetableConflict {
   id: string;
   timetableId: string;
-  conflictType: ConflictType;
+  conflictType: 'TEACHER_CLASH' | 'ROOM_CLASH' | 'CLASS_CLASH' | 'SUBJECT_PERIODS' | 'TEACHER_OVERLOAD' | 'CONSTRAINT_VIOLATION';
   severity: ConflictSeverity;
   title: string;
   description: string;
@@ -151,6 +151,7 @@ export enum ConflictType {
   TEACHER_CLASH = 'TEACHER_CLASH',
   ROOM_CLASH = 'ROOM_CLASH',
   CLASS_CLASH = 'CLASS_CLASH',
+  SUBJECT_PERIODS = 'SUBJECT_PERIODS',
   MISSING_PERIODS = 'MISSING_PERIODS',
   TEACHER_OVERLOAD = 'TEACHER_OVERLOAD',
   CONSTRAINT_VIOLATION = 'CONSTRAINT_VIOLATION'
@@ -281,7 +282,6 @@ export interface TimetableAnalytics {
   morningSlotUsage: number; // percentage
   afternoonSlotUsage: number; // percentage
   calculatedAt: Date;
-  [key: string]: any; // Add index signature for compatibility with Prisma Json
 }
 
 // ============================================
@@ -307,14 +307,18 @@ export interface TimetableSolution {
 export interface GenerationContext {
   schoolId: string;
   termId: string;
-  classes: any[];
-  subjects: any[];
-  teachers: any[];
-  rooms: any[];
-  timeStructure: any;
-  requirements: any[];
-  teacherConstraints: any[];
-  roomConstraints: any[];
+  classes: Array<{ id: string; name: string; [key: string]: unknown }>;
+  subjects: Array<{ id: string; name: string; periodsPerWeek: number; [key: string]: unknown }>;
+  teachers: Array<{ id: string; name: string; [key: string]: unknown }>;
+  rooms: Array<{ id: string; name: string; [key: string]: unknown }>;
+  timeStructure: {
+    periodsPerDay: number;
+    daysPerWeek: number;
+    [key: string]: unknown;
+  };
+  requirements: Array<{ id: string; [key: string]: unknown }>;
+  teacherConstraints: Array<{ teacherId: string; [key: string]: unknown }>;
+  roomConstraints: Array<{ roomId: string; [key: string]: unknown }>;
 }
 
 // ============================================

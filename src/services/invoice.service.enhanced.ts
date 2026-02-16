@@ -3,14 +3,12 @@
  * Fixes Issue #5: Invoice Generation Without Idempotency
  * 
  * Prevents duplicate invoices through transaction-based uniqueness checks
- */
+ */   
 import { prisma } from '@/lib/db'
 import { generateInvoiceNumber } from '@/lib/atomic-counter'
 import type {
   Invoice,
-  InvoiceFilters,
   InvoiceStatus,
-  PaginatedInvoices,
   FeeCategory,
 } from '@/types/finance'
 import { FinanceAuditService } from './finance-audit.service'
@@ -100,7 +98,7 @@ export async function generateInvoice(
       include: {
         class: true,
         stream: true,
-        account: true,
+        studentAccounts: true,
         studentGuardians: {
           where: { isPrimary: true },
           include: { guardian: true },
@@ -130,7 +128,8 @@ export async function generateInvoice(
     }
 
     // Get student type from account or default to DAY
-    const studentType = student.account?.studentType || 'DAY'
+    const studentAccount = student.studentAccounts?.[0]
+    const studentType = studentAccount?.studentType || 'DAY'
 
     // Get fee structure for this student's class, term, and type
     const feeStructure = await tx.feeStructure.findFirst({
@@ -158,10 +157,10 @@ export async function generateInvoice(
     const subtotal = feeStructure.items.reduce((sum, item) => sum + item.amount, 0)
 
     // Get approved discounts for this term
-    const discounts = student.account
+    const discounts = studentAccount
       ? await tx.studentDiscount.findMany({
           where: {
-            studentAccountId: student.account.id,
+            studentAccountId: studentAccount.id,
             termId,
             status: 'APPROVED',
           },
@@ -170,10 +169,10 @@ export async function generateInvoice(
     const discountAmount = discounts.reduce((sum, d) => sum + d.calculatedAmount, 0)
 
     // Get non-waived penalties for this term
-    const penalties = student.account
+    const penalties = studentAccount
       ? await tx.studentPenalty.findMany({
           where: {
-            studentAccountId: student.account.id,
+            studentAccountId: studentAccount.id,
             termId,
             isWaived: false,
           },
@@ -230,6 +229,7 @@ export async function generateInvoice(
         issuedBy,
         items: {
           create: feeStructure.items.map((item) => ({
+            schoolId: student.schoolId,
             description: item.name,
             category: item.category as FeeCategory,
             amount: item.amount,
@@ -251,9 +251,9 @@ export async function generateInvoice(
             schoolId: student.schoolId,
             userId: issuedBy,
             action: 'INVOICE_GENERATED',
-            resourceType: 'Invoice',
-            resourceId: invoice.id,
-            newValue: {
+            entityType: 'Invoice',
+            entityId: invoice.id,
+            details: {
               invoiceNumber,
               studentId,
               termId,

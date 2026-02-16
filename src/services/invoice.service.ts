@@ -2,7 +2,7 @@
  * Invoice Service
  * Generates and manages student invoices
  * Requirements: 6.1, 6.5
- *
+ *   
  * Property 26: Invoice Content Completeness
  * For any generated invoice, the invoice SHALL contain all fee items,
  * applied discounts, applied penalties, payments made, and balance due.
@@ -45,8 +45,28 @@ export class InvoiceError extends Error {
  * Generate unique invoice number based on school settings
  */
 async function generateInvoiceNumber(schoolId: string): Promise<string> {
-  const settings = await prisma.financeSettings.findUnique({
-    where: { schoolId },
+  // Get current term to use in compound unique key
+  const currentTerm = await prisma.term.findFirst({
+    where: {
+      academicYear: {
+        schoolId,
+        isCurrent: true,
+      },
+      startDate: { lte: new Date() },
+      endDate: { gte: new Date() },
+    },
+  })
+
+  if (!currentTerm) {
+    throw new InvoiceError(
+      INVOICE_ERRORS.TERM_NOT_FOUND,
+      'No active term found for invoice generation',
+      { schoolId }
+    )
+  }
+
+  const settings = await prisma.financeSettings.findFirst({
+    where: { schoolId, termId: currentTerm.id },
   })
 
   const prefix = settings?.invoicePrefix || 'INV'
@@ -55,30 +75,22 @@ async function generateInvoiceNumber(schoolId: string): Promise<string> {
 
   // Atomically increment the invoice number
   await prisma.financeSettings.upsert({
-    where: { schoolId },
+    where: {
+      schoolId_termId: {
+        schoolId,
+        termId: currentTerm.id,
+      },
+    },
     update: { nextInvoiceNumber: nextNumber + 1 },
     create: {
       schoolId,
+      termId: currentTerm.id,
       nextInvoiceNumber: nextNumber + 1,
     },
   })
 
   // Format: PREFIX-YEAR-NNNNNN (e.g., INV-2026-000001)
   return `${prefix}-${year}-${String(nextNumber).padStart(6, '0')}`
-}
-
-/**
- * Get user name for display
- */
-async function getUserName(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { staff: true },
-  })
-  if (user?.staff) {
-    return `${user.staff.firstName} ${user.staff.lastName}`
-  }
-  return user?.email || 'Unknown'
 }
 
 /**
@@ -125,7 +137,10 @@ export async function generateInvoice(
     include: {
       class: true,
       stream: true,
-      account: true,
+      studentAccounts: {
+        where: { termId },
+        take: 1,
+      },
       studentGuardians: {
         where: { isPrimary: true },
         include: { guardian: true },
@@ -155,7 +170,8 @@ export async function generateInvoice(
   }
 
   // Get student type from account or default to DAY
-  const studentType = student.account?.studentType || 'DAY'
+  const studentAccount = student.studentAccounts?.[0]
+  const studentType = studentAccount?.studentType || 'DAY'
 
   // Get fee structure for this student's class, term, and type
   const feeStructure = await prisma.feeStructure.findFirst({
@@ -200,10 +216,10 @@ export async function generateInvoice(
   const subtotal = feeStructure.items.reduce((sum, item) => sum + item.amount, 0)
 
   // Get approved discounts for this term (Property 26)
-  const discounts = student.account
+  const discounts = studentAccount
     ? await prisma.studentDiscount.findMany({
         where: {
-          studentAccountId: student.account.id,
+          studentAccountId: studentAccount.id,
           termId,
           status: 'APPROVED',
         },
@@ -212,10 +228,10 @@ export async function generateInvoice(
   const discountAmount = discounts.reduce((sum, d) => sum + d.calculatedAmount, 0)
 
   // Get non-waived penalties for this term (Property 26)
-  const penalties = student.account
+  const penalties = studentAccount
     ? await prisma.studentPenalty.findMany({
         where: {
-          studentAccountId: student.account.id,
+          studentAccountId: studentAccount.id,
           termId,
           isWaived: false,
         },
@@ -272,10 +288,14 @@ export async function generateInvoice(
       issuedBy,
       items: {
         create: feeStructure.items.map((item) => ({
+          schoolId: student.schoolId,
           description: item.name,
           category: item.category as FeeCategory,
           amount: item.amount,
           isOptional: item.isOptional,
+          school: {
+            connect: { id: student.schoolId },
+          },
         })),
       },
     },
@@ -291,9 +311,9 @@ export async function generateInvoice(
       schoolId: student.schoolId,
       userId: issuedBy,
       action: 'INVOICE_GENERATED',
-      resourceType: 'Invoice',
-      resourceId: invoice.id,
-      newValue: {
+      entityType: "Invoice",
+      entityId: invoice.id,
+      details: {
         invoiceNumber,
         studentId,
         termId,
@@ -315,7 +335,9 @@ export async function generateInvoice(
     guardianName: primaryGuardian
       ? `${primaryGuardian.firstName} ${primaryGuardian.lastName}`
       : undefined,
-    className: student.class.name + (student.stream ? ` - ${student.stream.name}` : ''),
+    className: student.class?.name
+      ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
+      : '',
     termId: invoice.termId,
     termName: term.name,
     feeStructureId: invoice.feeStructureId,
@@ -465,7 +487,7 @@ export async function getInvoice(invoiceId: string): Promise<Invoice | null> {
     admissionNumber: student?.admissionNumber || '',
     guardianId: invoice.guardianId ?? undefined,
     guardianName,
-    className: student
+    className: student?.class?.name
       ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
       : '',
     termId: invoice.termId,
@@ -615,8 +637,8 @@ export async function listInvoices(
       guardianName: guardian
         ? `${guardian.firstName} ${guardian.lastName}`
         : undefined,
-      className: student
-        ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
+      className: student?.class?.name
+      ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
         : '',
       termId: invoice.termId,
       termName: term?.name || '',
@@ -728,7 +750,7 @@ export async function updateInvoiceStatus(invoiceId: string): Promise<Invoice> {
     admissionNumber: student?.admissionNumber || '',
     guardianId: updatedInvoice.guardianId ?? undefined,
     guardianName,
-    className: student
+    className: student?.class?.name
       ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
       : '',
     termId: updatedInvoice.termId,
@@ -808,11 +830,13 @@ export async function cancelInvoice(
     schoolId: invoice.schoolId,
     userId,
     action: 'INVOICE_CANCELLED',
-    resourceType: 'Invoice',
-    resourceId: invoiceId,
-    previousValue,
-    newValue: { status: 'CANCELLED' },
-    reason,
+    entityType: "Invoice",
+    entityId: invoiceId,
+    details: {
+      previousValue,
+      newValue: { status: 'CANCELLED' },
+      reason,
+    },
   })
 
   // Get related info for response
@@ -846,7 +870,7 @@ export async function cancelInvoice(
     admissionNumber: student?.admissionNumber || '',
     guardianId: updatedInvoice.guardianId ?? undefined,
     guardianName,
-    className: student
+    className: student?.class?.name
       ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
       : '',
     termId: updatedInvoice.termId,
@@ -930,8 +954,8 @@ export async function getStudentInvoices(
       guardianName: guardian
         ? `${guardian.firstName} ${guardian.lastName}`
         : undefined,
-      className: student
-        ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
+      className: student?.class?.name
+      ? student.class.name + (student.stream ? ` - ${student.stream.name}` : '')
         : '',
       termId: invoice.termId,
       termName: term?.name || '',
@@ -999,7 +1023,6 @@ export function generateInvoiceHTML(invoice: Invoice, schoolInfo?: {
 
   const itemsHTML = Object.entries(itemsByCategory)
     .map(([category, items]) => {
-      const categoryTotal = items.reduce((sum, item) => sum + item.amount, 0)
       const itemRows = items
         .map(
           (item) => `
@@ -1244,3 +1267,4 @@ export const InvoiceService = {
 }
 
 export default InvoiceService
+

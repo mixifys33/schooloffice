@@ -120,12 +120,12 @@ export async function GET(request: NextRequest) {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
     const monthlyPayments = await prisma.payment.groupBy({
-      by: ['paymentDate'],
+      by: ['receivedAt'],
       where: {
         student: {
           schoolId: session.user.schoolId
         },
-        paymentDate: {
+        receivedAt: {
           gte: sixMonthsAgo
         }
       },
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     // Add collected amounts
     monthlyPayments.forEach(payment => {
-      const month = new Date(payment.paymentDate).toLocaleString('default', { month: 'short' }).substring(0, 3)
+      const month = new Date(payment.receivedAt).toLocaleString('default', { month: 'short' }).substring(0, 3)
       const current = monthlyTrendMap.get(month) || { collected: 0, outstanding: 0 }
       current.collected += payment._sum.amount || 0
       monthlyTrendMap.set(month, current)

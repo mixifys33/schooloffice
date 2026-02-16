@@ -6,7 +6,7 @@
  * 
  * Core principle: Academic assignments directly control data access permissions.
  * Changes to assignments take effect immediately.
- */
+ */   
 import { prisma } from '@/lib/db'
 import {
   Teacher,

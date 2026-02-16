@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '@/lib/db';
-
+   
 // Types for SmsLog
 interface SmsLog {
   id: string;
@@ -22,7 +22,7 @@ interface SmsLog {
   cost: number | null;
   segments: number;
   senderId: string;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,7 +38,7 @@ interface CreateSmsLogInput {
   cost?: number;
   segments?: number;
   senderId: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface UpdateSmsLogInput {
@@ -53,7 +53,7 @@ export class SmsLogService {
    * Create a new SMS log entry
    */
   static async create(input: CreateSmsLogInput): Promise<SmsLog> {
-    return await prisma.smsLog.create({
+    const result = await prisma.smsLog.create({
       data: {
         schoolId: input.schoolId,
         studentId: input.studentId,
@@ -65,41 +65,61 @@ export class SmsLogService {
         cost: input.cost || null,
         segments: input.segments || 1,
         senderId: input.senderId,
-        metadata: input.metadata || null,
+        metadata: input.metadata ? JSON.parse(JSON.stringify(input.metadata)) : null,
       },
     });
+    
+    return {
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    };
   }
 
   /**
    * Update SMS log status
    */
   static async update(id: string, input: UpdateSmsLogInput): Promise<SmsLog> {
-    return await prisma.smsLog.update({
+    const result = await prisma.smsLog.update({
       where: { id },
       data: input,
     });
+    
+    return {
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    };
   }
 
   /**
    * Get SMS logs for a student
    */
   static async getByStudent(studentId: string, limit: number = 50): Promise<SmsLog[]> {
-    return await prisma.smsLog.findMany({
+    const results = await prisma.smsLog.findMany({
       where: { studentId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    
+    return results.map(result => ({
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    }));
   }
 
   /**
    * Get SMS logs for a guardian
    */
   static async getByGuardian(guardianId: string, limit: number = 50): Promise<SmsLog[]> {
-    return await prisma.smsLog.findMany({
+    const results = await prisma.smsLog.findMany({
       where: { guardianId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    
+    return results.map(result => ({
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    }));
   }
 
   /**
@@ -113,7 +133,17 @@ export class SmsLogService {
     limit?: number;
     offset?: number;
   }): Promise<{ logs: SmsLog[]; total: number }> {
-    const where: any = { schoolId };
+    interface WhereClause {
+      schoolId: string
+      messageType?: string
+      status?: string
+      createdAt?: {
+        gte?: Date
+        lte?: Date
+      }
+    }
+
+    const where: WhereClause = { schoolId };
     
     if (filters?.messageType) {
       where.messageType = filters.messageType;
@@ -129,7 +159,7 @@ export class SmsLogService {
       if (filters.dateTo) where.createdAt.lte = filters.dateTo;
     }
     
-    const [logs, total] = await Promise.all([
+    const [results, total] = await Promise.all([
       prisma.smsLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -138,6 +168,11 @@ export class SmsLogService {
       }),
       prisma.smsLog.count({ where }),
     ]);
+    
+    const logs = results.map(result => ({
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    }));
     
     return { logs, total };
   }
@@ -154,7 +189,7 @@ export class SmsLogService {
     senderId: string;
     testType: string;
   }): Promise<SmsLog> {
-    return await prisma.smsLog.create({
+    const result = await prisma.smsLog.create({
       data: {
         schoolId: input.schoolId,
         studentId: input.studentId,
@@ -165,13 +200,18 @@ export class SmsLogService {
         status: 'QUEUED', // Will remain queued as automation is disabled
         segments: Math.ceil(input.message.length / 160), // Approximate segment count
         senderId: input.senderId,
-        metadata: {
+        metadata: JSON.parse(JSON.stringify({
           testType: input.testType,
           isTest: true,
           automationDisabled: true,
-        },
+        })),
       },
     });
+    
+    return {
+      ...result,
+      metadata: result.metadata as Record<string, unknown> | null,
+    };
   }
 
   /**
@@ -187,7 +227,15 @@ export class SmsLogService {
     byMessageType: Record<string, number>;
     byStatus: Record<string, number>;
   }> {
-    const where: any = { schoolId };
+    interface WhereClause {
+      schoolId: string
+      createdAt?: {
+        gte?: Date
+        lte?: Date
+      }
+    }
+
+    const where: WhereClause = { schoolId };
     
     if (dateFrom || dateTo) {
       where.createdAt = {};

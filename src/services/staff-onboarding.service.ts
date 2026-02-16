@@ -9,7 +9,7 @@ import { hashPassword } from '@/lib/auth'
 import { Role, StaffRole, StaffStatus } from '@/types/enums'
 import { auditService } from './audit.service'
 import { getUserFriendlyError } from '@/lib/error-messages'
-
+   
 export interface RequiredStaffRole {
   role: StaffRole | Role
   title: string
@@ -195,7 +195,7 @@ export class StaffOnboardingService {
           role: userRole,
           roles: [userRole],
           isActive: true,
-          forcePasswordReset: true, // Force password reset on first login
+          forcePasswordReset: false, // No forced password reset on first login
         },
       })
 
@@ -564,275 +564,150 @@ export class StaffOnboardingService {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to ${schoolName} - Staff Portal Access</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333333;
-            margin: 0;
-            padding: 0;
-            background-color: #f8fafc;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .header p {
-            margin: 8px 0 0 0;
-            font-size: 16px;
-            opacity: 0.9;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .welcome-text {
-            font-size: 18px;
-            color: #2d3748;
-            margin-bottom: 30px;
-        }
-        .credentials-box {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 25px;
-            margin: 25px 0;
-        }
-        .credentials-title {
-            color: #2b6cb0;
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0 0 20px 0;
-            display: flex;
-            align-items: center;
-        }
-        .credentials-title::before {
-            content: "🔐";
-            margin-right: 10px;
-            font-size: 24px;
-        }
-        .credential-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .credential-item:last-child {
-            border-bottom: none;
-        }
-        .credential-label {
-            font-weight: 600;
-            color: #4a5568;
-            min-width: 140px;
-        }
-        .credential-value {
-            font-family: 'Courier New', monospace;
-            background-color: #ffffff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e0;
-            font-size: 14px;
-            color: #2d3748;
-            flex: 1;
-            margin-left: 15px;
-            word-break: break-all;
-        }
-        .password-value {
-            background-color: #fed7d7;
-            border-color: #fc8181;
-            color: #c53030;
-            font-weight: 600;
-        }
-        .security-notice {
-            background: linear-gradient(135deg, #fef5e7 0%, #fed7aa 100%);
-            border-left: 4px solid #f6ad55;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 25px 0;
-        }
-        .security-notice h3 {
-            color: #c05621;
-            margin: 0 0 15px 0;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-        }
-        .security-notice h3::before {
-            content: "⚠️";
-            margin-right: 10px;
-        }
-        .security-notice ul {
-            margin: 0;
-            padding-left: 20px;
-            color: #744210;
-        }
-        .security-notice li {
-            margin-bottom: 8px;
-        }
-        .login-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 16px;
-            margin: 25px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
-        }
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
-        .footer {
-            background-color: #f7fafc;
-            padding: 25px 30px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-        }
-        .footer p {
-            margin: 5px 0;
-            color: #718096;
-            font-size: 14px;
-        }
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        .role-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-        @media (max-width: 600px) {
-            .container {
-                margin: 10px;
-                border-radius: 8px;
-            }
-            .content {
-                padding: 25px 20px;
-            }
-            .credential-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .credential-value {
-                margin-left: 0;
-                margin-top: 8px;
-                width: 100%;
-                box-sizing: border-box;
-            }
-        }
-    </style>
+    <title>Welcome to ${schoolName}</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Welcome to ${schoolName}</h1>
-            <p>Staff Portal Access Credentials</p>
-        </div>
-        
-        <div class="content">
-            <div class="welcome-text">
-                <strong>Dear ${credentials.name},</strong><br>
-                Your staff account has been successfully created! You have been assigned the role of <span class="role-badge">${credentials.role}</span>
-            </div>
-            
-            <div class="credentials-box">
-                <h3 class="credentials-title">Your Login Credentials</h3>
-                
-                <div class="credential-item">
-                    <span class="credential-label">👤 Full Name:</span>
-                    <span class="credential-value">${credentials.name}</span>
-                </div>
-                
-                <div class="credential-item">
-                    <span class="credential-label">🎭 Role:</span>
-                    <span class="credential-value">${credentials.role}</span>
-                </div>
-                
-                <div class="credential-item">
-                    <span class="credential-label">📧 Email Address:</span>
-                    <span class="credential-value">${credentials.email}</span>
-                </div>
-                
-                <div class="credential-item">
-                    <span class="credential-label">📱 Phone Number:</span>
-                    <span class="credential-value">${credentials.phone}</span>
-                </div>
-                
-                <div class="credential-item">
-                    <span class="credential-label">🏫 School Code:</span>
-                    <span class="credential-value">${credentials.schoolCode}</span>
-                </div>
-                
-                <div class="credential-item">
-                    <span class="credential-label">🔑 Temporary Password:</span>
-                    <span class="credential-value password-value">${credentials.password}</span>
-                </div>
-            </div>
-            
-            <div class="security-notice">
-                <h3>Important Security Information</h3>
-                <ul>
-                    <li><strong>Change your password immediately</strong> after your first login</li>
-                    <li><strong>Keep your credentials confidential</strong> - never share them with anyone</li>
-                    <li><strong>Use a strong, unique password</strong> when updating your credentials</li>
-                    <li><strong>Log out completely</strong> when finished using the system</li>
-                    <li><strong>Contact IT support</strong> if you suspect any unauthorized access</li>
-                </ul>
-            </div>
-            
-            <div style="text-align: center;">
-                <a href="${loginUrl}" class="login-button">🚀 Access Staff Portal</a>
-            </div>
-            
-            <div style="margin-top: 30px; padding: 20px; background-color: #f0fff4; border-radius: 8px; border-left: 4px solid #48bb78;">
-                <h4 style="color: #2f855a; margin: 0 0 10px 0;">📋 Next Steps:</h4>
-                <ol style="color: #276749; margin: 0; padding-left: 20px;">
-                    <li>Click the "Access Staff Portal" button above</li>
-                    <li>Enter your school code: <strong>${credentials.schoolCode}</strong></li>
-                    <li>Use your email and temporary password to log in</li>
-                    <li>Complete the mandatory password change</li>
-                    <li>Update your profile information as needed</li>
-                </ol>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p><strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
-            <p>Need help? Contact your school administrator or IT support.</p>
-            <p style="margin-top: 15px; font-size: 12px; color: #a0aec0;">
-                This email contains sensitive information. Please handle it securely and delete it after setting up your account.
-            </p>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; max-width: 100%;">
+                    
+                    <!-- Hero Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 40px; text-align: center;">
+                            <div style="background: rgba(255,255,255,0.2); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px;">
+                                🎓
+                            </div>
+                            <h1 style="color: white; margin: 0 0 10px; font-size: 32px; font-weight: 700;">Welcome Aboard!</h1>
+                            <p style="color: rgba(255,255,255,0.95); margin: 0; font-size: 18px; font-weight: 500;">${schoolName}</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            
+                            <!-- Welcome Message -->
+                            <div style="margin-bottom: 35px;">
+                                <h2 style="color: #1a202c; margin: 0 0 15px; font-size: 24px; font-weight: 600;">Hello ${credentials.name}! 👋</h2>
+                                <p style="color: #4a5568; margin: 0; font-size: 16px; line-height: 1.6;">
+                                    We're thrilled to have you join our team as a <strong style="color: #667eea;">${credentials.role}</strong>! 
+                                    Your account has been created and you're all set to start making a difference in our students' lives.
+                                </p>
+                            </div>
+                            
+                            <!-- Credentials Card -->
+                            <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 12px; padding: 30px; margin: 30px 0; border: 2px solid #e2e8f0;">
+                                <div style="display: flex; align-items: center; margin-bottom: 25px;">
+                                    <span style="font-size: 28px; margin-right: 12px;">🔐</span>
+                                    <h3 style="color: #2b6cb0; margin: 0; font-size: 20px; font-weight: 600;">Your Login Credentials</h3>
+                                </div>
+                                
+                                <table width="100%" cellpadding="8" cellspacing="0">
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                                            <strong style="color: #4a5568; font-size: 14px;">📧 Email</strong>
+                                        </td>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                                            <code style="background: white; padding: 8px 12px; border-radius: 6px; color: #2d3748; font-size: 14px; border: 1px solid #cbd5e0;">${credentials.email}</code>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                                            <strong style="color: #4a5568; font-size: 14px;">📱 Phone Number</strong>
+                                        </td>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                                            <code style="background: white; padding: 8px 12px; border-radius: 6px; color: #2d3748; font-size: 14px; border: 1px solid #cbd5e0;">${credentials.phone}</code>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                                            <strong style="color: #4a5568; font-size: 14px;">🏫 School Code</strong>
+                                        </td>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                                            <code style="background: white; padding: 8px 12px; border-radius: 6px; color: #2d3748; font-size: 14px; border: 1px solid #cbd5e0;">${credentials.schoolCode}</code>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0;">
+                                            <strong style="color: #4a5568; font-size: 14px;">🔑 Temporary Password</strong>
+                                        </td>
+                                        <td style="padding: 12px 0; text-align: right;">
+                                            <code style="background: #fed7d7; padding: 8px 12px; border-radius: 6px; color: #c53030; font-size: 14px; font-weight: 600; border: 1px solid #fc8181;">${credentials.password}</code>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 35px 0;">
+                                <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                                    🚀 Access Your Portal
+                                </a>
+                            </div>
+                            
+                            <!-- Quick Start Guide -->
+                            <div style="background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%); border-radius: 12px; padding: 25px; margin: 30px 0; border-left: 4px solid #48bb78;">
+                                <h4 style="color: #2f855a; margin: 0 0 15px; font-size: 18px; font-weight: 600;">
+                                    <span style="font-size: 20px; margin-right: 8px;">✨</span>Quick Start Guide
+                                </h4>
+                                <ol style="color: #276749; margin: 0; padding-left: 20px; line-height: 1.8;">
+                                    <li style="margin-bottom: 8px;">Click the <strong>"Access Your Portal"</strong> button above</li>
+                                    <li style="margin-bottom: 8px;">Enter your <strong>School Code</strong> on the login page</li>
+                                    <li style="margin-bottom: 8px;">Sign in with your <strong>email</strong> and <strong>temporary password</strong></li>
+                                    <li style="margin-bottom: 8px;">Create a <strong>strong, unique password</strong> (required on first login)</li>
+                                    <li>Complete your <strong>profile</strong> and start exploring!</li>
+                                </ol>
+                            </div>
+                            
+                            <!-- Security Notice -->
+                            <div style="background: linear-gradient(135deg, #fef5e7 0%, #fed7aa 100%); border-radius: 12px; padding: 25px; margin: 30px 0; border-left: 4px solid #f6ad55;">
+                                <h4 style="color: #c05621; margin: 0 0 15px; font-size: 18px; font-weight: 600;">
+                                    <span style="font-size: 20px; margin-right: 8px;">🔒</span>Security First
+                                </h4>
+                                <ul style="color: #744210; margin: 0; padding-left: 20px; line-height: 1.8;">
+                                    <li style="margin-bottom: 8px;"><strong>Change your password</strong> immediately after first login</li>
+                                    <li style="margin-bottom: 8px;"><strong>Never share</strong> your credentials with anyone</li>
+                                    <li style="margin-bottom: 8px;"><strong>Always log out</strong> when you're done</li>
+                                    <li>Contact IT support if you notice anything suspicious</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Motivational Quote -->
+                            <div style="text-align: center; padding: 30px 20px; background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%); border-radius: 12px; margin: 30px 0;">
+                                <p style="color: #234e52; font-size: 18px; font-style: italic; margin: 0 0 10px; line-height: 1.6;">
+                                    "Education is the most powerful weapon which you can use to change the world."
+                                </p>
+                                <p style="color: #2c7a7b; font-size: 14px; font-weight: 600; margin: 0;">— Nelson Mandela</p>
+                            </div>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #718096; margin: 0 0 15px; font-size: 14px; text-align: center;">
+                                <strong>Login URL:</strong> <a href="${loginUrl}" style="color: #667eea; text-decoration: none;">${loginUrl}</a>
+                            </p>
+                            <p style="color: #718096; margin: 0 0 15px; font-size: 14px; text-align: center;">
+                                Need help? Contact your school administrator or IT support team.
+                            </p>
+                            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                                <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+                                    This email contains sensitive information. Please handle it securely and delete after setup.
+                                </p>
+                                <p style="color: #cbd5e0; margin: 10px 0 0; font-size: 11px;">
+                                    © ${new Date().getFullYear()} ${schoolName}. All rights reserved.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>`
 

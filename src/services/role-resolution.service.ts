@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db'
 import { Role } from '@/types/enums'
 import { getPermissionsForRole } from '@/lib/rbac'
 import { Permission } from '@/types/services'
-
+    
 // ============================================
 // TYPES
 // ============================================

@@ -3,7 +3,7 @@
  * Prevents wrong amounts and invalid payments from being recorded
  * 
  * Requirements: Payment Validation - Prevention of incorrect amounts
- * 
+ *    
  * Property 1: Amount Validation
  * For any payment recording attempt, the system SHALL validate the amount against 
  * expected fee structure before allowing the transaction.

@@ -7,7 +7,7 @@
  * 1. Decimal.js for precision
  * 2. Transactions for atomicity
  * 3. Consistent formula application
- */
+ */   
 import { prisma } from '@/lib/db'
 import type {
   StudentAccount,
@@ -242,7 +242,7 @@ export async function updateBalance(
             schoolId: student.schoolId,
             userId,
             action: 'BALANCE_UPDATED',
-            resourceType: 'StudentAccount',
+            resource: "StudentAccount",
             resourceId: updatedAccount.id,
             previousValue: {
               balance: currentAccount.balance,
@@ -341,7 +341,7 @@ export async function getOrCreateStudentAccount(
           schoolId: student.schoolId,
           userId: 'SYSTEM',
           action: 'ACCOUNT_CREATED',
-          resourceType: 'StudentAccount',
+          resource: "StudentAccount",
           resourceId: account!.id,
           newValue: { studentId, termId },
         })

@@ -109,7 +109,7 @@ export interface ResponsibilityInput {
   assignedBy: string;
 }
 
-
+  
 // ============================================
 // STAFF PROFILE
 // Requirements: 2.1, 2.3

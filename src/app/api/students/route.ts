@@ -448,6 +448,7 @@ export async function POST(request: NextRequest) {
       parentName,
       parentPhone,
       parentEmail,
+      optionalSubjectIds, // New field for optional subjects
     } = body
 
     // Validate required fields
@@ -533,6 +534,7 @@ export async function POST(request: NextRequest) {
 
         const guardian = await tx.guardian.create({
           data: {
+            schoolId,
             firstName: parentFirstName,
             lastName: parentLastName,
             phone: parentPhone || '',
@@ -546,6 +548,7 @@ export async function POST(request: NextRequest) {
         // Link guardian to student as primary
         await tx.studentGuardian.create({
           data: {
+            schoolId,
             studentId: student.id,
             guardianId: guardian.id,
             isPrimary: true,
@@ -555,6 +558,29 @@ export async function POST(request: NextRequest) {
 
       return student
     })
+
+    // Create student-subject assignments for optional subjects
+    if (optionalSubjectIds && Array.isArray(optionalSubjectIds) && optionalSubjectIds.length > 0) {
+      // Validate that all subjects are optional (isCompulsory: false)
+      const subjects = await prisma.subject.findMany({
+        where: {
+          id: { in: optionalSubjectIds },
+          schoolId,
+          isCompulsory: false, // Only allow optional subjects
+          isActive: true,
+        },
+      })
+
+      // Create student-subject assignments
+      await prisma.studentSubject.createMany({
+        data: subjects.map((subject) => ({
+          schoolId,
+          studentId: result.id,
+          subjectId: subject.id,
+        })),
+        skipDuplicates: true,
+      })
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error) {

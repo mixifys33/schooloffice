@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, ChevronRight, Users, Layers } from 'lucide-react'
+import { Plus, ChevronRight, Users, Layers, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { AlertBanner } from '@/components/ui/alert-banner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ClassBulkUpload } from '@/components/classes/class-bulk-upload'
 
 /**
  * Classes and Streams Management Page
@@ -23,6 +24,7 @@ interface ClassItem {
   id: string
   name: string
   level: number
+  levelType?: 'O_LEVEL' | 'A_LEVEL' | null
   streams?: StreamItem[] // Make streams optional since it might be undefined
 }
 
@@ -31,6 +33,7 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
 
   const fetchClasses = useCallback(async () => {
     try {
@@ -66,11 +69,17 @@ export default function ClassesPage() {
     router.push('/dashboard/classes/new')
   }
 
-  // Group classes by level type (Primary P1-P7, Secondary S1-S6)
+  const handleBulkUploadComplete = () => {
+    setShowBulkUpload(false)
+    fetchClasses()
+  }
+
+  // Group classes by level type (O-Level and A-Level)
   // Extra safety: ensure classes is always an array before filtering
   const safeClasses = Array.isArray(classes) ? classes : []
-  const primaryClasses = safeClasses.filter(c => c.level >= 1 && c.level <= 7)
-  const secondaryClasses = safeClasses.filter(c => c.level >= 8 && c.level <= 13)
+  const oLevelClasses = safeClasses.filter(c => c.levelType === 'O_LEVEL')
+  const aLevelClasses = safeClasses.filter(c => c.levelType === 'A_LEVEL')
+  const unspecifiedClasses = safeClasses.filter(c => !c.levelType)
 
   if (loading) {
     return (
@@ -88,6 +97,17 @@ export default function ClassesPage() {
     )
   }
 
+  if (showBulkUpload) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6">
+        <ClassBulkUpload
+          onUploadComplete={handleBulkUploadComplete}
+          onCancel={() => setShowBulkUpload(false)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
@@ -98,10 +118,16 @@ export default function ClassesPage() {
             {safeClasses.length} classes configured
           </p>
         </div>
-        <Button onClick={handleAddClass} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add Class</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowBulkUpload(true)} variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Bulk Upload</span>
+          </Button>
+          <Button onClick={handleAddClass} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Class</span>
+          </Button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -130,14 +156,14 @@ export default function ClassesPage() {
         </Card>
       )}
 
-      {/* Primary Classes Section */}
-      {primaryClasses.length > 0 && (
+      {/* O-Level Classes Section */}
+      {oLevelClasses.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-muted)]">
-            Primary Classes
+            O-Level Classes (S1-S4)
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {primaryClasses.map((classItem) => (
+            {oLevelClasses.map((classItem) => (
               <ClassCard
                 key={classItem.id}
                 classItem={classItem}
@@ -148,14 +174,32 @@ export default function ClassesPage() {
         </div>
       )}
 
-      {/* Secondary Classes Section */}
-      {secondaryClasses.length > 0 && (
+      {/* A-Level Classes Section */}
+      {aLevelClasses.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-muted)]">
-            Secondary Classes
+            A-Level Classes (S5-S6)
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {secondaryClasses.map((classItem) => (
+            {aLevelClasses.map((classItem) => (
+              <ClassCard
+                key={classItem.id}
+                classItem={classItem}
+                onClick={() => handleClassClick(classItem)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Unspecified Level Type Classes */}
+      {unspecifiedClasses.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-muted)]">
+            Other Classes
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {unspecifiedClasses.map((classItem) => (
               <ClassCard
                 key={classItem.id}
                 classItem={classItem}
@@ -178,6 +222,13 @@ function ClassCard({ classItem, onClick }: ClassCardProps) {
   // Safely handle streams array - it might be undefined or null
   const streams = classItem.streams || [];
   
+  // Format level type for display
+  const levelTypeLabel = classItem.levelType === 'O_LEVEL' 
+    ? 'O-Level' 
+    : classItem.levelType === 'A_LEVEL' 
+    ? 'A-Level' 
+    : null;
+  
   return (
     <Card 
       className="cursor-pointer hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] transition-colors"
@@ -185,7 +236,14 @@ function ClassCard({ classItem, onClick }: ClassCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{classItem.name}</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">{classItem.name}</CardTitle>
+            {levelTypeLabel && (
+              <Badge variant="outline" className="text-xs">
+                {levelTypeLabel}
+              </Badge>
+            )}
+          </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </div>
       </CardHeader>

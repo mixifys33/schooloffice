@@ -5,7 +5,7 @@
  * Core principle: A teacher is a role-bound institutional entity, not a user account.
  * Teachers are created as records first, then optionally granted system access.
  */
-
+  
 import { Gender } from './enums'
 
 // ============================================
@@ -146,23 +146,21 @@ export const DEFAULT_TEACHER_PERMISSIONS: TeacherPermissions = {
 
 /**
  * Communication channel configuration
- * Requirements 5.1, 5.2: Channel configuration with SMS/WhatsApp disabled by default
+ * Requirements 5.1, 5.2: Channel configuration with SMS disabled by default
  */
 export interface ChannelConfig {
   inAppMessaging: boolean
   sms: boolean
-  whatsapp: boolean
   email: boolean
 }
 
 /**
  * Default channel configuration for new teachers
- * Requirement 5.2: SMS and WhatsApp disabled by default
+ * Requirement 5.2: SMS disabled by default
  */
 export const DEFAULT_CHANNEL_CONFIG: ChannelConfig = {
   inAppMessaging: true,
   sms: false,      // Disabled by default per Requirement 5.2
-  whatsapp: false, // Disabled by default per Requirement 5.2
   email: true,
 }
 

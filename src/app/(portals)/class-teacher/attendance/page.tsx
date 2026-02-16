@@ -1,34 +1,21 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ClipboardList, Users, Calendar, AlertCircle, CheckCircle, Clock, Save, Send, Lock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { ErrorMessagePanel } from '@/components/teacher'
 import { 
-  errorMessages, 
-  spacing, 
-  typography, 
-  cardStyles, 
-  teacherColors,
-  transitions 
-} from '@/lib/teacher-ui-standards'
+  ArrowLeft, ClipboardList, Calendar, AlertCircle, CheckCircle, 
+  Save, Send, Lock, Download, History as HistoryIcon, BarChart3,
+  AlertTriangle
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { cn } from '@/lib/utils'
-
-/**
- * Attendance Page for Class Teacher Portal
- * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
- * - Display only students in assigned class
- * - Allow taking attendance for assigned class only
- * - Show attendance history
- * - Validate teacher assignment before allowing entry
- * - Disable data entry when context is invalid
- * - Dense but clean layout with muted colors (12.1)
- * - Clear enabled/disabled states (12.2)
- * - Hide/disable non-permitted actions (12.3)
- * - Clear error messages with next steps (12.4)
- */
+import { BulkActions } from '@/components/class-teacher/attendance/BulkActions'
+import { AttendanceFilters } from '@/components/class-teacher/attendance/AttendanceFilters'
+import { AttendanceCalendar } from '@/components/class-teacher/attendance/AttendanceCalendar'
+import { AttendanceStats } from '@/components/class-teacher/attendance/AttendanceStats'
+import { LowAttendanceAlerts } from '@/components/class-teacher/attendance/LowAttendanceAlerts'
 
 interface StudentAttendance {
   studentId: string
@@ -39,25 +26,23 @@ interface StudentAttendance {
   attendanceRate: number
 }
 
-interface ClassTeacherContextData {
-  teacherId: string
-  teacherName: string
-  roleName: string
-  currentTerm: {
-    id: string
-    name: string
-    startDate: string
-    endDate: string
-  } | null
-  academicYear: {
-    id: string
-    name: string
-  } | null
-  contextError: string | null
-}
-
 interface ClassTeacherAttendanceData {
-  context: ClassTeacherContextData
+  context: {
+    teacherId: string
+    teacherName: string
+    roleName: string
+    currentTerm: {
+      id: string
+      name: string
+      startDate: string
+      endDate: string
+    } | null
+    academicYear: {
+      id: string
+      name: string
+    } | null
+    contextError: string | null
+  }
   class: {
     id: string
     name: string
@@ -81,39 +66,155 @@ export default function ClassTeacherAttendancePage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('marking')
 
   // Attendance state
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null>>({})
   const [hasChanges, setHasChanges] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [rateFilter, setRateFilter] = useState('all')
+
+  // Get localStorage key for current date and class
+  const getLocalStorageKey = useCallback(() => {
+    if (!data?.class?.id) return null
+    const dateStr = selectedDate.toISOString().split('T')[0]
+    return `attendance-${data.class.id}-${dateStr}`
+  }, [data?.class?.id, selectedDate])
+
+  // Save to localStorage
   useEffect(() => {
-    async function fetchAttendanceData() {
-      try {
-        const response = await fetch(`/api/class-teacher/attendance?date=${selectedDate}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch attendance data')
-        }
-        const attendanceData = await response.json()
-        setData(attendanceData)
+    const storageKey = getLocalStorageKey()
+    if (!storageKey || !hasChanges) return
 
-        // Initialize attendance status from fetched data
-        const initialStatus: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null> = {}
-        attendanceData.students.forEach((student: StudentAttendance) => {
-          initialStatus[student.studentId] = student.attendanceStatus
-        })
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(attendanceStatus))
+      console.log('💾 Saved to localStorage:', storageKey)
+    } catch (err) {
+      console.error('Failed to save to localStorage:', err)
+    }
+  }, [attendanceStatus, hasChanges, getLocalStorageKey])
+
+  // Fetch attendance data
+  const fetchAttendanceData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const dateStr = selectedDate.toISOString().split('T')[0]
+      const response = await fetch(`/api/class-teacher/attendance?date=${dateStr}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch attendance data')
+      }
+      const attendanceData = await response.json()
+      setData(attendanceData)
+
+      // Initialize attendance status from fetched data
+      const initialStatus: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null> = {}
+      attendanceData.students.forEach((student: StudentAttendance) => {
+        initialStatus[student.studentId] = student.attendanceStatus
+      })
+
+      // Check for localStorage backup
+      const storageKey = `attendance-${attendanceData.class?.id}-${dateStr}`
+      const savedData = localStorage.getItem(storageKey)
+      
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData)
+          console.log('📂 Restored from localStorage:', storageKey)
+          setAttendanceStatus(parsedData)
+          setHasChanges(true)
+        } catch (err) {
+          console.error('Failed to parse localStorage data:', err)
+          setAttendanceStatus(initialStatus)
+          setHasChanges(false)
+        }
+      } else {
         setAttendanceStatus(initialStatus)
         setHasChanges(false)
-      } catch (err) {
-        setError('Unable to load attendance data')
-        console.error('Error fetching class teacher attendance:', err)
-      } finally {
-        setLoading(false)
       }
-    }
 
-    fetchAttendanceData()
+      setError(null)
+    } catch (err) {
+      setError('Unable to load attendance data')
+      console.error('Error fetching attendance:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [selectedDate])
+
+  useEffect(() => {
+    fetchAttendanceData()
+  }, [fetchAttendanceData])
+
+  // Auto-save functionality - triggers 2 seconds after changes
+  useEffect(() => {
+    if (!hasChanges || !data?.canEdit) return
+
+    setAutoSaveStatus('idle')
+    const timer = setTimeout(() => {
+      autoSaveAttendance()
+    }, 2000) // 2 seconds debounce
+
+    return () => clearTimeout(timer)
+  }, [attendanceStatus, hasChanges, data?.canEdit])
+
+  // Auto-save function
+  const autoSaveAttendance = async () => {
+    if (!data || !hasChanges) return
+
+    setAutoSaveStatus('saving')
+    console.log('💾 Auto-saving attendance...')
+
+    try {
+      const attendanceToSave = Object.entries(attendanceStatus).map(([studentId, status]) => ({
+        studentId,
+        status,
+        date: selectedDate.toISOString().split('T')[0],
+      }))
+
+      const response = await fetch('/api/class-teacher/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: data.class?.id,
+          date: selectedDate.toISOString().split('T')[0],
+          attendance: attendanceToSave,
+          isDraft: true,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Auto-save failed')
+      }
+
+      // Clear localStorage after successful save
+      const storageKey = getLocalStorageKey()
+      if (storageKey) {
+        localStorage.removeItem(storageKey)
+        console.log('🗑️ Cleared localStorage:', storageKey)
+      }
+
+      setHasChanges(false)
+      setAutoSaveStatus('saved')
+      setLastSavedAt(new Date())
+      console.log('✅ Auto-save successful')
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setAutoSaveStatus('idle')
+      }, 3000)
+    } catch (err) {
+      console.error('❌ Auto-save failed:', err)
+      setAutoSaveStatus('idle')
+    }
+  }
 
   // Handle attendance status change
   const handleAttendanceChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null) => {
@@ -124,7 +225,38 @@ export default function ClassTeacherAttendancePage() {
     setHasChanges(true)
   }
 
-  // Save attendance as draft
+  // Bulk actions
+  const handleMarkAllPresent = () => {
+    if (!data) return
+    const newStatus: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null> = {}
+    data.students.forEach(student => {
+      newStatus[student.studentId] = 'PRESENT'
+    })
+    setAttendanceStatus(newStatus)
+    setHasChanges(true)
+  }
+
+  const handleMarkAllAbsent = () => {
+    if (!data) return
+    const newStatus: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null> = {}
+    data.students.forEach(student => {
+      newStatus[student.studentId] = 'ABSENT'
+    })
+    setAttendanceStatus(newStatus)
+    setHasChanges(true)
+  }
+
+  const handleClearAll = () => {
+    if (!data) return
+    const newStatus: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null> = {}
+    data.students.forEach(student => {
+      newStatus[student.studentId] = null
+    })
+    setAttendanceStatus(newStatus)
+    setHasChanges(true)
+  }
+
+  // Save attendance
   const handleSaveDraft = async () => {
     if (!data || !hasChanges) return
 
@@ -136,7 +268,7 @@ export default function ClassTeacherAttendancePage() {
       const attendanceToSave = Object.entries(attendanceStatus).map(([studentId, status]) => ({
         studentId,
         status,
-        date: selectedDate,
+        date: selectedDate.toISOString().split('T')[0],
       }))
 
       const response = await fetch('/api/class-teacher/attendance', {
@@ -144,7 +276,7 @@ export default function ClassTeacherAttendancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classId: data.class?.id,
-          date: selectedDate,
+          date: selectedDate.toISOString().split('T')[0],
           attendance: attendanceToSave,
           isDraft: true,
         }),
@@ -155,15 +287,15 @@ export default function ClassTeacherAttendancePage() {
         throw new Error(errorData.error || 'Failed to save attendance')
       }
 
-      // Refresh attendance data
-      const refreshResponse = await fetch(`/api/class-teacher/attendance?date=${selectedDate}`)
-      if (refreshResponse.ok) {
-        const refreshedData = await refreshResponse.json()
-        setData(refreshedData)
+      // Clear localStorage after successful save
+      const storageKey = getLocalStorageKey()
+      if (storageKey) {
+        localStorage.removeItem(storageKey)
       }
 
+      await fetchAttendanceData()
       setHasChanges(false)
-      setSuccessMessage('Attendance saved as draft successfully')
+      setSuccessMessage('Attendance saved successfully')
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save attendance')
@@ -176,9 +308,8 @@ export default function ClassTeacherAttendancePage() {
   const handleSubmitFinal = async () => {
     if (!data) return
 
-    // Confirm submission
     const confirmed = window.confirm(
-      'Are you sure you want to submit final attendance? This will notify the administration and attendance cannot be changed without approval.'
+      'Are you sure you want to submit final attendance? This will notify the administration.'
     )
     if (!confirmed) return
 
@@ -189,22 +320,7 @@ export default function ClassTeacherAttendancePage() {
     try {
       // First save any pending changes
       if (hasChanges) {
-        const attendanceToSave = Object.entries(attendanceStatus).map(([studentId, status]) => ({
-          studentId,
-          status,
-          date: selectedDate,
-        }))
-
-        await fetch('/api/class-teacher/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            classId: data.class?.id,
-            date: selectedDate,
-            attendance: attendanceToSave,
-            isDraft: false,
-          }),
-        })
+        await handleSaveDraft()
       }
 
       // Submit final attendance
@@ -213,7 +329,7 @@ export default function ClassTeacherAttendancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classId: data.class?.id,
-          date: selectedDate,
+          date: selectedDate.toISOString().split('T')[0],
         }),
       })
 
@@ -222,15 +338,8 @@ export default function ClassTeacherAttendancePage() {
         throw new Error(errorData.error || 'Failed to submit attendance')
       }
 
-      // Refresh attendance data
-      const refreshResponse = await fetch(`/api/class-teacher/attendance?date=${selectedDate}`)
-      if (refreshResponse.ok) {
-        const refreshedData = await refreshResponse.json()
-        setData(refreshedData)
-      }
-
-      setHasChanges(false)
-      setSuccessMessage('Attendance submitted successfully. Administration has been notified.')
+      await fetchAttendanceData()
+      setSuccessMessage('Attendance submitted successfully')
       setTimeout(() => setSuccessMessage(null), 5000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit attendance')
@@ -239,358 +348,393 @@ export default function ClassTeacherAttendancePage() {
     }
   }
 
+  // Export attendance
+  const handleExport = async () => {
+    try {
+      const startDate = new Date(selectedDate)
+      startDate.setDate(1) // First day of month
+      const endDate = new Date(selectedDate)
+      endDate.setMonth(endDate.getMonth() + 1, 0) // Last day of month
+
+      const url = `/api/class-teacher/attendance/export?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}&format=csv`
+      window.open(url, '_blank')
+    } catch (err) {
+      setError('Failed to export attendance')
+    }
+  }
+
+  // Filter students
+  const filteredStudents = data?.students.filter(student => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const matchesName = student.studentName.toLowerCase().includes(query)
+      const matchesAdmission = student.admissionNumber.toLowerCase().includes(query)
+      if (!matchesName && !matchesAdmission) return false
+    }
+
+    // Status filter
+    const currentStatus = attendanceStatus[student.studentId]
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'not-marked' && currentStatus !== null) return false
+      if (statusFilter !== 'not-marked' && currentStatus?.toLowerCase() !== statusFilter) return false
+    }
+
+    // Rate filter
+    if (rateFilter !== 'all') {
+      if (rateFilter === 'excellent' && student.attendanceRate < 90) return false
+      if (rateFilter === 'good' && (student.attendanceRate < 75 || student.attendanceRate >= 90)) return false
+      if (rateFilter === 'fair' && (student.attendanceRate < 50 || student.attendanceRate >= 75)) return false
+      if (rateFilter === 'poor' && student.attendanceRate >= 50) return false
+    }
+
+    return true
+  }) || []
+
+  // Calculate statistics
+  const presentCount = Object.values(attendanceStatus).filter(s => s === 'PRESENT').length
+  const absentCount = Object.values(attendanceStatus).filter(s => s === 'ABSENT').length
+  const lateCount = Object.values(attendanceStatus).filter(s => s === 'LATE').length
+  const excusedCount = Object.values(attendanceStatus).filter(s => s === 'EXCUSED').length
+  const notMarkedCount = Object.values(attendanceStatus).filter(s => s === null).length
+  const totalStudents = data?.students.length || 0
+  const classRate = totalStudents > 0 ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 0
+
+  // Low attendance alerts
+  const lowAttendanceAlerts = data?.students
+    .filter(s => s.attendanceRate < 75)
+    .map(s => ({
+      studentId: s.studentId,
+      studentName: s.studentName,
+      admissionNumber: s.admissionNumber,
+      attendanceRate: s.attendanceRate,
+      daysAbsent: 0, // Would need to calculate from history
+    })) || []
+
   if (loading) {
     return (
-      <div className={cn(spacing.section, 'p-4 sm:p-6')}>
+      <div className="p-4 sm:p-6">
         <SkeletonLoader variant="text" count={2} />
         <SkeletonLoader variant="card" count={6} />
       </div>
     )
   }
 
-  if (error || !data) {
+  if (error && !data) {
     return (
       <div className="p-4 sm:p-6">
-        <ErrorMessagePanel
-          config={errorMessages.networkError}
-          onRetry={() => window.location.reload()}
-        />
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="h-5 w-5" />
+            <span>{error}</span>
+          </div>
+        </div>
       </div>
     )
   }
 
-  const { context, class: classData, students, date, lockMessage } = data
-  const hasContextError = !!context.contextError
-  const teacherName = context.teacherName
-
   return (
-    <div className={cn(spacing.section, 'p-4 sm:p-6')}>
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Back Navigation */}
       <Link
-        href="/class-teacher"
-        className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
+        href="/dashboard/class-teacher"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Dashboard
       </Link>
 
       {/* Page Header */}
-      <div className={cn(cardStyles.base, cardStyles.compact, 'mt-4')}>
-        <div className="flex items-center gap-4">
-          <div className={cn('p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg', teacherColors.info.bg)}>
-            <ClipboardList className={cn('h-6 w-6', teacherColors.info.text)} />
-          </div>
-          <div>
-            <h1 className={typography.pageTitle}>
-              Take Attendance
-            </h1>
-            <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-1')}>
-              {classData ? `${classData.name} ${classData.streamName ? `(${classData.streamName})` : ''}` : 'Class Attendance'}
-              {context.currentTerm && (
-                <span className="ml-2 text-sm font-medium text-[var(--chart-blue)] dark:text-[var(--chart-blue)]">
-                  • {context.currentTerm.name}
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Context Error Warning - Requirement 12.4: Clear error messages */}
-      {hasContextError && (
-        <div className={cn(cardStyles.base, cardStyles.compact, 'mt-4 bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] border-[var(--warning-light)] dark:border-[var(--warning-dark)]')}>
-          <div className="flex items-center gap-2">
-            <AlertCircle className={cn('h-5 w-5', teacherColors.warning.text)} />
+      <div className="bg-card rounded-lg border p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <ClipboardList className="h-6 w-6 text-blue-600" />
+            </div>
             <div>
-              <h3 className={cn(typography.h3, teacherColors.warning.text)}>Data Entry Disabled</h3>
-              <p className={cn(typography.caption, teacherColors.warning.text)}>
-                {context.contextError || 'Academic context could not be determined. Please contact administration.'}
+              <h1 className="text-2xl font-bold">Attendance Management</h1>
+              <p className="text-muted-foreground">
+                {data?.class ? `${data.class.name} ${data.class.streamName ? `(${data.class.streamName})` : ''}` : 'Class Attendance'}
+                {data?.context.currentTerm && (
+                  <span className="ml-2 text-sm font-medium text-blue-600">
+                    • {data.context.currentTerm.name}
+                  </span>
+                )}
               </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Date Selection */}
-      <div className={cn(cardStyles.base, cardStyles.compact)}>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-[var(--text-muted)]" />
-            <label className={cn(typography.caption, 'text-[var(--text-primary)] dark:text-[var(--text-muted)]')}>Date:</label>
+          <div className="flex items-center gap-3">
+            {/* Auto-save status indicator */}
+            {autoSaveStatus !== 'idle' && (
+              <div className="flex items-center gap-2 text-sm">
+                {autoSaveStatus === 'saving' && (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    <span className="text-blue-600">Saving...</span>
+                  </>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-green-600">
+                      Saved {lastSavedAt && `at ${lastSavedAt.toLocaleTimeString()}`}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+            {hasChanges && autoSaveStatus === 'idle' && (
+              <div className="flex items-center gap-2 text-sm text-yellow-600">
+                <AlertCircle className="h-4 w-4" />
+                <span>Unsaved changes</span>
+              </div>
+            )}
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
           </div>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
-          />
         </div>
       </div>
 
-      {/* Success Message */}
+      {/* Success/Error Messages */}
       {successMessage && (
-        <div className={cn(cardStyles.base, cardStyles.compact, 'bg-[var(--success-light)] dark:bg-[var(--success-dark)] border-[var(--success-light)] dark:border-[var(--success-dark)]')}>
-          <div className="flex items-center gap-2 text-[var(--chart-green)] dark:text-[var(--success)]">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-green-800">
             <CheckCircle className="h-5 w-5" />
             <span>{successMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Error Message */}
       {error && (
-        <div className={cn(cardStyles.base, cardStyles.compact, 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border-[var(--danger-light)] dark:border-[var(--danger-dark)]')}>
-          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-red-800">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
           </div>
         </div>
       )}
 
-      {/* Lock/Status Banner */}
-      {lockMessage && (
-        <div className={cn(cardStyles.base, cardStyles.compact, 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)] border-[var(--warning-light)] dark:border-[var(--warning-dark)]')}>
-          <div className="flex items-center gap-2 text-[var(--warning-dark)] dark:text-[var(--warning)]">
+      {/* Lock Message */}
+      {data?.lockMessage && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-yellow-800">
             <Lock className="h-5 w-5" />
-            <span>{lockMessage}</span>
+            <span>{data.lockMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Attendance Table */}
-      <div className={cn(cardStyles.base, cardStyles.normal)}>
-        {/* Table Header */}
-        <div className="p-4 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className={cn(typography.sectionTitle, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                Attendance for {new Date(date).toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </h2>
-              <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                {students.length} students • {classData?.name}
-              </p>
+      {/* Main Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="marking" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Mark Attendance
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendar
+          </TabsTrigger>
+          <TabsTrigger value="statistics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Statistics
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Alerts {lowAttendanceAlerts.length > 0 && `(${lowAttendanceAlerts.length})`}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Marking Tab */}
+        <TabsContent value="marking" className="space-y-6">
+          {/* Date Selection & Bulk Actions */}
+          <div className="bg-card rounded-lg border p-4 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium">Date:</label>
+                <input
+                  type="date"
+                  value={selectedDate.toISOString().split('T')[0]}
+                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                  className="px-3 py-2 border rounded-lg"
+                />
+              </div>
+              {data?.canEdit && (
+                <BulkActions
+                  onMarkAllPresent={handleMarkAllPresent}
+                  onMarkAllAbsent={handleMarkAllAbsent}
+                  onClearAll={handleClearAll}
+                  disabled={saving || submitting}
+                  studentCount={totalStudents}
+                />
+              )}
             </div>
 
-            {/* Action Buttons */}
-            {data.canEdit && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveDraft}
-                  disabled={!hasChanges || saving || submitting}
-                  className="gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {saving ? 'Saving...' : 'Save Draft'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSubmitFinal}
-                  disabled={submitting || saving}
-                  className="gap-2"
-                >
-                  <Send className="h-4 w-4" />
-                  {submitting ? 'Submitting...' : 'Submit Final'}
-                </Button>
+            {/* Filters */}
+            <AttendanceFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              rateFilter={rateFilter}
+              onRateFilterChange={setRateFilter}
+            />
+          </div>
+
+          {/* Statistics Summary */}
+          <AttendanceStats
+            totalStudents={totalStudents}
+            presentCount={presentCount}
+            absentCount={absentCount}
+            lateCount={lateCount}
+            excusedCount={excusedCount}
+            notMarkedCount={notMarkedCount}
+            classRate={classRate}
+          />
+
+          {/* Student List */}
+          <div className="bg-card rounded-lg border">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Student Roster</h2>
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredStudents.length} of {totalStudents} students
+                </p>
+              </div>
+              {data?.canEdit && hasChanges && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveDraft}
+                    disabled={saving || submitting}
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Saving...' : 'Save Draft'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitFinal}
+                    disabled={submitting || saving}
+                    className="gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    {submitting ? 'Submitting...' : 'Submit Final'}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase">Student Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase">Admission #</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium uppercase">Mark Attendance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredStudents.map((student, index) => (
+                    <tr key={student.studentId} className="hover:bg-muted/50">
+                      <td className="px-4 py-3 text-sm">{index + 1}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{student.studentName}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {student.admissionNumber}
+                      </td>
+                      <td className="px-4 py-3">
+                        {data?.canEdit ? (
+                          <div className="flex justify-center items-center gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={attendanceStatus[student.studentId] === 'PRESENT'}
+                                onChange={(e) => {
+                                  handleAttendanceChange(
+                                    student.studentId,
+                                    e.target.checked ? 'PRESENT' : 'ABSENT'
+                                  )
+                                }}
+                                className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              />
+                              <span className="text-sm font-medium">
+                                {attendanceStatus[student.studentId] === 'PRESENT' ? (
+                                  <span className="text-green-600">Present</span>
+                                ) : (
+                                  <span className="text-red-600">Absent</span>
+                                )}
+                              </span>
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="flex justify-center">
+                            <span className={cn(
+                              'px-3 py-1 rounded-full text-sm font-medium',
+                              student.attendanceStatus === 'PRESENT' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            )}>
+                              {student.attendanceStatus === 'PRESENT' ? 'Present' : 'Absent'}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredStudents.length === 0 && (
+              <div className="p-8 text-center">
+                <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">No Students Found</h3>
+                <p className="text-sm text-muted-foreground">
+                  Try adjusting your filters
+                </p>
               </div>
             )}
           </div>
-        </div>
+        </TabsContent>
 
-        {/* Attendance Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className={cn(teacherColors.secondary.bg)}>
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">#</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Student</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Admission #</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Attendance</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Last Attendance</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Rate</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)] uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {students.map((student, index) => (
-                <tr key={student.studentId} className="hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-                      {student.studentName}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-                    {student.admissionNumber}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    {data.canEdit ? (
-                      <div className="flex justify-center gap-1">
-                        <button
-                          onClick={() => handleAttendanceChange(student.studentId, 'PRESENT')}
-                          className={cn(
-                            'px-3 py-1 rounded text-sm font-medium',
-                            attendanceStatus[student.studentId] === 'PRESENT'
-                              ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          )}
-                        >
-                          P
-                        </button>
-                        <button
-                          onClick={() => handleAttendanceChange(student.studentId, 'ABSENT')}
-                          className={cn(
-                            'px-3 py-1 rounded text-sm font-medium',
-                            attendanceStatus[student.studentId] === 'ABSENT'
-                              ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          )}
-                        >
-                          A
-                        </button>
-                        <button
-                          onClick={() => handleAttendanceChange(student.studentId, 'LATE')}
-                          className={cn(
-                            'px-3 py-1 rounded text-sm font-medium',
-                            attendanceStatus[student.studentId] === 'LATE'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          )}
-                        >
-                          L
-                        </button>
-                        <button
-                          onClick={() => handleAttendanceChange(student.studentId, 'EXCUSED')}
-                          className={cn(
-                            'px-3 py-1 rounded text-sm font-medium',
-                            attendanceStatus[student.studentId] === 'EXCUSED'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          )}
-                        >
-                          E
-                        </button>
-                      </div>
-                    ) : (
-                      <span className={cn(
-                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                        student.attendanceStatus === 'PRESENT' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                        student.attendanceStatus === 'ABSENT' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
-                        student.attendanceStatus === 'LATE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                        student.attendanceStatus === 'EXCUSED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100' :
-                        'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
-                      )}>
-                        {student.attendanceStatus ? student.attendanceStatus.charAt(0) : '-'}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-                    {student.lastAttendanceDate ? new Date(student.lastAttendanceDate).toLocaleDateString('en-UG', { month: 'short', day: 'numeric' }) : '-'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center">
-                      <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-2 mr-2">
-                        <div
-                          className={cn(
-                            'h-2 rounded-full',
-                            student.attendanceRate >= 90 ? 'bg-green-500' :
-                            student.attendanceRate >= 75 ? 'bg-blue-500' :
-                            student.attendanceRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          )}
-                          style={{ width: `${student.attendanceRate}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-                        {student.attendanceRate}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <Link
-                      href={`/class-teacher/students/${student.studentId}`}
-                      className="text-[var(--accent-hover)] dark:text-[var(--accent)] hover:underline"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Calendar Tab */}
+        <TabsContent value="calendar">
+          <AttendanceCalendar
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            markedDates={[]} // Would need to fetch from API
+          />
+        </TabsContent>
 
-        {/* Empty State */}
-        {students.length === 0 && (
-          <div className="p-8 text-center">
-            <ClipboardList className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
-            <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>
-              No Students Found
-            </h3>
-            <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-              {classData ? `No students enrolled in ${classData.name} yet.` : 'No students assigned to your class.'}
-            </p>
-          </div>
-        )}
-      </div>
+        {/* Statistics Tab */}
+        <TabsContent value="statistics">
+          <AttendanceStats
+            totalStudents={totalStudents}
+            presentCount={presentCount}
+            absentCount={absentCount}
+            lateCount={lateCount}
+            excusedCount={excusedCount}
+            notMarkedCount={notMarkedCount}
+            classRate={classRate}
+          />
+        </TabsContent>
 
-      {/* Attendance Summary */}
-      {students.length > 0 && (
-        <div className={cn(cardStyles.base, cardStyles.normal)}>
-          <h2 className={cn(typography.sectionTitle, 'mb-4')}>Attendance Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className={cn(cardStyles.base, cardStyles.compact)}>
-              <div className="flex items-center gap-3">
-                <CheckCircle className={cn('h-5 w-5', teacherColors.success.text)} />
-                <div>
-                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Present</h3>
-                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                    {students.filter(s => attendanceStatus[s.studentId] === 'PRESENT').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={cn(cardStyles.base, cardStyles.compact)}>
-              <div className="flex items-center gap-3">
-                <AlertCircle className={cn('h-5 w-5', teacherColors.danger.text)} />
-                <div>
-                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Absent</h3>
-                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                    {students.filter(s => attendanceStatus[s.studentId] === 'ABSENT').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={cn(cardStyles.base, cardStyles.compact)}>
-              <div className="flex items-center gap-3">
-                <Clock className={cn('h-5 w-5', teacherColors.warning.text)} />
-                <div>
-                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Late</h3>
-                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                    {students.filter(s => attendanceStatus[s.studentId] === 'LATE').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={cn(cardStyles.base, cardStyles.compact)}>
-              <div className="flex items-center gap-3">
-                <Users className={cn('h-5 w-5', teacherColors.info.text)} />
-                <div>
-                  <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>Total</h3>
-                  <p className={cn(typography.label, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                    {students.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Alerts Tab */}
+        <TabsContent value="alerts">
+          <LowAttendanceAlerts
+            alerts={lowAttendanceAlerts}
+            onStudentClick={(studentId) => {
+              // Navigate to student details
+              window.location.href = `/dashboard/class-teacher/students/${studentId}`
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

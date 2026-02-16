@@ -1,220 +1,174 @@
 'use client'
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Download, Share, Clock, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { FileText, CheckCircle2, Eye, Download, Send, Shield, Loader2, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
+interface ClassReports {
+  classId: string
+  className: string
+  termId: string
+  termName: string
+  reports: any[]
+  stats: { total: number; generated: number; approved: number; published: number }
+}
 
 export default function ReviewReportsPage() {
-  const [reportStats, setReportStats] = useState({
-    pending: 0,
-    approved: 0,
-    distributed: 0,
-    downloaded: 0
-  });
-
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [terms, setTerms] = useState<any[]>([])
+  const [selectedTerm, setSelectedTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [classesData, setClassesData] = useState<ClassReports[]>([])
+  const [loading, setLoading] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchReportData = async () => {
-      try {
-        // Fetch report statistics
-        const statsResponse = await fetch('/api/dos/reports/stats');
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setReportStats(statsData);
-        }
+    fetch('/api/settings/terms').then(res => res.json()).then(data => {
+      setTerms(data.terms || [])
+      const current = data.terms?.find((t: any) => t.isCurrent)
+      if (current) setSelectedTerm(current.id)
+    })
+  }, [])
 
-        // Fetch recent reports
-        const reportsResponse = await fetch('/api/dos/reports');
-        if (reportsResponse.ok) {
-          const reportsData = await reportsResponse.json();
-          setReports(reportsData.reports || []);
-        }
-      } catch (error) {
-        console.error('Error fetching report data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {
+    if (selectedTerm) fetchReports()
+  }, [selectedTerm, statusFilter])
 
-    fetchReportData();
-  }, []);
-
-  const handleViewReport = (reportId: string) => {
-    // Navigate to report viewer using the secure token system
-    // In a real implementation, you would get the token for the report
-    // For now, we'll use a placeholder
-    window.open(`/reports/${reportId}`, '_blank');
-  };
-
-  const handleDownloadReport = (reportId: string) => {
-    // Download the report using the secure token system
-    // In a real implementation, you would get the token for the report
-    // For now, we'll use a placeholder
-    window.location.href = `/reports/${reportId}`;
-  };
-
-  const handleShareReport = async (reportId: string) => {
+  const fetchReports = async () => {
+    setLoading(true)
     try {
-      // Get the share link from the API
-      const response = await fetch(`/api/reports/share/${reportId}`);
-      if (response.ok) {
-        const data = await response.json();
-        navigator.clipboard.writeText(data.shareLink);
-        alert('Report link copied to clipboard!');
-      } else {
-        alert('Failed to generate share link');
-      }
-    } catch (error) {
-      console.error('Error sharing report:', error);
-      alert('Error sharing report');
+      const params = new URLSearchParams({ termId: selectedTerm })
+      if (statusFilter !== 'all') params.append('status', statusFilter.toUpperCase())
+      const res = await fetch(`/api/dos/reports/review?${params}`)
+      const data = await res.json()
+      setClassesData(data.classes || [])
+    } catch (err) {
+      setError('Failed to fetch reports')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Review Reports</h1>
-          <p className="text-muted-foreground">
-            Loading report data...
-          </p>
-        </div>
-        <div className="text-center py-10">Loading...</div>
-      </div>
-    );
+  const handleApprove = async (classId: string, termId: string) => {
+    setProcessing(true)
+    try {
+      const res = await fetch(`/api/dos/reports/review/${classId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ termId }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess(`Approved ${data.successCount} reports!`)
+        fetchReports()
+      } else {
+        setError(data.error)
+      }
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handlePublish = async (classId: string, termId: string) => {
+    setProcessing(true)
+    try {
+      const res = await fetch(`/api/dos/reports/review/${classId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ termId, linkExpiryDays: 90 }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess(`Published ${data.successCount} reports!`)
+        fetchReports()
+      } else {
+        setError(data.error)
+      }
+    } finally {
+      setProcessing(false)
+    }
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Review Reports</h1>
-        <p className="text-muted-foreground">
-          Review, approve, and distribute generated reports
-        </p>
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-3xl font-bold">Review Report Cards</h1>
+        <p className="text-muted-foreground mt-2">Review, approve, and publish report cards</p>
       </div>
 
-      <div className="grid gap-6">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[var(--chart-yellow)]" />
-                <span className="text-2xl font-bold">{reportStats.pending}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-[var(--chart-green)]" />
-                <span className="text-2xl font-bold">{reportStats.approved}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Distributed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Share className="h-4 w-4 text-[var(--chart-blue)]" />
-                <span className="text-2xl font-bold">{reportStats.distributed}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Downloaded</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Download className="h-4 w-4 text-[var(--chart-purple)]" />
-                <span className="text-2xl font-bold">{reportStats.downloaded}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Reports</CardTitle>
-            <CardDescription>
-              Review and manage recently generated reports
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {reports.length > 0 ? (
-                reports.map((report) => (
-                  <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{report.title}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{report.type}</span>
-                        <span>•</span>
-                        <span>Generated {new Date(report.generatedAt).toLocaleDateString()}</span>
-                        <span>•</span>
-                        <span>{report.size}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={
-                        report.status === 'distributed' ? 'default' :
-                        report.status === 'approved' ? 'secondary' : 'outline'
-                      }>
-                        {report.status}
-                      </Badge>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewReport(report.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadReport(report.id)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        {(report.status === 'approved' || report.status === 'distributed') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleShareReport(report.id)}
-                          >
-                            <Share className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  No reports found. Generate reports to begin reviewing.
-                </div>
-              )}
+      <Card>
+        <CardHeader><CardTitle>Filters</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Term</label>
+              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                <SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger>
+                <SelectContent>
+                  {terms.map(term => <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="generated">Generated</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      {success && <Alert className="border-green-500 bg-green-50"><CheckCircle2 className="h-4 w-4 text-green-600" /><AlertDescription className="text-green-600">{success}</AlertDescription></Alert>}
+
+      {classesData.map(classData => (
+        <Card key={classData.classId}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{classData.className}</CardTitle>
+                <CardDescription className="flex items-center gap-4 mt-2">
+                  <span className="flex items-center gap-1"><Users className="h-4 w-4" />{classData.stats.total} students</span>
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {classData.stats.generated > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => handleApprove(classData.classId, classData.termId)} disabled={processing}>
+                    <Shield className="h-4 w-4 mr-2" />Approve ({classData.stats.generated})
+                  </Button>
+                )}
+                {classData.stats.approved > 0 && (
+                  <Button size="sm" onClick={() => handlePublish(classData.classId, classData.termId)} disabled={processing}>
+                    <Send className="h-4 w-4 mr-2" />Publish ({classData.stats.approved})
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-4 mt-4">
+              <div className="text-sm"><span className="text-muted-foreground">Generated:</span> <span className="font-medium text-blue-600">{classData.stats.generated}</span></div>
+              <div className="text-sm"><span className="text-muted-foreground">Approved:</span> <span className="font-medium text-green-600">{classData.stats.approved}</span></div>
+              <div className="text-sm"><span className="text-muted-foreground">Published:</span> <span className="font-medium text-purple-600">{classData.stats.published}</span></div>
+            </div>
+          </CardHeader>
         </Card>
-      </div>
+      ))}
+
+      {loading && <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+      {!loading && classesData.length === 0 && selectedTerm && (
+        <Card><CardContent className="py-12 text-center"><FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><h3 className="text-lg font-medium mb-2">No Reports Found</h3></CardContent></Card>
+      )}
     </div>
-  );
+  )
 }

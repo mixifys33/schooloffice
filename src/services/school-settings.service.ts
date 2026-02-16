@@ -5,7 +5,7 @@
  */
 import { prisma } from '@/lib/db'
 import { FinanceAuditService } from './finance-audit.service'
-
+    
 // Settings category types
 export type SettingsCategory =
   | 'identity'
@@ -335,7 +335,7 @@ export class SchoolSettingsService {
       return DEFAULT_SETTINGS[category] as T
     }
 
-    return settings.settings as T
+    return settings.settings as unknown as T
   }
 
   /**
@@ -386,10 +386,12 @@ export class SchoolSettingsService {
           schoolId,
           userId: updatedBy,
           action: 'SETTINGS_UPDATED',
-          resourceType: 'Settings',
-          resourceId: result.id,
-          previousValue: currentSettings as Record<string, unknown>,
-          newValue: mergedSettings as Record<string, unknown>,
+          entityType: 'Settings',
+          entityId: result.id,
+          details: {
+            previousValue: currentSettings as unknown as Record<string, unknown>,
+            newValue: mergedSettings as unknown as Record<string, unknown>,
+          },
           ipAddress,
         })
       } catch (auditError) {
@@ -398,7 +400,7 @@ export class SchoolSettingsService {
       }
     }
 
-    return result.settings as T
+    return result.settings as unknown as T
   }
 
   /**
@@ -423,7 +425,7 @@ export class SchoolSettingsService {
 
     // Override with stored settings
     for (const setting of allSettings) {
-      result[setting.category as SettingsCategory] = setting.settings as SchoolSettingsData
+      result[setting.category as SettingsCategory] = setting.settings as unknown as SchoolSettingsData
     }
 
     return result
@@ -481,7 +483,7 @@ export class SchoolSettingsService {
     key: string
   ): Promise<T | undefined> {
     const settings = await this.getSettings(schoolId, category)
-    return (settings as Record<string, unknown>)[key] as T | undefined
+    return (settings as unknown as Record<string, unknown>)[key] as T | undefined
   }
 
   // ============================================
@@ -732,7 +734,7 @@ export class SchoolSettingsService {
         settings: {
           ...settings,
           nextReceiptNumber: currentNumber + 1,
-        },
+        } as object,
         updatedBy,
       },
     })
@@ -766,7 +768,7 @@ export class SchoolSettingsService {
         settings: {
           ...settings,
           nextInvoiceNumber: currentNumber + 1,
-        },
+        } as object,
         updatedBy,
       },
     })

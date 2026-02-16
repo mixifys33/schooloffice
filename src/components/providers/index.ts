@@ -3,6 +3,7 @@
  * Central export for all provider components
  */
 
+export * from './error-boundary'
 export * from './onboarding-provider'
 export * from './session-provider'
 export * from './theme-provider'

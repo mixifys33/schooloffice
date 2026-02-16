@@ -2,7 +2,7 @@
  * Context Management Service
  * Handles session context management for multi-tenant authentication
  * Requirements: 18.1, 18.2, 18.3, 18.4, 18.6
- */
+ */  
 import { prisma } from '@/lib/db'
 import { Role, LicenseType, AuthEventType } from '@/types/enums'
 import { getPermissionsForRole } from '@/lib/rbac'

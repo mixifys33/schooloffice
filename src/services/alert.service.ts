@@ -5,7 +5,7 @@
  */
 import { prisma } from '@/lib/db'
 import { AlertType, AlertSeverity } from '@prisma/client'
-
+  
 /**
  * Alert Interface
  */
@@ -39,16 +39,21 @@ export class AlertService {
    * Requirement 5.1: SMS balance < 100 messages
    */
   async checkLowSmsBalance(schoolId: string): Promise<AlertConditionResult | null> {
-    const metrics = await prisma.schoolHealthMetrics.findUnique({
-      where: { schoolId },
-      select: { smsBalance: true },
+    // Get SMS balance from school's subscription
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { 
+        subscription: {
+          select: { smsBalance: true }
+        }
+      },
     })
 
-    if (!metrics) {
+    if (!school?.subscription) {
       return null
     }
 
-    const shouldAlert = metrics.smsBalance < 100
+    const shouldAlert = school.subscription.smsBalance < 100
 
     if (shouldAlert) {
       return {
@@ -56,7 +61,7 @@ export class AlertService {
         type: AlertType.LOW_SMS,
         severity: AlertSeverity.WARNING,
         title: 'Low SMS Balance',
-        message: `SMS balance is critically low (${metrics.smsBalance} messages remaining). Please top up to avoid service interruption.`,
+        message: `SMS balance is critically low (${school.subscription.smsBalance} messages remaining). Please top up to avoid service interruption.`,
         conditionStartedAt: new Date(), // Will be updated if alert already exists
       }
     }
@@ -69,12 +74,17 @@ export class AlertService {
    * Requirement 5.2: No admin login for 14+ days
    */
   async checkInactiveAdmin(schoolId: string): Promise<AlertConditionResult | null> {
-    const metrics = await prisma.schoolHealthMetrics.findUnique({
-      where: { schoolId },
-      select: { lastAdminLogin: true },
+    // Get most recent admin login from audit logs
+    const recentAdminLogin = await prisma.auditLog.findFirst({
+      where: { 
+        schoolId,
+        action: 'login',
+      },
+      orderBy: { timestamp: 'desc' },
+      select: { timestamp: true },
     })
 
-    if (!metrics || !metrics.lastAdminLogin) {
+    if (!recentAdminLogin) {
       // No login data available, create critical alert
       return {
         shouldAlert: true,
@@ -88,7 +98,7 @@ export class AlertService {
 
     const now = new Date()
     const daysSinceLogin = Math.floor(
-      (now.getTime() - metrics.lastAdminLogin.getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - recentAdminLogin.timestamp.getTime()) / (1000 * 60 * 60 * 24)
     )
 
     const shouldAlert = daysSinceLogin >= 14
@@ -114,18 +124,26 @@ export class AlertService {
    * Requirement 5.3: Payment overdue by 7+ days
    */
   async checkPaymentOverdue(schoolId: string): Promise<AlertConditionResult | null> {
-    const metrics = await prisma.schoolHealthMetrics.findUnique({
-      where: { schoolId },
-      select: { nextBillingDate: true },
+    // Get subscription billing info
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { 
+        subscription: {
+          select: { 
+            endDate: true,
+            status: true
+          }
+        }
+      },
     })
 
-    if (!metrics || !metrics.nextBillingDate) {
+    if (!school?.subscription?.endDate) {
       return null // No billing date set, no alert needed
     }
 
     const now = new Date()
     const daysOverdue = Math.floor(
-      (now.getTime() - metrics.nextBillingDate.getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - school.subscription.endDate.getTime()) / (1000 * 60 * 60 * 24)
     )
 
     const shouldAlert = daysOverdue > 7
@@ -138,7 +156,7 @@ export class AlertService {
         title: 'Payment Overdue',
         message: `Payment is ${daysOverdue} days overdue. Immediate action required to avoid service suspension.`,
         conditionStartedAt: new Date(
-          metrics.nextBillingDate.getTime() + 7 * 24 * 60 * 60 * 1000
+          school.subscription.endDate.getTime() + 7 * 24 * 60 * 60 * 1000
         ),
       }
     }
@@ -151,16 +169,27 @@ export class AlertService {
    * Requirement 5.4: Health score < 50
    */
   async checkCriticalHealth(schoolId: string): Promise<AlertConditionResult | null> {
-    const metrics = await prisma.schoolHealthMetrics.findUnique({
-      where: { schoolId },
-      select: { healthScore: true },
-    })
+    // Calculate health score based on multiple factors
+    const [studentCount, activeStaff, recentPayments] = await Promise.all([
+      prisma.student.count({ where: { schoolId, status: 'ACTIVE' } }),
+      prisma.staff.count({ where: { schoolId, status: 'ACTIVE' } }),
+      prisma.payment.count({ 
+        where: { 
+          schoolId,
+          receivedAt: { 
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+          }
+        }
+      }),
+    ])
 
-    if (!metrics) {
-      return null
-    }
+    // Simple health score calculation (0-100)
+    let healthScore = 100
+    if (studentCount === 0) healthScore -= 40
+    if (activeStaff === 0) healthScore -= 30
+    if (recentPayments === 0) healthScore -= 30
 
-    const shouldAlert = metrics.healthScore < 50
+    const shouldAlert = healthScore < 50
 
     if (shouldAlert) {
       return {
@@ -168,7 +197,7 @@ export class AlertService {
         type: AlertType.CRITICAL_HEALTH,
         severity: AlertSeverity.CRITICAL,
         title: 'Critical Health Score',
-        message: `School health score is critically low (${metrics.healthScore}/100). Multiple risk factors detected.`,
+        message: `School health score is critically low (${healthScore}/100). Multiple risk factors detected.`,
         conditionStartedAt: new Date(),
       }
     }
@@ -181,39 +210,25 @@ export class AlertService {
    * Requirement 5.5: Student count decreased for 2 consecutive months
    */
   async checkDecliningEnrollment(schoolId: string): Promise<AlertConditionResult | null> {
-    // Get historical student count data
-    // For now, we'll check if current count is less than previous count
-    // In a production system, we'd track monthly snapshots
-    const metrics = await prisma.schoolHealthMetrics.findUnique({
-      where: { schoolId },
-      select: { studentCount: true },
+    // Get current student count
+    const currentCount = await prisma.student.count({
+      where: { schoolId, status: 'ACTIVE' }
     })
 
-    if (!metrics) {
-      return null
-    }
-
-    // Get current student count from school
-    const school = await prisma.school.findUnique({
-      where: { id: schoolId },
-      include: {
-        students: {
-          where: { status: 'ACTIVE' },
-          select: { id: true },
-        },
-      },
+    // Get student count from 30 days ago (approximate)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const studentsCreatedRecently = await prisma.student.count({
+      where: { 
+        schoolId, 
+        status: 'ACTIVE',
+        createdAt: { gte: thirtyDaysAgo }
+      }
     })
 
-    if (!school) {
-      return null
-    }
-
-    const currentCount = school.students.length
-    const previousCount = metrics.studentCount
+    // Estimate previous count (current - new additions)
+    const previousCount = currentCount - studentsCreatedRecently
 
     // Check if enrollment is declining
-    // In a full implementation, we'd check 2 consecutive months
-    // For now, we'll flag if current is significantly less than previous
     const isDecining = currentCount < previousCount && previousCount > 0
 
     if (isDecining) {

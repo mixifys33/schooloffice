@@ -2,7 +2,7 @@
  * Communication Permission Service
  * Implements role-based access control for messaging functionality
  * Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6
- */
+ */   
 import { prisma } from '@/lib/db'
 import { Role, MessageChannel, MessageType, TargetType } from '@/types/enums'
 import {

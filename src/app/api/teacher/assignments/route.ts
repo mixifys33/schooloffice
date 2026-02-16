@@ -65,15 +65,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No current academic year found' }, { status: 400 })
     }
 
-    const currentTerm = await prisma.term.findFirst({
+    // Try to get current term (isCurrent flag)
+    let currentTerm = await prisma.term.findFirst({
       where: {
         academicYearId: currentAcademicYear.id,
         isCurrent: true
       }
     })
 
+    // If no current term, try date-based selection
     if (!currentTerm) {
-      return NextResponse.json({ error: 'No current term found' }, { status: 400 })
+      const today = new Date()
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // If still no term, get the most recent term
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    if (!currentTerm) {
+      return NextResponse.json({ 
+        error: 'No term found',
+        details: 'Please create a term for the current academic year in Settings > Academic Settings.'
+      }, { status: 400 })
     }
 
     // Fetch assignments for this teacher only

@@ -2,7 +2,7 @@
  * Finance Notification Service
  * Handles automated finance-related notifications including payment confirmations,
  * fee reminders, penalty notifications, and bulk balance summaries.
- * 
+ *   
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  * 
  * Property 24: Payment Notification
@@ -365,7 +365,7 @@ export class FinanceNotificationService {
    */
   async getDeliveryStatistics(schoolId: string, dateFrom?: Date, dateTo?: Date): Promise<{
     total: number; sent: number; delivered: number; failed: number;
-    byType: Record<FinanceNotificationType, number>; byChannel: Record<MessageChannel, number>; deliveryRate: number
+    byType: Record<FinanceNotificationType, number>; byChannel: Record<string, number>; deliveryRate: number
   }> {
     const where: Record<string, unknown> = { schoolId }
     if (dateFrom || dateTo) {

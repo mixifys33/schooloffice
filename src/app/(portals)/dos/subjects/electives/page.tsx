@@ -92,15 +92,15 @@ export default function ElectiveSubjectsPage() {
   );
 
   const handleBack = () => {
-    router.push('/dashboard/dos/subjects/management');
+    router.push('/dos/subjects/management');
   };
 
   const handleAddSubject = () => {
-    router.push('/dashboard/dos/subjects/add?type=elective');
+    router.push('/dos/subjects/add?type=elective');
   };
 
   const handleEditSubject = (subjectId: string) => {
-    router.push(`/dashboard/dos/subjects/edit/${subjectId}`);
+    router.push(`/dos/subjects/edit/${subjectId}`);
   };
 
   const getStatusColor = (status: string) => {

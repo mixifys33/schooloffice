@@ -191,7 +191,7 @@ export default function ClassTeacherExamEntryPage() {
   const getScoreValue = (student: StudentExam): string => {
     if (editedScores.has(student.studentId)) {
       const edited = editedScores.get(student.studentId)
-      return edited === null ? '' : edited.toString()
+      return edited === null || edited === undefined ? '' : edited.toString()
     }
     return student.score === null ? '' : student.score.toString()
   }
@@ -329,7 +329,7 @@ export default function ClassTeacherExamEntryPage() {
     <div className="space-y-6 p-4 sm:p-6">
       {/* Back Navigation */}
       <Link
-        href="/dashboard/class-teacher/assessments"
+        href="/class-teacher/assessments"
         className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
       >
         <ArrowLeft className="h-4 w-4" />

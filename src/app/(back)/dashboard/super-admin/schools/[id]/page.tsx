@@ -1,382 +1,397 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { SchoolStatusBadge, SchoolStatus } from '@/components/ui/school-status-badge'
-import { SkeletonLoader } from '@/components/ui/skeleton-loader'
-import { Toast, useLocalToast } from '@/components/ui/toast'
+import React, { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { 
-  ArrowLeft,
-  Building2, 
-  Users, 
-  Mail,
-  Phone,
+  Users,
+  GraduationCap,
+  BookOpen,
+  MessageSquare,
+  DollarSign,
   Calendar,
-  Save,
-  MessageSquare
+  AlertTriangle,
 } from 'lucide-react'
-import { LicenseType } from '@/types/enums'
+import { StatCard, StatsGrid } from '@/components/ui/stat-card'
+import { AlertBanner } from '@/components/ui/alert-banner'
+import { SkeletonLoader } from '@/components/ui/skeleton-loader'
+import { cn } from '@/lib/utils'
+import { SchoolProfileHeader } from '@/components/super-admin/school-profile-header'
+import { SchoolQuickActions } from '@/components/super-admin/school-quick-actions'
+import { SchoolCoreInfo } from '@/components/super-admin/school-core-info'
+import { SchoolActivityTimeline } from '@/components/super-admin/school-activity-timeline'
+import { SchoolAuditLog } from '@/components/super-admin/school-audit-log'
 
 /**
- * School Detail/Edit Page
- * Requirements: 13.5 - Update school's maximum student count
+ * Super Admin School Profile Page
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
+ * - Navigate to school profile page (6.1)
+ * - Display header section with school name, health score, plan, status badge, and last activity timestamp (6.2)
+ * - Display quick action buttons for suspend, reactivate, change plan, reset admin password, force logout, and impersonate (6.3)
+ * - Display core information including admin name, admin email, phone, registration date, and current plan details (6.4)
+ * - Display usage metrics including student count, teacher count, class count, SMS sent this month, and SMS balance (6.5)
+ * - Display financial metrics including MRR, total revenue, last payment date, last payment amount, and next billing date (6.6)
+ * - Display activity timeline showing recent significant events in reverse chronological order (6.7)
+ * - Display current alert flags with descriptions (6.8)
  */
 
-interface SchoolDetail {
+// ============================================
+// TYPES
+// ============================================
+
+interface SchoolDetailData {
   id: string
   name: string
-  code: string
-  email: string | null
-  phone: string | null
-  address: string | null
-  licenseType: string
-  smsBudgetPerTerm: number
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-  features: {
-    smsEnabled: boolean
-    whatsappEnabled: boolean
-    paymentIntegration: boolean
-    advancedReporting: boolean
-    bulkMessaging: boolean
+  healthScore: number
+  plan: string
+  status: 'active' | 'suspended'
+  lastActivity: Date | null
+  coreInfo: {
+    adminName: string | null
+    adminEmail: string | null
+    phone: string | null
+    registrationDate: Date
+    currentPlan: string
+    planDetails: {
+      tier: string | null
+      billingCycle: string | null
+    }
   }
-  _count: {
-    students: number
-    staff: number
+  usageMetrics: {
+    studentCount: number
+    teacherCount: number
+    classCount: number
+    smsSentThisMonth: number
+    smsBalance: number
   }
+  financialMetrics: {
+    mrr: number
+    totalRevenue: number
+    lastPaymentDate: Date | null
+    lastPaymentAmount: number
+    nextBillingDate: Date | null
+  }
+  activityTimeline: {
+    timestamp: Date
+    eventType: string
+    description: string
+    actor: string | null
+  }[]
+  alertFlags: {
+    id: string
+    type: string
+    severity: string
+    title: string
+    message: string
+    daysSinceCondition: number
+    conditionStartedAt: Date
+  }[]
+  recentAuditLogs: {
+    id: string
+    timestamp: Date
+    adminEmail: string
+    actionType: string
+    reason: string
+    result: string
+  }[]
 }
 
-const planLabels: Record<string, string> = {
-  FREE_PILOT: 'Free Pilot',
-  BASIC: 'Basic',
-  PREMIUM: 'Premium'
-}
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
 function formatCurrency(amount: number): string {
-  return `UGX ${amount.toLocaleString()}`
+  return new Intl.NumberFormat('en-UG', {
+    style: 'currency',
+    currency: 'UGX',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
-export default function SchoolDetailPage() {
-  const router = useRouter()
-  const params = useParams()
-  const schoolId = params.id as string
-  const { toast, showToast, hideToast } = useLocalToast()
+function formatDate(date: Date | null): string {
+  if (!date) return 'Not available'
   
-  const [school, setSchool] = useState<SchoolDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Form state
-  const [smsBudgetPerTerm, setSmsBudgetPerTerm] = useState(0)
-  const [licenseType, setLicenseType] = useState<string>('FREE_PILOT')
+  return new Date(date).toLocaleDateString('en-UG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
-  const fetchSchool = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch(`/api/admin/schools/${schoolId}`)
-      
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Access denied. Super Admin privileges required.')
-        }
-        if (response.status === 404) {
-          throw new Error('School not found')
-        }
-        throw new Error('Failed to fetch school data')
-      }
-      
-      const data = await response.json()
-      setSchool(data.school)
-      setSmsBudgetPerTerm(data.school.smsBudgetPerTerm)
-      setLicenseType(data.school.licenseType)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }, [schoolId])
+function getAlertBadge(severity: string): React.ReactNode {
+  const severityClasses = {
+    critical: 'bg-[var(--danger-light)] text-[var(--danger-dark)] dark:bg-[var(--danger-dark)] dark:text-[var(--danger)]',
+    warning: 'bg-[var(--warning-light)] text-[var(--warning-dark)] dark:bg-[var(--warning-dark)] dark:text-[var(--warning)]',
+    info: 'bg-[var(--info-light)] text-[var(--info-dark)] dark:bg-[var(--info-dark)] dark:text-[var(--info)]',
+  }
+  
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+      severityClasses[severity as keyof typeof severityClasses] || severityClasses.info
+    )}>
+      {severity}
+    </span>
+  )
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
+export default function SchoolProfilePage() {
+  const params = useParams()
+  const router = useRouter()
+  const schoolId = params?.id as string
+
+  const [data, setData] = useState<SchoolDetailData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchSchool()
-  }, [fetchSchool])
-
-  const handleSave = async () => {
-    try {
-      setSaving(true)
-      
-      // Update SMS budget - Requirement 13.5
-      const response = await fetch(`/api/admin/schools/${schoolId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'updateLimits',
-          smsBudgetPerTerm 
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to update school')
-
-      // Update license type if changed
-      if (licenseType !== school?.licenseType) {
-        const licenseResponse = await fetch(`/api/admin/schools/${schoolId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            action: 'updateLicense',
-            licenseType 
-          })
-        })
-
-        if (!licenseResponse.ok) throw new Error('Failed to update license type')
+    async function fetchSchoolDetail() {
+      if (!schoolId) {
+        setError('School ID is required')
+        setLoading(false)
+        return
       }
 
-      showToast('success', 'School settings updated successfully')
-      await fetchSchool()
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : 'Failed to update school')
-    } finally {
-      setSaving(false)
+      try {
+        setLoading(true)
+        
+        const response = await fetch(`/api/super-admin/schools/${schoolId}`)
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized. Please log in.')
+          }
+          if (response.status === 403) {
+            throw new Error('Access denied. Super Admin privileges required.')
+          }
+          if (response.status === 404) {
+            throw new Error('School not found.')
+          }
+          throw new Error('Failed to fetch school details')
+        }
+        
+        const result = await response.json()
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to load school details')
+        }
+        
+        setData(result.data)
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error('Error fetching school detail:', err)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchSchoolDetail()
+  }, [schoolId])
+
+  const handleActionComplete = () => {
+    // Refresh the page data
+    window.location.reload()
   }
 
-  // Determine status
-  const getStatus = (): SchoolStatus => {
-    if (!school) return 'ACTIVE'
-    if (!school.isActive) return 'SUSPENDED'
-    if (school.licenseType === 'FREE_PILOT') return 'PILOT'
-    return 'ACTIVE'
-  }
+  // ============================================
+  // RENDER
+  // ============================================
 
   if (loading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Schools
-          </button>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">School Details</h1>
-        </div>
-        <SkeletonLoader variant="card" count={2} />
+      <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+        <SkeletonLoader variant="text" count={1} />
+        <SkeletonLoader variant="card" count={5} />
       </div>
     )
   }
 
-  if (error || !school) {
+  if (error) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Schools
-          </button>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">School Details</h1>
-        </div>
-        <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-lg p-4">
-          <p className="text-[var(--chart-red)]">{error || 'School not found'}</p>
-          <button
-            onClick={fetchSchool}
-            className="mt-2 text-sm text-[var(--chart-red)] underline hover:no-underline"
-          >
-            Try again
-          </button>
-        </div>
+      <div className="p-2 sm:p-3 md:p-4 lg:p-6">
+        <AlertBanner
+          type="danger"
+          message={error}
+          action={{
+            label: 'Back to Dashboard',
+            onClick: () => router.push('/portals/super-admin/dashboard'),
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="p-2 sm:p-3 md:p-4 lg:p-6">
+        <AlertBanner
+          type="danger"
+          message="No data available"
+          action={{
+            label: 'Back to Dashboard',
+            onClick: () => router.push('/portals/super-admin/dashboard'),
+          }}
+        />
       </div>
     )
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50">
-          <Toast
-            type={toast.type}
-            message={toast.message}
-            onDismiss={hideToast}
-          />
+    <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+      {/* Requirement 6.2: Header Section - Mobile Optimized */}
+      <SchoolProfileHeader
+        schoolId={data.id}
+        schoolName={data.name}
+        healthScore={data.healthScore}
+        plan={data.plan}
+        status={data.status}
+        lastActivity={data.lastActivity}
+      />
+
+      {/* Requirement 6.3: Quick Action Buttons */}
+      <SchoolQuickActions
+        schoolId={data.id}
+        schoolName={data.name}
+        currentStatus={data.status}
+        currentPlan={data.plan}
+        onActionComplete={handleActionComplete}
+      />
+
+      {/* Requirement 6.8: Alert Flags Display - Fully Responsive */}
+      {data.alertFlags.length > 0 && (
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4 md:p-6">
+          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)] mb-3 sm:mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--warning)]" />
+            <span>Active Alerts ({data.alertFlags.length})</span>
+          </h2>
+          
+          <div className="space-y-3">
+            {data.alertFlags.map((alert) => (
+              <div
+                key={alert.id}
+                className="p-3 sm:p-4 rounded-lg border border-[var(--warning-light)] dark:border-[var(--warning-dark)] bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/10"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                      {getAlertBadge(alert.severity)}
+                      <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                        {alert.title}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                      {alert.message}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-2">
+                      Active for {alert.daysSinceCondition} day{alert.daysSinceCondition !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Schools
-        </button>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-[var(--info-light)] flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-[var(--chart-blue)]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--text-primary)]">{school.name}</h1>
-              <p className="text-[var(--text-muted)]">{school.code}</p>
-            </div>
-          </div>
-          <SchoolStatusBadge status={getStatus()} plan={school.licenseType as 'FREE_PILOT' | 'BASIC' | 'PREMIUM'} />
+      {/* Requirement 6.4: Core Information Section */}
+      <SchoolCoreInfo coreInfo={data.coreInfo} />
+
+      {/* Requirement 6.5: Usage Metrics Section - Fully Responsive */}
+      <div className="space-y-3">
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+          Usage Metrics
+        </h2>
+        {/* Mobile: 1 column, Small: 2 columns, Medium: 3 columns, Large: 5 columns */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          <StatCard
+            title="Students"
+            value={data.usageMetrics.studentCount}
+            subtitle="Total enrolled"
+            color="blue"
+            icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
+          />
+          <StatCard
+            title="Teachers"
+            value={data.usageMetrics.teacherCount}
+            subtitle="Active staff"
+            color="green"
+            icon={<GraduationCap className="h-4 w-4 sm:h-5 sm:w-5" />}
+          />
+          <StatCard
+            title="Classes"
+            value={data.usageMetrics.classCount}
+            subtitle="Total classes"
+            color="purple"
+            icon={<BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />}
+          />
+          <StatCard
+            title="SMS Sent"
+            value={data.usageMetrics.smsSentThisMonth}
+            subtitle="This month"
+            color="orange"
+            icon={<MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />}
+          />
+          <StatCard
+            title="SMS Balance"
+            value={data.usageMetrics.smsBalance}
+            subtitle="Remaining credits"
+            color={data.usageMetrics.smsBalance < 100 ? 'red' : 'gray'}
+            icon={<MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />}
+          />
         </div>
       </div>
 
-      {/* School Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
-            <Users className="h-4 w-4" />
-            <span className="text-sm">Students</span>
-          </div>
-          <p className="text-2xl font-bold text-[var(--text-primary)]">{school._count.students}</p>
-        </div>
-        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
-            <Users className="h-4 w-4" />
-            <span className="text-sm">Staff</span>
-          </div>
-          <p className="text-2xl font-bold text-[var(--text-primary)]">{school._count.staff}</p>
-        </div>
-        <div className="bg-[var(--bg-main)] rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-[var(--text-muted)] mb-1">
-            <MessageSquare className="h-4 w-4" />
-            <span className="text-sm">SMS Budget</span>
-          </div>
-          <p className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(school.smsBudgetPerTerm)}</p>
-        </div>
-      </div>
-
-      {/* Contact Info */}
-      <div className="bg-[var(--bg-main)] rounded-lg border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Contact Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-3">
-            <Mail className="h-5 w-5 text-[var(--text-muted)]" />
+      {/* Requirement 6.6: Financial Metrics Section - Fully Responsive */}
+      <div className="space-y-3">
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+          Financial Metrics
+        </h2>
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--border-strong)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             <div>
-              <p className="text-sm text-[var(--text-muted)]">Email</p>
-              <p className="text-[var(--text-primary)]">{school.email || 'Not provided'}</p>
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">Monthly Recurring Revenue</p>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                {formatCurrency(data.financialMetrics.mrr)}
+              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Phone className="h-5 w-5 text-[var(--text-muted)]" />
+            
             <div>
-              <p className="text-sm text-[var(--text-muted)]">Phone</p>
-              <p className="text-[var(--text-primary)]">{school.phone || 'Not provided'}</p>
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">Total Revenue</p>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                {formatCurrency(data.financialMetrics.totalRevenue)}
+              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-3 md:col-span-2">
-            <Calendar className="h-5 w-5 text-[var(--text-muted)]" />
+            
             <div>
-              <p className="text-sm text-[var(--text-muted)]">Created</p>
-              <p className="text-[var(--text-primary)]">
-                {new Date(school.createdAt).toLocaleDateString('en-UG', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">Last Payment</p>
+              <p className="text-sm sm:text-base md:text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                {formatCurrency(data.financialMetrics.lastPaymentAmount)}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
+                {formatDate(data.financialMetrics.lastPaymentDate)}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1">Next Billing Date</p>
+              <p className="text-sm sm:text-base md:text-lg font-semibold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                {formatDate(data.financialMetrics.nextBillingDate)}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Settings Form - Requirement 13.5 */}
-      <div className="bg-[var(--bg-main)] rounded-lg border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">School Settings</h2>
-        
-        <div className="space-y-4">
-          {/* License Type */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-              License Type
-            </label>
-            <select
-              value={licenseType}
-              onChange={(e) => setLicenseType(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
-            >
-              <option value="FREE_PILOT">Free Pilot</option>
-              <option value="BASIC">Basic</option>
-              <option value="PREMIUM">Premium</option>
-            </select>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Changing the license type will update available features
-            </p>
-          </div>
+      {/* Requirement 6.7: Activity Timeline */}
+      <SchoolActivityTimeline activityTimeline={data.activityTimeline} />
 
-          {/* SMS Budget - Requirement 13.5 */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-              SMS Budget Per Term (UGX)
-            </label>
-            <input
-              type="number"
-              value={smsBudgetPerTerm}
-              onChange={(e) => setSmsBudgetPerTerm(Number(e.target.value))}
-              min={0}
-              step={10000}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
-            />
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Maximum SMS budget allocated to this school per term
-            </p>
-          </div>
-
-          {/* Save Button */}
-          <div className="pt-4">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--chart-blue)] text-[var(--white-pure)] rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="bg-[var(--bg-main)] rounded-lg border p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Enabled Features</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Object.entries(school.features).map(([key, enabled]) => (
-            <div 
-              key={key}
-              className={`p-3 rounded-lg border ${
-                enabled 
-                  ? 'bg-[var(--success-light)] border-[var(--success-light)]' 
-                  : 'bg-[var(--bg-surface)] border-[var(--border-default)]'
-              }`}
-            >
-              <div className={`text-sm font-medium ${enabled ? 'text-[var(--chart-green)]' : 'text-[var(--text-muted)]'}`}>
-                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-              </div>
-              <div className={`text-xs ${enabled ? 'text-[var(--chart-green)]' : 'text-[var(--text-muted)]'}`}>
-                {enabled ? 'Enabled' : 'Disabled'}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Requirement 6.8: Audit Log Display */}
+      <SchoolAuditLog recentAuditLogs={data.recentAuditLogs} />
     </div>
   )
 }

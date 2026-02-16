@@ -1,0 +1,809 @@
+# Prisma Schema Fixes - Add schoolId and Relations
+# Generated: 2026-02-10T12:53:15.274Z
+# Total fixes: 78
+
+## CRITICAL: This is a REFERENCE file, not executable code!
+## You need to manually apply these changes to prisma/schema.prisma
+
+═══════════════════════════════════════════════════════════
+PART 1: Add schoolId field + relation (${modelsNeedingSchoolId.length} models)
+═══════════════════════════════════════════════════════════
+
+1. Guardian
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+2. Term
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+3. Stream
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+4. Mark
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+5. Result
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+6. Attendance
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+7. CAEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+8. ExamEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+9. DisciplineCase
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+10. StudentDocument
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+11. ClassSubject
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+12. StaffSubject
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+13. StaffClass
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+14. StudentGuardian
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+15. GradeRange
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+16. FeeItem
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+17. InvoiceItem
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+18. PaymentAllocation
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+19. TeacherAlert
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+20. LearningEvidence
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+21. TeacherAssessment
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+22. TeacherAssessmentResult
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+23. DoSAssessmentPlan
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+24. DoSContinuousAssessment
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+25. DoSExam
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+26. DoSExamResult
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+27. DoSFinalScore
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+28. DoSTimetableEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+29. AssessmentPlan
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+30. ContinuousAssessment
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+31. CAResult
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+32. StaffResponsibility
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+33. StaffHistoryEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+34. StaffDocument
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+35. GuardianDocument
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+36. GuardianPortalAccess
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+37. GuardianAuditLog
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+38. StudentDiscount
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+39. StudentPenalty
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+40. StudentMilestoneStatus
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+41. TimetableEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+42. TimetableSlot
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+43. TimetableConflict
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+44. TeacherDocument
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+45. TeacherHistoryEntry
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+46. TeacherExaminationRoleAssignment
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+47. DosApproval
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+48. CompetencyProgress
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+49. CompetencyMapping
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+50. CompetencyAuditTrail
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+51. SecureLink
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+52. DirectMessage
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+53. TimetableApproval
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+54. AnnouncementDelivery
+   Add after the id field:
+   schoolId  String  @db.ObjectId
+   
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Add in indexes section:
+   @@index([schoolId])
+
+
+═══════════════════════════════════════════════════════════
+PART 2: Add relation only (24 models)
+═══════════════════════════════════════════════════════════
+
+1. User
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+2. SystemLock
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+3. PasswordReset
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+4. StaffTask
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+5. PublishedReportCard
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+6. FeeStructure
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+7. DiscountRule
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+8. PenaltyRule
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+9. Invoice
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+10. Payment
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+11. Receipt
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+12. FinanceAuditLog
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+13. FinanceNotificationLog
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+14. FinanceSettings
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+15. AuthAuditLog
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+16. OTPVerification
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+17. TeacherSmsPermissionCode
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+18. TeacherDraft
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+19. TeacherPerformanceMetric
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+20. ReportCardTemplate
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+21. NewCurriculumReportCard
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+22. DoSReportCard
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+23. DoSPromotionDecision
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+24. DoSAuditLog
+   Add in relations section:
+   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   
+   Verify index exists:
+   @@index([schoolId])
+
+
+═══════════════════════════════════════════════════════════
+PART 3: Update School model
+═══════════════════════════════════════════════════════════
+
+Add these relations to the School model:
+
+  guardians                      Guardian[]
+  terms                          Term[]
+  streams                        Stream[]
+  marks                          Mark[]
+  results                        Result[]
+  attendances                    Attendance[]
+  cAEntrys                       CAEntry[]
+  examEntrys                     ExamEntry[]
+  disciplineCases                DisciplineCase[]
+  studentDocuments               StudentDocument[]
+  classSubjects                  ClassSubject[]
+  staffSubjects                  StaffSubject[]
+  staffClasss                    StaffClass[]
+  studentGuardians               StudentGuardian[]
+  gradeRanges                    GradeRange[]
+  feeItems                       FeeItem[]
+  invoiceItems                   InvoiceItem[]
+  paymentAllocations             PaymentAllocation[]
+  teacherAlerts                  TeacherAlert[]
+  learningEvidences              LearningEvidence[]
+  teacherAssessments             TeacherAssessment[]
+  teacherAssessmentResults       TeacherAssessmentResult[]
+  doSAssessmentPlans             DoSAssessmentPlan[]
+  doSContinuousAssessments       DoSContinuousAssessment[]
+  doSExams                       DoSExam[]
+  doSExamResults                 DoSExamResult[]
+  doSFinalScores                 DoSFinalScore[]
+  doSTimetableEntrys             DoSTimetableEntry[]
+  assessmentPlans                AssessmentPlan[]
+  continuousAssessments          ContinuousAssessment[]
+  cAResults                      CAResult[]
+  staffResponsibilitys           StaffResponsibility[]
+  staffHistoryEntrys             StaffHistoryEntry[]
+  staffDocuments                 StaffDocument[]
+  guardianDocuments              GuardianDocument[]
+  guardianPortalAccesss          GuardianPortalAccess[]
+  guardianAuditLogs              GuardianAuditLog[]
+  studentDiscounts               StudentDiscount[]
+  studentPenaltys                StudentPenalty[]
+  studentMilestoneStatuss        StudentMilestoneStatus[]
+  timetableEntrys                TimetableEntry[]
+  timetableSlots                 TimetableSlot[]
+  timetableConflicts             TimetableConflict[]
+  teacherDocuments               TeacherDocument[]
+  teacherHistoryEntrys           TeacherHistoryEntry[]
+  teacherExaminationRoleAssignments TeacherExaminationRoleAssignment[]
+  dosApprovals                   DosApproval[]
+  competencyProgresss            CompetencyProgress[]
+  competencyMappings             CompetencyMapping[]
+  competencyAuditTrails          CompetencyAuditTrail[]
+  secureLinks                    SecureLink[]
+  directMessages                 DirectMessage[]
+  timetableApprovals             TimetableApproval[]
+  announcementDeliverys          AnnouncementDelivery[]
+  users                          User[]
+  systemLocks                    SystemLock[]
+  passwordResets                 PasswordReset[]
+  staffTasks                     StaffTask[]
+  publishedReportCards           PublishedReportCard[]
+  feeStructures                  FeeStructure[]
+  discountRules                  DiscountRule[]
+  penaltyRules                   PenaltyRule[]
+  invoices                       Invoice[]
+  payments                       Payment[]
+  receipts                       Receipt[]
+  financeAuditLogs               FinanceAuditLog[]
+  financeNotificationLogs        FinanceNotificationLog[]
+  financeSettingss               FinanceSettings[]
+  authAuditLogs                  AuthAuditLog[]
+  oTPVerifications               OTPVerification[]
+  teacherSmsPermissionCodes      TeacherSmsPermissionCode[]
+  teacherDrafts                  TeacherDraft[]
+  teacherPerformanceMetrics      TeacherPerformanceMetric[]
+  reportCardTemplates            ReportCardTemplate[]
+  newCurriculumReportCards       NewCurriculumReportCard[]
+  doSReportCards                 DoSReportCard[]
+  doSPromotionDecisions          DoSPromotionDecision[]
+  doSAuditLogs                   DoSAuditLog[]

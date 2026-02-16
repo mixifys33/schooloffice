@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
 import { StatCard } from '@/components/ui/stat-card'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessage } from '@/components/ui/error-message'
@@ -65,7 +66,30 @@ interface FeeStructure {
 interface Class {
   id: string
   name: string
-  streams: string[]
+  streams: Array<{ id: string; name: string }>
+}
+
+interface ClassWithStreams {
+  id: string
+  name: string
+  level: string
+  streams: Array<{ id: string; name: string }>
+}
+
+interface Term {
+  id: string
+  name: string
+  academicYear: string
+  isActive: boolean
+  startDate: string
+  endDate: string
+}
+
+interface AcademicYear {
+  id: string
+  name: string
+  isActive: boolean
+  terms: Array<{ id: string; name: string }>
 }
 
 // ============================================
@@ -76,9 +100,90 @@ interface FeeStructureTableProps {
   structures: FeeStructure[]
   onEdit: (structure: FeeStructure) => void
   onDelete: (id: string) => void
+  classes: ClassWithStreams[]
 }
 
-function FeeStructureTable({ structures, onEdit, onDelete }: FeeStructureTableProps) {
+function FeeStructureTable({ structures, onEdit, onDelete, classes }: FeeStructureTableProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string[]>([])
+  const [selectedStreamFilter, setSelectedStreamFilter] = useState<string[]>([])
+  const [selectedTermFilter, setSelectedTermFilter] = useState<string[]>([])
+  const [selectedAcademicYearFilter, setSelectedAcademicYearFilter] = useState<string[]>([])
+  const [showFilters, setShowFilters] = useState(false)
+
+  const classOptions: MultiSelectOption[] = classes.map(c => ({
+    label: c.name,
+    value: c.id
+  }))
+
+  // Get all unique streams, terms, and academic years
+  const allStreams = React.useMemo(() => {
+    const streams = new Set<string>()
+    structures.forEach(s => {
+      if (s.stream) streams.add(s.stream)
+    })
+    return Array.from(streams)
+  }, [structures])
+
+  const allTerms = React.useMemo(() => {
+    const terms = new Set<string>()
+    structures.forEach(s => {
+      if (s.term) terms.add(s.term)
+    })
+    return Array.from(terms)
+  }, [structures])
+
+  const allAcademicYears = React.useMemo(() => {
+    const years = new Set<string>()
+    structures.forEach(s => {
+      if (s.academicYear) years.add(s.academicYear)
+    })
+    return Array.from(years)
+  }, [structures])
+
+  const streamOptions: MultiSelectOption[] = allStreams.map(s => ({
+    label: s,
+    value: s
+  }))
+
+  const termOptions: MultiSelectOption[] = allTerms.map(t => ({
+    label: t,
+    value: t
+  }))
+
+  const academicYearOptions: MultiSelectOption[] = allAcademicYears.map(ay => ({
+    label: ay,
+    value: ay
+  }))
+
+  const filteredStructures = React.useMemo(() => {
+    return structures.filter(structure => {
+      // Search filter
+      const matchesSearch = searchTerm === '' || 
+        structure.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        structure.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        structure.academicYear.toLowerCase().includes(searchTerm.toLowerCase())
+
+      // Class filter
+      const matchesClass = selectedClassFilter.length === 0 || 
+        selectedClassFilter.includes(structure.classId)
+
+      // Stream filter
+      const matchesStream = selectedStreamFilter.length === 0 || 
+        (structure.stream && selectedStreamFilter.includes(structure.stream))
+
+      // Term filter
+      const matchesTerm = selectedTermFilter.length === 0 || 
+        selectedTermFilter.includes(structure.term)
+
+      // Academic year filter
+      const matchesAcademicYear = selectedAcademicYearFilter.length === 0 || 
+        selectedAcademicYearFilter.includes(structure.academicYear)
+
+      return matchesSearch && matchesClass && matchesStream && matchesTerm && matchesAcademicYear
+    })
+  }, [structures, searchTerm, selectedClassFilter, selectedStreamFilter, selectedTermFilter, selectedAcademicYearFilter])
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
@@ -91,17 +196,66 @@ function FeeStructureTable({ structures, onEdit, onDelete }: FeeStructureTablePr
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CardTitle className="text-lg font-semibold">Fee Structures</CardTitle>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search structures..."
-              className="max-w-xs"
-            />
-            <Button size="sm" variant="outline">
-              <Filter className="h-4 w-4" />
-            </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-lg font-semibold">Fee Structures</CardTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search structures..."
+                className="max-w-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
+          
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[var(--border-default)]">
+              <div>
+                <label className="block text-sm font-medium mb-1">Filter by Class</label>
+                <MultiSelect
+                  options={classOptions}
+                  selected={selectedClassFilter}
+                  onChange={setSelectedClassFilter}
+                  placeholder="All classes..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Filter by Stream</label>
+                <MultiSelect
+                  options={streamOptions}
+                  selected={selectedStreamFilter}
+                  onChange={setSelectedStreamFilter}
+                  placeholder="All streams..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Filter by Term</label>
+                <MultiSelect
+                  options={termOptions}
+                  selected={selectedTermFilter}
+                  onChange={setSelectedTermFilter}
+                  placeholder="All terms..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Filter by Academic Year</label>
+                <MultiSelect
+                  options={academicYearOptions}
+                  selected={selectedAcademicYearFilter}
+                  onChange={setSelectedAcademicYearFilter}
+                  placeholder="All years..."
+                />
+              </div>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -130,7 +284,7 @@ function FeeStructureTable({ structures, onEdit, onDelete }: FeeStructureTablePr
               </tr>
             </thead>
             <tbody>
-              {structures.map((structure) => (
+              {filteredStructures.map((structure) => (
                 <tr key={structure.id} className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
                   <td className="py-3 px-4">
                     <div className="font-medium">
@@ -171,11 +325,14 @@ function FeeStructureTable({ structures, onEdit, onDelete }: FeeStructureTablePr
 
 interface FeeStructureFormProps {
   structure: FeeStructure | null
-  onSave: (structure: FeeStructure) => void
+  onSave: (structure: FeeStructure, termId: string, classId: string) => Promise<void>
   onCancel: () => void
+  classes: ClassWithStreams[]
+  terms: Term[]
+  academicYears: AcademicYear[]
 }
 
-function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps) {
+function FeeStructureForm({ structure, onSave, onCancel, classes, terms, academicYears }: FeeStructureFormProps) {
   const [formData, setFormData] = useState<FeeStructure>(structure || {
     id: '',
     classId: '',
@@ -195,6 +352,66 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
     updatedAt: new Date().toISOString()
   })
 
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([])
+  const [selectedTerms, setSelectedTerms] = useState<string[]>([])
+  const [selectedAcademicYears, setSelectedAcademicYears] = useState<string[]>([])
+
+  // Initialize form with existing structure data when editing
+  React.useEffect(() => {
+    if (structure) {
+      // Find and set the class
+      if (structure.classId) {
+        setSelectedClasses([structure.classId])
+      }
+
+      // Find and set the term
+      if (structure.term) {
+        const termData = terms.find(t => t.name === structure.term)
+        if (termData) {
+          setSelectedTerms([termData.id])
+          
+          // Also set the academic year based on the term
+          const academicYearData = academicYears.find(ay => ay.name === termData.academicYear)
+          if (academicYearData) {
+            setSelectedAcademicYears([academicYearData.id])
+          }
+        }
+      }
+    } else {
+      // Reset form when creating new
+      setSelectedClasses([])
+      setSelectedTerms([])
+      setSelectedAcademicYears([])
+    }
+  }, [structure, classes, terms, academicYears])
+
+  // Filter terms based on selected academic years
+  const availableTerms = React.useMemo(() => {
+    if (selectedAcademicYears.length === 0) return terms
+    
+    const selectedAcademicYearNames = selectedAcademicYears.map(id => {
+      const ay = academicYears.find(a => a.id === id)
+      return ay?.name
+    }).filter(Boolean)
+    
+    return terms.filter(term => selectedAcademicYearNames.includes(term.academicYear))
+  }, [selectedAcademicYears, terms, academicYears])
+
+  const classOptions: MultiSelectOption[] = classes.map(c => ({
+    label: c.name,
+    value: c.id
+  }))
+
+  const academicYearOptions: MultiSelectOption[] = academicYears.map(ay => ({
+    label: ay.name,
+    value: ay.id
+  }))
+
+  const termOptions: MultiSelectOption[] = availableTerms.map(t => ({
+    label: `${t.name} (${t.academicYear})`,
+    value: t.id
+  }))
+
   const handleChange = (field: keyof FeeStructure, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -209,7 +426,62 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
     }))
   }
 
-  const handleSubmit = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    // If editing, just update the single structure
+    if (structure) {
+      // Validate selections
+      if (selectedClasses.length === 0) {
+        alert('Please select a class')
+        return
+      }
+
+      if (selectedTerms.length === 0) {
+        alert('Please select a term')
+        return
+      }
+
+      // Calculate total amount
+      const total = formData.breakdown.tuition + 
+                    formData.breakdown.development + 
+                    formData.breakdown.meals + 
+                    formData.breakdown.boarding +
+                    formData.breakdown.optional.reduce((sum, item) => sum + item.amount, 0)
+
+      const classData = classes.find(c => c.id === selectedClasses[0])
+      const termData = terms.find(t => t.id === selectedTerms[0])
+
+      setIsSubmitting(true)
+      try {
+        await onSave({
+          ...formData,
+          classId: selectedClasses[0],
+          className: classData?.name || '',
+          stream: null,
+          term: termData?.name || '',
+          academicYear: termData?.academicYear || '',
+          totalAmount: total
+        }, selectedTerms[0], selectedClasses[0])
+      } catch (error) {
+        // Error is already handled in onSave
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    // Creating new structures - validate selections
+    if (selectedClasses.length === 0) {
+      alert('Please select at least one class')
+      return
+    }
+
+    if (selectedTerms.length === 0) {
+      alert('Please select at least one term')
+      return
+    }
+
     // Calculate total amount
     const total = formData.breakdown.tuition + 
                   formData.breakdown.development + 
@@ -217,10 +489,64 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
                   formData.breakdown.boarding +
                   formData.breakdown.optional.reduce((sum, item) => sum + item.amount, 0)
     
-    onSave({
-      ...formData,
-      totalAmount: total
+    // Create fee structures for each class/term combination
+    const structures: Array<{ structure: FeeStructure; termId: string; classId: string }> = []
+    
+    selectedTerms.forEach(termId => {
+      const termData = terms.find(t => t.id === termId)
+      
+      // Create for each class-term combination
+      selectedClasses.forEach(classId => {
+        const classData = classes.find(c => c.id === classId)
+        structures.push({
+          structure: {
+            ...formData,
+            classId,
+            className: classData?.name || '',
+            stream: null,
+            term: termData?.name || '',
+            academicYear: termData?.academicYear || '',
+            totalAmount: total
+          },
+          termId,
+          classId
+        })
+      })
     })
+    
+    // Create all fee structures
+    setIsSubmitting(true)
+    try {
+      let successCount = 0
+      let errorCount = 0
+      const errors: string[] = []
+      
+      for (const item of structures) {
+        try {
+          await onSave(item.structure, item.termId, item.classId)
+          successCount++
+        } catch (error) {
+          errorCount++
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+          errors.push(errorMsg)
+          console.error('Error creating fee structure:', error)
+        }
+      }
+      
+      if (successCount > 0) {
+        const message = `Successfully created ${successCount} fee structure(s)${errorCount > 0 ? `. ${errorCount} failed: ${errors[0]}` : ''}`
+        alert(message)
+        
+        // Close form and reset if at least one succeeded
+        onCancel()
+      } else {
+        alert(`Failed to create fee structures: ${errors[0] || 'Unknown error'}`)
+      }
+    } catch (error) {
+      // Error is already handled in onSave
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const formatCurrency = (amount: number) => {
@@ -240,68 +566,55 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {!structure && (selectedClasses.length > 0 || selectedTerms.length > 0) && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              {(() => {
+                const classCount = selectedClasses.length || 1
+                const termCount = selectedTerms.length || 1
+                const totalStructures = classCount * termCount
+                return `This will create ${totalStructures} fee structure(s) for the selected combinations.`
+              })()}
+            </p>
+          </div>
+        )}
+        
+        {structure && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Editing fee structure. You can only update one structure at a time.
+            </p>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Class</label>
-            <select 
-              className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
-              value={formData.className}
-              onChange={(e) => handleChange('className', e.target.value)}
-            >
-              <option value="">Select Class</option>
-              <option value="P1">P1</option>
-              <option value="P2">P2</option>
-              <option value="P3">P3</option>
-              <option value="P4">P4</option>
-              <option value="P5">P5</option>
-              <option value="P6">P6</option>
-              <option value="S1">S1</option>
-              <option value="S2">S2</option>
-              <option value="S3">S3</option>
-              <option value="S4">S4</option>
-              <option value="S5">S5</option>
-              <option value="S6">S6</option>
-            </select>
+            <label className="block text-sm font-medium mb-1">Classes</label>
+            <MultiSelect
+              options={classOptions}
+              selected={selectedClasses}
+              onChange={setSelectedClasses}
+              placeholder="Select classes..."
+            />
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-1">Stream</label>
-            <select 
-              className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
-              value={formData.stream || ''}
-              onChange={(e) => handleChange('stream', e.target.value || null)}
-            >
-              <option value="">No Stream</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="Science">Science</option>
-              <option value="Arts">Arts</option>
-              <option value="Commerce">Commerce</option>
-            </select>
+            <label className="block text-sm font-medium mb-1">Academic Years</label>
+            <MultiSelect
+              options={academicYearOptions}
+              selected={selectedAcademicYears}
+              onChange={setSelectedAcademicYears}
+              placeholder="Select academic years..."
+            />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium mb-1">Term</label>
-            <select 
-              className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
-              value={formData.term}
-              onChange={(e) => handleChange('term', e.target.value)}
-            >
-              <option value="">Select Term</option>
-              <option value="Term 1">Term 1</option>
-              <option value="Term 2">Term 2</option>
-              <option value="Term 3">Term 3</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1">Academic Year</label>
-            <Input
-              type="text"
-              placeholder="e.g., 2024/2025"
-              value={formData.academicYear}
-              onChange={(e) => handleChange('academicYear', e.target.value)}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">Terms</label>
+            <MultiSelect
+              options={termOptions}
+              selected={selectedTerms}
+              onChange={setSelectedTerms}
+              placeholder={selectedAcademicYears.length === 0 ? "All terms available..." : "Select terms..."}
             />
           </div>
         </div>
@@ -352,11 +665,20 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
-            {structure ? 'Update' : 'Create'} Structure
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                {structure ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              <>
+                {structure ? 'Update' : 'Create'} Structure
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
@@ -370,35 +692,52 @@ function FeeStructureForm({ structure, onSave, onCancel }: FeeStructureFormProps
 
 export default function FeeStructureManagementPage() {
   const [structures, setStructures] = useState<FeeStructure[]>([])
+  const [classes, setClasses] = useState<ClassWithStreams[]>([])
+  const [terms, setTerms] = useState<Term[]>([])
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null)
 
   useEffect(() => {
-    const fetchFeeStructures = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/bursar/fee-structures')
+        // Fetch fee structures, classes, terms, and academic years
+        const [structuresRes, classesRes, termsRes, academicYearsRes] = await Promise.all([
+          fetch('/api/bursar/fee-structures'),
+          fetch('/api/classes'),
+          fetch('/api/terms'),
+          fetch('/api/settings/academic-years')
+        ])
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch fee structures')
+        if (!structuresRes.ok || !classesRes.ok || !termsRes.ok || !academicYearsRes.ok) {
+          throw new Error('Failed to fetch data')
         }
 
-        const data = await response.json()
+        const [structuresData, classesData, termsData, academicYearsData] = await Promise.all([
+          structuresRes.json(),
+          classesRes.json(),
+          termsRes.json(),
+          academicYearsRes.json()
+        ])
         
-        setStructures(data.structures)
+        setStructures(structuresData.structures)
+        setClasses(classesData.classes)
+        setTerms(termsData.terms || termsData)
+        setAcademicYears(academicYearsData.academicYears)
       } catch (err) {
-        console.error('Error fetching fee structures:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch fee structures')
+        console.error('Error fetching data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to fetch data')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchFeeStructures()
+    fetchData()
   }, [])
 
   const handleCreateNew = () => {
@@ -411,22 +750,74 @@ export default function FeeStructureManagementPage() {
     setShowForm(true)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this fee structure?')) {
-      setStructures(prev => prev.filter(s => s.id !== id))
+      try {
+        const response = await fetch(`/api/bursar/fee-structures/${id}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to delete fee structure')
+        }
+
+        // Remove from local state after successful deletion
+        setStructures(prev => prev.filter(s => s.id !== id))
+        alert('Fee structure deleted successfully!')
+      } catch (error) {
+        console.error('Error deleting fee structure:', error)
+        alert(error instanceof Error ? error.message : 'Failed to delete fee structure')
+      }
     }
   }
 
-  const handleSave = (structure: FeeStructure) => {
+  const handleSave = async (structure: FeeStructure, termId: string, classId: string) => {
     if (editingStructure) {
-      // Update existing structure
-      setStructures(prev => prev.map(s => s.id === structure.id ? structure : s))
+      // Update existing structure via API
+      const response = await fetch(`/api/bursar/fee-structures/${structure.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(structure)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update fee structure')
+      }
+
+      const data = await response.json()
+      
+      // Update local state with the response from server
+      setStructures(prev => prev.map(s => s.id === structure.id ? data.structure : s))
+      alert('Fee structure updated successfully!')
+      
+      setShowForm(false)
+      setEditingStructure(null)
     } else {
-      // Add new structure
-      setStructures(prev => [...prev, { ...structure, id: Date.now().toString() }])
+      // Create new structure via API
+      const response = await fetch('/api/bursar/fee-structures', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: classId,
+          termId: termId,
+          totalAmount: structure.totalAmount,
+          studentType: 'DAY', // Default to DAY, you can make this selectable
+          breakdown: structure.breakdown
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create fee structure')
+      }
+
+      const data = await response.json()
+      
+      // Add the newly created structure from the API response to local state
+      setStructures(prev => [...prev, data.structure])
     }
-    setShowForm(false)
-    setEditingStructure(null)
   }
 
   const handleCancel = () => {
@@ -490,12 +881,16 @@ export default function FeeStructureManagementPage() {
           structure={editingStructure}
           onSave={handleSave}
           onCancel={handleCancel}
+          classes={classes}
+          terms={terms}
+          academicYears={academicYears}
         />
       ) : (
         <FeeStructureTable
           structures={structures}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          classes={classes}
         />
       )}
     </div>

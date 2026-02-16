@@ -1,136 +1,153 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import { ReactNode, useState } from 'react';
 import {
-  Home,
+  LayoutDashboard,
   BookOpen,
-  ClipboardCheck,
-  Calculator,
   FileText,
+  TrendingUp,
   Users,
   Calendar,
+  BarChart3,
   Settings,
-} from 'lucide-react'
-import {
-  DashboardLayout,
-  type NavItem,
-} from '@/components/layout'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { DoSContextBar } from '@/components/dashboard/dos-context-bar'
+  GraduationCap,
+  Award,
+  ClipboardCheck,
+  Shield,
+  CheckCircle2
+} from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { DoSContextBar } from '@/components/dashboard/dos-context-bar';
+import { DoSContextProvider } from '@/components/dos/dos-context-provider';
+
+interface DoSLayoutProps {
+  children: ReactNode;
+}
 
 /**
  * DoS Portal Layout - Academic Command Center
  * 
- * This is the home of academic authority. The DoS portal provides:
- * - Situational awareness across all academic operations
- * - Control over curriculum, assessments, exams, and reporting
- * - Academic integrity enforcement and audit trails
- * - New curriculum compliance monitoring
- * 
- * Navigation is organized by control zones, not CRUD operations.
+ * Professional layout matching Class Teacher and Admin sections:
+ * - Uses DashboardLayout foundation for consistency
+ * - Responsive design (mobile, tablet, desktop)
+ * - Persistent context bar with term/academic year info
+ * - Collapsible sidebar with organized navigation
+ * - Bottom navigation for mobile devices
  */
 
-interface DoSLayoutProps {
-  children: ReactNode
-}
-
-// DoS Navigation - Organized by Control Zones
-const navItems: NavItem[] = [
+// Navigation items for Director of Studies
+const navItems = [
   { 
     href: '/dos', 
-    label: 'Command Center', 
-    icon: <Home className="h-5 w-5" />,
-    description: 'Academic situational awareness'
+    label: 'Overview', 
+    icon: <LayoutDashboard className="h-5 w-5" /> 
   },
   { 
-    href: '/dashboard/dos/curriculum/subjects', 
-    label: 'Subject Management', 
-    icon: <BookOpen className="h-5 w-5" />,
-    description: 'Subject approval & structure'
+    href: '/dos/assignments', 
+    label: 'Staff Assignments', 
+    icon: <Users className="h-5 w-5" /> 
   },
   { 
-    href: '/dos/curriculum', 
-    label: 'Curriculum Control', 
-    icon: <BookOpen className="h-5 w-5" />,
-    description: 'Curriculum oversight'
-  },
-  { 
-    href: '/dos/assessments', 
-    label: 'Assessment Control', 
-    icon: <ClipboardCheck className="h-5 w-5" />,
-    description: 'CA monitoring (20%)'
-  },
-
-  { 
-    href: '/dos/scores', 
-    label: 'Score Control', 
-    icon: <Calculator className="h-5 w-5" />,
-    description: '20/80 merge & approval'
-  },
-  { 
-    href: '/dos/reports', 
-    label: 'Report Control', 
-    icon: <FileText className="h-5 w-5" />,
-    description: 'Official document release'
-  },
-  { 
-    href: '/dos/promotion', 
-    label: 'Promotion Control', 
-    icon: <Users className="h-5 w-5" />,
-    description: 'Academic progression'
+    href: '/dos/grading', 
+    label: 'Grading System', 
+    icon: <Award className="h-5 w-5" /> 
   },
   { 
     href: '/dos/timetable', 
-    label: 'Timetable Control', 
-    icon: <Calendar className="h-5 w-5" />,
-    description: 'Academic logistics'
+    label: 'Timetable', 
+    icon: <Calendar className="h-5 w-5" /> 
   },
-
+  { 
+    href: '/dos/assessments/monitoring', 
+    label: 'View All CA Marks', 
+    icon: <ClipboardCheck className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/subjects', 
+    label: 'Subjects', 
+    icon: <BookOpen className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/assessments', 
+    label: 'Assessments', 
+    icon: <ClipboardCheck className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/exams', 
+    label: 'Exams', 
+    icon: <FileText className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/reports', 
+    label: 'Reports', 
+    icon: <GraduationCap className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/reports/generate', 
+    label: '  ↳ Generate', 
+    icon: <FileText className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/reports/review', 
+    label: '  ↳ Review', 
+    icon: <Shield className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/reports/templates', 
+    label: '  ↳ Templates', 
+    icon: <Settings className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/scores', 
+    label: 'Scores', 
+    icon: <BarChart3 className="h-5 w-5" /> 
+  },
+  { 
+    href: '/dos/analytics', 
+    label: 'Analytics', 
+    icon: <TrendingUp className="h-5 w-5" /> 
+  },
   { 
     href: '/dos/settings', 
-    label: 'DoS Settings', 
-    icon: <Settings className="h-5 w-5" />,
-    description: 'Academic configuration'
+    label: 'Settings', 
+    icon: <Settings className="h-5 w-5" /> 
   },
-]
+];
 
 export default function DoSLayout({ children }: DoSLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
-    <div className="min-h-screen bg-[var(--bg-surface)] dark:bg-[var(--text-primary)]">
-      {/* DoS Context Bar - Shows term, academic year, school status */}
-      <DoSContextBar className="sticky top-0 z-30" />
-      
-      <DashboardLayout
-        navItems={navItems}
-        brandText="SchoolOffice"
-        subtitle="Director of Studies"
-        useBottomNav={true}
-        headerContent={
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="hidden md:flex items-center gap-2 px-2 sm:px-3 py-1 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-full">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[var(--chart-blue)] rounded-full animate-pulse"></div>
-              <span className="text-xs sm:text-sm font-medium text-[var(--info-dark)] dark:text-[var(--info)]">
-                Academic Authority
-              </span>
+    <DoSContextProvider>
+      <div className="min-h-screen bg-[var(--bg-surface)] dark:bg-[var(--text-primary)]">
+        {/* Persistent Context Bar with sidebar toggle */}
+        <DoSContextBar 
+          className="sticky top-0 z-30" 
+          onToggleSidebar={handleToggleSidebar}
+        />
+
+        <DashboardLayout
+          navItems={navItems}
+          brandText="SchoolOffice"
+          subtitle="Director of Studies"
+          useBottomNav={true}
+          hideHeader={true}
+          sidebarOpen={sidebarOpen}
+          onSidebarOpenChange={setSidebarOpen}
+          sidebarFooter={
+            <div className="text-sm text-[var(--text-muted)]">
+              <p className="font-medium">DoS Portal</p>
+              <p className="text-xs mt-1 opacity-75">Academic Management</p>
             </div>
-            <ThemeToggle />
-          </div>
-        }
-        sidebarFooter={
-          <div className="text-sm text-[var(--text-muted)] space-y-1 px-2">
-            <p className="font-medium text-xs sm:text-sm">DoS Portal</p>
-            <p className="text-xs">Academic Command Center</p>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-1.5 h-1.5 bg-[var(--success)] rounded-full"></div>
-              <span>System Operational</span>
-            </div>
-          </div>
-        }
-      >
-        <div className="p-3 sm:p-4 lg:p-6">
+          }
+        >
           {children}
-        </div>
-      </DashboardLayout>
-    </div>
-  )
+        </DashboardLayout>
+      </div>
+    </DoSContextProvider>
+  );
 }

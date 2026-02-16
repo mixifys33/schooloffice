@@ -20,15 +20,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Validate DoS role
-    if (session.user.role !== 'DOS' && session.user.role !== 'SUPER_ADMIN') {
+    const schoolId = session.user.schoolId;
+    
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 })
+    }
+
+    // Validate DoS access - check both user role and staff role
+    const userRole = session.user.activeRole || session.user.role;
+    const isAdmin = userRole === 'SCHOOL_ADMIN' || userRole === 'DEPUTY' || userRole === 'SUPER_ADMIN';
+    
+    let isDoS = userRole === 'DOS';
+    
+    // If not admin and not DoS user role, check staff role
+    if (!isAdmin && !isDoS) {
+      const staffCheck = await prisma.staff.findFirst({
+        where: { 
+          schoolId,
+          userId: session.user.id 
+        },
+        select: { 
+          primaryRole: true,
+          secondaryRoles: true
+        }
+      });
+
+      isDoS = staffCheck && (
+        staffCheck.primaryRole === 'DOS' ||
+        ((staffCheck.secondaryRoles as string[]) || []).includes('DOS')
+      );
+    }
+
+    if (!isAdmin && !isDoS) {
       return NextResponse.json(
         { error: 'Director of Studies access required' },
         { status: 403 }
       )
     }
-
-    const schoolId = session.user.schoolId
 
     // Get current term and academic year
     const currentTerm = await prisma.term.findFirst({
@@ -47,19 +75,23 @@ export async function GET(request: NextRequest) {
       where: { id: schoolId },
       select: {
         name: true,
-        status: true,
-        settings: true
+        isActive: true
       }
     })
 
-    // Get user information
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    // Get user and staff information
+    const staff = await prisma.staff.findFirst({
+      where: { 
+        userId: session.user.id,
+        schoolId 
+      },
       select: {
-        name: true,
-        role: true
+        firstName: true,
+        lastName: true
       }
     })
+
+    const dosName = staff ? `${staff.firstName} ${staff.lastName}` : session.user.email || 'DoS User'
 
     // Calculate alerts
     const [
@@ -108,11 +140,11 @@ export async function GET(request: NextRequest) {
         }
       }),
       
-      // Report cards awaiting approval
+      // Report cards awaiting approval (DRAFT status means not yet approved)
       prisma.doSReportCard.count({
         where: {
           schoolId,
-          status: 'PENDING_DOS_APPROVAL'
+          status: 'DRAFT'
         }
       })
     ])
@@ -153,14 +185,14 @@ export async function GET(request: NextRequest) {
 
     // DoS permissions based on role
     const permissions = {
-      canApprove: session.user.role === 'DOS' || session.user.role === 'SUPER_ADMIN',
-      canLock: session.user.role === 'DOS' || session.user.role === 'SUPER_ADMIN',
-      canOverride: session.user.role === 'SUPER_ADMIN',
-      canGenerateReports: session.user.role === 'DOS' || session.user.role === 'SUPER_ADMIN'
+      canApprove: isDoS || isAdmin,
+      canLock: isDoS || isAdmin,
+      canOverride: userRole === 'SUPER_ADMIN',
+      canGenerateReports: isDoS || isAdmin
     }
 
     const contextData = {
-      dosName: user?.name || 'DoS User',
+      dosName: dosName,
       schoolName: school?.name || 'School',
       currentTerm: currentTerm ? {
         id: currentTerm.id,

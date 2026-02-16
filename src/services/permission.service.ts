@@ -8,7 +8,7 @@ import { Role, PermissionType } from '@/types/enums'
 
 /**
  * Permission definition for a role-feature combination
- */
+ */  
 export interface Permission {
   feature: string
   type: PermissionType

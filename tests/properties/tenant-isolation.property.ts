@@ -6,7 +6,7 @@
  * For any two schools in the system, data created in one school 
  * (students, staff, classes, payments) SHALL NOT be accessible 
  * from the other school's context.
- */
+ */  
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 

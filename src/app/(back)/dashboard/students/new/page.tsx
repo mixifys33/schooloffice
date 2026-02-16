@@ -41,6 +41,12 @@ interface ClassWithStreams {
   }[]
 }
 
+interface OptionalSubject {
+  id: string
+  name: string
+  code: string
+}
+
 interface FormData {
   firstName: string
   lastName: string
@@ -52,6 +58,7 @@ interface FormData {
   parentName: string
   parentPhone: string
   parentEmail: string
+  optionalSubjectIds: string[] // New field for optional subjects
 }
 
 interface FormErrors {
@@ -110,12 +117,14 @@ const defaultFormData: FormData = {
   parentName: '',
   parentPhone: '',
   parentEmail: '',
+  optionalSubjectIds: [],
 }
 
 export default function NewStudentPage() {
   const router = useRouter()
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(null)
   const [classes, setClasses] = useState<ClassWithStreams[]>([])
+  const [optionalSubjects, setOptionalSubjects] = useState<OptionalSubject[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -166,6 +175,7 @@ export default function NewStudentPage() {
 
   useEffect(() => {
     fetchClasses()
+    fetchOptionalSubjects()
   }, [])
 
   async function fetchClasses() {
@@ -174,12 +184,25 @@ export default function NewStudentPage() {
       const response = await fetch('/api/classes')
       if (!response.ok) throw new Error('Failed to fetch classes')
       const data = await response.json()
-      setClasses(data)
+      setClasses(data.classes || [])
     } catch (err) {
       console.error('Error fetching classes:', err)
       setError('Unable to load classes. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchOptionalSubjects() {
+    try {
+      const response = await fetch('/api/subjects?active=true')
+      if (!response.ok) throw new Error('Failed to fetch subjects')
+      const data = await response.json()
+      // Filter only optional subjects (isCompulsory: false)
+      const optional = data.filter((subject: any) => subject.isCompulsory === false)
+      setOptionalSubjects(optional)
+    } catch (err) {
+      console.error('Error fetching optional subjects:', err)
     }
   }
 
@@ -203,12 +226,19 @@ export default function NewStudentPage() {
         }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        setClassError(data.error || 'Failed to create class')
+        let errorMessage = 'Failed to create class'
+        try {
+          const data = await response.json()
+          errorMessage = data.error || errorMessage
+        } catch {
+          // If JSON parsing fails, use default error message
+        }
+        setClassError(errorMessage)
         return
       }
+
+      const data = await response.json()
 
       // Refresh classes list and select the new class
       await fetchClasses()
@@ -340,6 +370,7 @@ export default function NewStudentPage() {
           parentName: formData.parentName.trim() || null,
           parentPhone: formData.parentPhone.trim() || null,
           parentEmail: formData.parentEmail.trim() || null,
+          optionalSubjectIds: formData.optionalSubjectIds,
         }),
       })
 
@@ -385,6 +416,7 @@ export default function NewStudentPage() {
           parentName: formData.parentName.trim() || null,
           parentPhone: formData.parentPhone.trim() || null,
           parentEmail: formData.parentEmail.trim() || null,
+          optionalSubjectIds: formData.optionalSubjectIds, // Include optional subjects
         }),
       })
 
@@ -680,6 +712,46 @@ export default function NewStudentPage() {
             )}
           </div>
         </div>
+
+        {/* Optional Subjects Section */}
+        {optionalSubjects.length > 0 && (
+          <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Optional Subjects</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Select optional subjects for this student (if applicable)
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              {optionalSubjects.map((subject) => (
+                <label
+                  key={subject.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.optionalSubjectIds.includes(subject.id)}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setFormData((prev) => ({
+                        ...prev,
+                        optionalSubjectIds: checked
+                          ? [...prev.optionalSubjectIds, subject.id]
+                          : prev.optionalSubjectIds.filter((id) => id !== subject.id),
+                      }))
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">{subject.name}</div>
+                    <div className="text-sm text-muted-foreground">{subject.code}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Parent/Guardian Information */}
         <div className="rounded-lg border bg-card p-4 sm:p-6 space-y-4">

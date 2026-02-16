@@ -281,8 +281,8 @@ export default function ClassTeacherDashboardPage() {
           onClick={hasContextError ? (e) => e.preventDefault() : undefined}
         >
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg', teacherColors.chart.green.bg)}>
-              <FolderOpen className={cn('h-6 w-6', teacherColors.chart.green.text)} />
+            <div className={cn('p-2 rounded-lg', teacherColors.success.bg)}>
+              <FolderOpen className={cn('h-6 w-6', teacherColors.success.text)} />
             </div>
             <div>
               <h3 className={typography.label}>Learning Evidence</h3>
@@ -306,8 +306,8 @@ export default function ClassTeacherDashboardPage() {
           onClick={hasContextError ? (e) => e.preventDefault() : undefined}
         >
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg', teacherColors.chart.blue.bg)}>
-              <BarChart3 className={cn('h-6 w-6', teacherColors.chart.blue.text)} />
+            <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
+              <BarChart3 className={cn('h-6 w-6', teacherColors.info.text)} />
             </div>
             <div>
               <h3 className={typography.label}>View Reports</h3>
@@ -626,12 +626,12 @@ export default function ClassTeacherDashboardPage() {
                 key={alert.id}
                 className={cn(
                   'flex items-center justify-between p-3 rounded-lg border',
-                  teacherColors.chart.green.bg,
-                  teacherColors.chart.green.border
+                  teacherColors.success.bg,
+                  teacherColors.success.border
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <FolderOpen className={cn('h-5 w-5', teacherColors.chart.green.text)} />
+                  <FolderOpen className={cn('h-5 w-5', teacherColors.success.text)} />
                   <div>
                     <div className={typography.label}>
                       Evidence Upload
@@ -641,7 +641,7 @@ export default function ClassTeacherDashboardPage() {
                     </div>
                   </div>
                 </div>
-                <div className={cn('text-sm font-medium', teacherColors.chart.green.text)}>
+                <div className={cn('text-sm font-medium', teacherColors.success.text)}>
                   Due {new Date(alert.deadline).toLocaleDateString('en-UG', { month: 'short', day: 'numeric' })}
                 </div>
               </div>

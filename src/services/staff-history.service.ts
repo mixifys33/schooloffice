@@ -6,7 +6,7 @@
  * Requirements: 13.1 - Staff history tracking
  * Property 35: Staff History Tracking - For any promotion, role change, transfer, 
  * or exit event, the Staff_History should record the event.
- */
+ */   
 
 import { prisma } from '@/lib/db';
 import { AuditService, AuditAction, AuditResource } from './audit.service';

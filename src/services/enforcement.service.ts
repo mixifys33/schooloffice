@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/db'
 import { LicenseType } from '@/types/enums'
 import type { FeatureFlags } from '@/types'
-
+   
 // Default system rules
 const DEFAULT_SYSTEM_RULES = {
   gracePeriodDays: 14,

@@ -8,17 +8,30 @@ import {
   BookOpen,
   FileText,
   TrendingUp,
-  Shield,
   Users,
   Calendar,
   BarChart3,
   Settings,
   ChevronDown,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  Award,
+  ClipboardCheck,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+
+/**
+ * DoS Navigation Component - Redesigned
+ * 
+ * Professional navigation matching Class Teacher section:
+ * - Clean, modern design
+ * - Expandable sections with smooth animations
+ * - Active state highlighting
+ * - Mobile-responsive
+ * - Consistent with other portal sections
+ */
 
 interface NavigationItem {
   name: string;
@@ -31,56 +44,87 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     name: 'Overview',
-    href: '/dashboard/dos',
+    href: '/dos',
     icon: LayoutDashboard,
   },
   {
-    name: 'Assignments',
-    href: '/dashboard/dos/assignments',
+    name: 'Staff Assignments',
+    href: '/dos/assignments',
     icon: Users,
   },
   {
-    name: 'Subjects',
-    href: '/dashboard/dos/subjects',
-    icon: BookOpen,
-    children: [
-      { name: 'Control Center', href: '/dashboard/dos/subjects', icon: BarChart3 },
-      { name: 'Performance', href: '/dashboard/dos/subjects/performance', icon: TrendingUp },
-      { name: 'Interventions', href: '/dashboard/dos/subjects/interventions', icon: Shield },
-      { name: 'Subject Management', href: '/dashboard/dos/subjects/management', icon: Settings },
-    ],
+    name: 'Grading System',
+    href: '/dos/grading',
+    icon: Award,
   },
   {
-    name: 'Curriculum',
-    href: '/dashboard/dos/curriculum',
-    icon: GraduationCap,
+    name: 'Timetable',
+    href: '/dos/timetable',
+    icon: Calendar,
+  },
+  {
+    name: 'View All CA Marks',
+    href: '/dos/assessments/monitoring',
+    icon: ClipboardCheck,
+  },
+  {
+    name: 'Subjects',
+    href: '/dos/subjects',
+    icon: BookOpen,
     children: [
-      { name: 'Timetable', href: '/dashboard/dos/curriculum/timetable', icon: Calendar },
-      { name: 'Approvals', href: '/dashboard/dos/curriculum/approvals', icon: Shield },
+      { name: 'Control Center', href: '/dos/subjects', icon: BarChart3 },
+      { name: 'Performance', href: '/dos/subjects/performance', icon: TrendingUp },
+      { name: 'Interventions', href: '/dos/subjects/interventions', icon: Shield },
+      { name: 'Management', href: '/dos/subjects/management', icon: Settings },
+      { name: 'Analytics', href: '/dos/subjects/analytics', icon: BarChart3 },
+      { name: 'Configuration', href: '/dos/subjects/configuration', icon: Settings },
     ],
   },
   {
     name: 'Assessments',
-    href: '/dashboard/dos/assessments',
+    href: '/dos/assessments',
+    icon: ClipboardCheck,
+    children: [
+      { name: 'Overview', href: '/dos/assessments', icon: LayoutDashboard },
+      { name: 'CA Monitoring', href: '/dos/assessments/monitoring', icon: FileText },
+      { name: 'Plans', href: '/dos/assessments/plans', icon: Calendar },
+      { name: 'Performance', href: '/dos/assessments/performance', icon: BarChart3 },
+    ],
+  },
+  {
+    name: 'Exams',
+    href: '/dos/exams',
     icon: FileText,
     children: [
-      { name: 'CA Monitoring', href: '/dashboard/dos/assessments/monitoring', icon: FileText },
-      { name: 'Plans', href: '/dashboard/dos/assessments/plans', icon: Calendar },
-      { name: 'Performance', href: '/dashboard/dos/assessments/performance', icon: BarChart3 },
+      { name: 'Control Center', href: '/dos/exams', icon: BarChart3 },
+      { name: 'Validation', href: '/dos/exams/validation', icon: Shield },
     ],
   },
-
   {
     name: 'Reports',
-    href: '/dashboard/dos/reports',
+    href: '/dos/reports',
     icon: GraduationCap,
     children: [
-      { name: 'Generate', href: '/dashboard/dos/reports/generate', icon: FileText },
-      { name: 'Review', href: '/dashboard/dos/reports/review', icon: Shield },
-      { name: 'Templates', href: '/dashboard/dos/reports/templates', icon: Settings },
+      { name: 'Generate', href: '/dos/reports/generate', icon: FileText },
+      { name: 'Review', href: '/dos/reports/review', icon: Shield },
+      { name: 'Templates', href: '/dos/reports/templates', icon: Settings },
     ],
   },
-
+  {
+    name: 'Scores',
+    href: '/dos/scores',
+    icon: BarChart3,
+  },
+  {
+    name: 'Analytics',
+    href: '/dos/analytics',
+    icon: TrendingUp,
+  },
+  {
+    name: 'Settings',
+    href: '/dos/settings',
+    icon: Settings,
+  },
 ];
 
 interface DoSNavigationProps {
@@ -91,164 +135,97 @@ export function DoSNavigation({ onNavigate }: DoSNavigationProps) {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const toggleExpanded = (itemName: string) => {
-    setExpandedItems(prev => 
-      prev.includes(itemName) 
-        ? prev.filter(name => name !== itemName)
-        : [...prev, itemName]
+  const toggleExpanded = (name: string) => {
+    setExpandedItems(prev =>
+      prev.includes(name)
+        ? prev.filter(item => item !== name)
+        : [...prev, name]
     );
   };
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
-  };
-
-  const isExpanded = (itemName: string) => {
-    return expandedItems.includes(itemName) || 
-           navigationItems.find(item => item.name === itemName)?.children?.some(child => isActive(child.href));
-  };
-
-  const handleNavigation = () => {
-    if (onNavigate) {
-      onNavigate();
+    if (href === '/dos') {
+      return pathname === href;
     }
+    return pathname.startsWith(href);
   };
+
+  const isExpanded = (name: string) => expandedItems.includes(name);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Navigation Header */}
-      <div 
-        className="p-4 border-b"
-        style={{ borderColor: 'var(--border-default)' }}
-      >
-        <div className="flex items-center space-x-2">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: 'var(--accent-primary)' }}
-          >
-            <GraduationCap 
-              className="h-5 w-5" 
-              style={{ color: 'var(--accent-contrast)' }}
-            />
-          </div>
-          <div>
-            <h2 
-              className="text-sm font-semibold"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              DoS Portal
-            </h2>
-            <p 
-              className="text-xs"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              Academic Management
-            </p>
-          </div>
-        </div>
-      </div>
+    <nav className="space-y-1 p-3">
+      {navigationItems.map((item) => {
+        const hasChildren = item.children && item.children.length > 0;
+        const active = isActive(item.href);
+        const expanded = isExpanded(item.name);
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigationItems.map((item) => (
+        return (
           <div key={item.name}>
-            {item.children ? (
-              <div>
+            {hasChildren ? (
+              <>
                 <button
                   onClick={() => toggleExpanded(item.name)}
                   className={cn(
-                    'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 border',
-                    'hover:opacity-80'
+                    'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                    active
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
-                  style={{
-                    backgroundColor: isActive(item.href) ? 'var(--accent-primary)' : 'transparent',
-                    color: isActive(item.href) ? 'var(--accent-contrast)' : 'var(--text-primary)',
-                    borderColor: isActive(item.href) ? 'var(--accent-primary)' : 'transparent',
-                  }}
                 >
-                  <div className="flex items-center">
-                    <item.icon className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <div className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
                     <span className="truncate">{item.name}</span>
-                    {item.badge && (
-                      <Badge variant="destructive" className="ml-2 text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
                   </div>
-                  {isExpanded(item.name) ? (
-                    <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                  {expanded ? (
+                    <ChevronDown className="h-4 w-4 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0" />
                   )}
                 </button>
-                
-                {isExpanded(item.name) && (
-                  <div 
-                    className="mt-1 ml-4 space-y-1 border-l pl-4"
-                    style={{ borderColor: 'var(--border-default)' }}
-                  >
-                    {item.children.map((child) => (
+                {expanded && (
+                  <div className="ml-4 mt-1 space-y-1 border-l-2 border-border pl-4">
+                    {item.children?.map((child) => (
                       <Link
-                        key={child.name}
+                        key={child.href}
                         href={child.href}
-                        onClick={handleNavigation}
+                        onClick={onNavigate}
                         className={cn(
-                          'flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200',
-                          'hover:opacity-80',
-                          isActive(child.href) && 'border-l-2 font-medium'
+                          'flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors',
+                          isActive(child.href)
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
-                        style={{
-                          backgroundColor: isActive(child.href) ? 'var(--bg-surface)' : 'transparent',
-                          color: isActive(child.href) ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          borderLeftColor: isActive(child.href) ? 'var(--accent-primary)' : 'transparent',
-                        }}
                       >
-                        <child.icon className="w-4 h-4 mr-3 flex-shrink-0" />
+                        <child.icon className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">{child.name}</span>
                       </Link>
                     ))}
                   </div>
                 )}
-              </div>
+              </>
             ) : (
               <Link
                 href={item.href}
-                onClick={handleNavigation}
+                onClick={onNavigate}
                 className={cn(
-                  'flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 border',
-                  'hover:opacity-80'
+                  'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                  active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                style={{
-                  backgroundColor: isActive(item.href) ? 'var(--accent-primary)' : 'transparent',
-                  color: isActive(item.href) ? 'var(--accent-contrast)' : 'var(--text-primary)',
-                  borderColor: isActive(item.href) ? 'var(--accent-primary)' : 'transparent',
-                }}
               >
-                <item.icon className="w-4 h-4 mr-3 flex-shrink-0" />
+                <item.icon className="h-5 w-5 flex-shrink-0" />
                 <span className="truncate">{item.name}</span>
                 {item.badge && (
-                  <Badge variant="destructive" className="ml-auto text-xs">
+                  <Badge variant="secondary" className="ml-auto">
                     {item.badge}
                   </Badge>
                 )}
               </Link>
             )}
           </div>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div 
-        className="p-4 border-t"
-        style={{ borderColor: 'var(--border-default)' }}
-      >
-        <div 
-          className="text-xs text-center"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          DoS Academic Portal
-        </div>
-      </div>
-    </div>
+        );
+      })}
+    </nav>
   );
 }

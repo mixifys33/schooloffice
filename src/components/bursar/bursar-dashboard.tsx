@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   DollarSign,
   TrendingUp,
@@ -197,6 +198,7 @@ function PaymentMethodChart({ data, title }: PaymentMethodChartProps) {
 // ============================================
 
 export function BursarDashboard() {
+  const router = useRouter()
   const [metrics, setMetrics] = useState<BursarMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -263,7 +265,7 @@ export function BursarDashboard() {
       title: 'Record Payment',
       description: 'Add new payment from student/parent',
       icon: <DollarSign className="h-5 w-5" />,
-      action: () => console.log('Record payment'),
+      action: () => router.push('/dashboard/bursar/students'),
       color: 'green'
     },
     {

@@ -5,7 +5,7 @@
  * 
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5
  */
-
+   
 import { prisma } from '@/lib/db';
 import { AuditService, AuditAction, AuditResource } from './audit.service';
 import {

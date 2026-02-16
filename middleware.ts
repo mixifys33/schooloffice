@@ -1,22 +1,52 @@
 /**
- * Next.js Middleware for Super Admin Route Protection
+ * Next.js Middleware for Role-Based Route Protection
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
  * 
  * This middleware:
- * - Checks authentication for super admin routes
+ * - Checks authentication for all dashboard routes
+ * - Enforces role-based access control
  * - Redirects unauthorized users
  * - Logs authentication failures
- * - Enforces SUPER_ADMIN role requirement
  */
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { Role } from '@/types/enums'
+import { Role, StaffRole } from '@/types/enums'
 
 /**
- * Super Admin protected routes
- * All routes starting with these paths require SUPER_ADMIN role
+ * Role-based route protection mapping
+ * Each route pattern maps to allowed roles
+ */
+const ROLE_ROUTES: Record<string, (Role | StaffRole)[]> = {
+  '/super-admin': [Role.SUPER_ADMIN],
+  '/dashboard/super-admin': [Role.SUPER_ADMIN],
+  '/api/super-admin': [Role.SUPER_ADMIN],
+  
+  '/dos': [Role.SCHOOL_ADMIN, Role.DEPUTY, StaffRole.DOS],
+  '/api/dos': [Role.SCHOOL_ADMIN, Role.DEPUTY, StaffRole.DOS],
+  
+  '/dashboard/class-teacher': [StaffRole.CLASS_TEACHER, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  '/api/class-teacher': [StaffRole.CLASS_TEACHER, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  
+  '/dashboard/teacher': [Role.TEACHER, StaffRole.CLASS_TEACHER, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  '/api/teacher': [Role.TEACHER, StaffRole.CLASS_TEACHER, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  
+  '/dashboard/bursar': [StaffRole.BURSAR, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  '/api/bursar': [StaffRole.BURSAR, Role.SCHOOL_ADMIN, Role.DEPUTY],
+  
+  '/dashboard/students': [Role.SCHOOL_ADMIN, Role.DEPUTY, StaffRole.DOS, StaffRole.CLASS_TEACHER, Role.TEACHER],
+  '/api/students': [Role.SCHOOL_ADMIN, Role.DEPUTY, StaffRole.DOS, StaffRole.CLASS_TEACHER, Role.TEACHER],
+  
+  '/dashboard/parent': [Role.PARENT],
+  '/api/parent': [Role.PARENT],
+  
+  '/dashboard/student': [Role.STUDENT],
+  '/api/student': [Role.STUDENT],
+}
+
+/**
+ * Super Admin protected routes (backward compatibility)
  */
 const SUPER_ADMIN_ROUTES = [
   '/super-admin',
@@ -49,17 +79,48 @@ function logAuthenticationFailure(
 }
 
 /**
- * Middleware function to protect super admin routes
+ * Check if user has required role for a route
+ */
+function hasRequiredRole(
+  userRole: Role | StaffRole | undefined,
+  userActiveRole: Role | StaffRole | undefined,
+  allowedRoles: (Role | StaffRole)[]
+): boolean {
+  if (!userRole) return false
+  
+  // Check active role first (takes precedence)
+  if (userActiveRole && allowedRoles.includes(userActiveRole)) {
+    return true
+  }
+  
+  // Check primary role
+  if (allowedRoles.includes(userRole)) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Middleware function to protect all dashboard routes with role-based access
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Check if the route requires super admin access
-  const requiresSuperAdmin = SUPER_ADMIN_ROUTES.some(route => 
-    pathname.startsWith(route)
-  )
+  // Find matching route pattern
+  let matchedRoute: string | null = null
+  let allowedRoles: (Role | StaffRole)[] = []
+  
+  for (const [route, roles] of Object.entries(ROLE_ROUTES)) {
+    if (pathname.startsWith(route)) {
+      matchedRoute = route
+      allowedRoles = roles
+      break
+    }
+  }
 
-  if (!requiresSuperAdmin) {
+  // If no protected route matched, allow access
+  if (!matchedRoute) {
     return NextResponse.next()
   }
 
@@ -86,21 +147,27 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // Check if user has SUPER_ADMIN role
-    if (token.role !== Role.SUPER_ADMIN && token.activeRole !== Role.SUPER_ADMIN) {
+    // Check if user has required role
+    const userRole = token.role as Role | StaffRole
+    const userActiveRole = token.activeRole as Role | StaffRole
+    
+    if (!hasRequiredRole(userRole, userActiveRole, allowedRoles)) {
+      const roleDisplay = userActiveRole || userRole
       logAuthenticationFailure(
         request, 
         token.id as string, 
         token.email as string, 
-        'Insufficient permissions - not SUPER_ADMIN'
+        `Insufficient permissions - ${roleDisplay} not in ${allowedRoles.join(', ')}`
       )
       
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           { 
             error: 'Forbidden', 
-            message: 'Super Admin access required',
-            code: 'SUPER_ADMIN_REQUIRED'
+            message: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
+            code: 'INSUFFICIENT_PERMISSIONS',
+            userRole: roleDisplay,
+            requiredRoles: allowedRoles
           },
           { status: 403 }
         )
@@ -134,11 +201,41 @@ export async function middleware(request: NextRequest) {
 
 /**
  * Matcher configuration for middleware
+ * Protects all dashboard sections and their API endpoints
  */
 export const config = {
   matcher: [
+    // Super Admin routes
     '/super-admin/:path*',
     '/dashboard/super-admin/:path*',
-    '/api/super-admin/:path*'
+    '/api/super-admin/:path*',
+    
+    // DoS routes
+    '/dos/:path*',
+    '/api/dos/:path*',
+    
+    // Class Teacher routes
+    '/dashboard/class-teacher/:path*',
+    '/api/class-teacher/:path*',
+    
+    // Teacher routes
+    '/dashboard/teacher/:path*',
+    '/api/teacher/:path*',
+    
+    // Bursar routes
+    '/dashboard/bursar/:path*',
+    '/api/bursar/:path*',
+    
+    // Students routes (all students management)
+    '/dashboard/students/:path*',
+    '/api/students/:path*',
+    
+    // Parent routes
+    '/dashboard/parent/:path*',
+    '/api/parent/:path*',
+    
+    // Student routes (individual student portal)
+    '/dashboard/student/:path*',
+    '/api/student/:path*',
   ]
 }

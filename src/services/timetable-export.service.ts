@@ -1,6 +1,6 @@
 /**
  * TIMETABLE EXPORT SERVICE
- * 
+ *    
  * Handles PDF and Excel export of timetables for:
  * - Master timetable (all classes)
  * - Individual class timetables
@@ -64,6 +64,7 @@ export class TimetableExportService {
    * Export timetable to PDF
    */
   private async exportToPDF(data: any, request: ExportRequest): Promise<string> {
+    const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 30 });
     const fileName = `timetable-${request.viewType}-${Date.now()}.pdf`;
     const filePath = path.join(process.cwd(), 'public', 'exports', fileName);
@@ -151,6 +152,7 @@ export class TimetableExportService {
    * Export timetable to Excel
    */
   private async exportToExcel(data: any, request: ExportRequest): Promise<string> {
+    const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Timetable');
 
@@ -184,8 +186,8 @@ export class TimetableExportService {
     });
 
     // Style all cells
-    // worksheet.eachRow((row: any, rowNumber: any) => {
-    //   row.eachCell((cell: any) => {
+    worksheet.eachRow((row: any, rowNumber: number) => {
+      row.eachCell((cell: any) => {
         cell.border = {
           top: { style: 'thin' },
           left: { style: 'thin' },
@@ -193,8 +195,8 @@ export class TimetableExportService {
           right: { style: 'thin' }
         };
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      // });
-    // });
+      });
+    });
 
     // Add metadata sheet
     const metadataSheet = workbook.addWorksheet('Metadata');

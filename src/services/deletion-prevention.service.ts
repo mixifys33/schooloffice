@@ -3,7 +3,7 @@
  * Prevents unauthorized deletion of financial records and maintains data integrity
  * 
  * Requirements: Deletion Prevention - Protecting financial records from unauthorized deletion
- * 
+ *    
  * Property 1: Financial Record Permanence
  * For any financial record (payment, receipt, etc.), direct deletion SHALL be prevented
  * and records SHALL be maintained permanently for audit purposes.
@@ -368,7 +368,7 @@ export class DeletionPreventionService {
     if (recordAge && recordAge > 365) { // Older than 1 year
       violations.push({
         rule: 'COMPLIANCE_RETENTION',
-        severity: 'WARNING',
+        severity: ConflictSeverity.WARNING,
         message: 'Record is older than 1 year and may be required for compliance auditing'
       })
     }
