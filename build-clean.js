@@ -10,9 +10,9 @@ console.warn = function(...args) {
   originalConsoleWarn.apply(console, args);
 };
 
-// Run the actual build
+// Run the actual build with increased memory
 const { spawn } = require('child_process');
-const child = spawn('npx', ['next', 'build'], {
+const child = spawn('node', ['--max-old-space-size=4096', 'node_modules/next/dist/bin/next', 'build'], {
   stdio: 'inherit',
   shell: true
 });

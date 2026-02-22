@@ -26,3 +26,4 @@ export interface SpecialPeriodInput {
   name: string;
   startTime: string;
   endTime: string;
+}

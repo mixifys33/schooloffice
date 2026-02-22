@@ -50,7 +50,9 @@ interface AssessmentType {
   status: 'draft' | 'submitted' | 'approved' | 'pending'
   date: string
   subject: string
+  subjectId: string
   class: string
+  classId: string
   caCount?: number
   examCount?: number
   caPercentage?: number
@@ -403,13 +405,13 @@ export default function ClassTeacherAssessmentsPage() {
                       key={deadline.id}
                       className={cn(
                         'flex items-center justify-between p-3 rounded-lg border',
-                        teacherColors.danger.bg,
-                        teacherColors.danger.border
+                        teacherColors.error.bg,
+                        teacherColors.error.border
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={cn('p-2 rounded-lg', teacherColors.danger.bg)}>
-                          <AlertTriangle className={cn('h-4 w-4', teacherColors.danger.text)} />
+                        <div className={cn('p-2 rounded-lg', teacherColors.error.bg)}>
+                          <AlertTriangle className={cn('h-4 w-4', teacherColors.error.text)} />
                         </div>
                         <div>
                           <div className={cn(typography.label, 'capitalize')}>
@@ -424,7 +426,7 @@ export default function ClassTeacherAssessmentsPage() {
                         <div className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
                           Due
                         </div>
-                        <div className={cn('text-sm font-medium', teacherColors.danger.text)}>
+                        <div className={cn('text-sm font-medium', teacherColors.error.text)}>
                           {new Date(deadline.deadline).toLocaleDateString('en-UG', { month: 'short', day: 'numeric' })}
                         </div>
                       </div>

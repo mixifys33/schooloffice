@@ -22,10 +22,10 @@ async function testEnhancedBursarImplementation() {
     console.log('\n✅ Test 2: Verifying API routes...');
     
     // Check if the new API routes exist by checking if they can be imported
-    const dashboardRoute = await import('@/app/api/bursar/dashboard-enhanced/route.ts');
-    const automationPreviewRoute = await import('@/app/api/bursar/automation-preview/route.ts');
-    const manualActionsRoute = await import('@/app/api/bursar/manual-actions/route.ts');
-    const currentTermRoute = await import('@/app/api/terms/current/route.ts');
+    const dashboardRoute = await import('@/app/api/bursar/dashboard-enhanced/route');
+    const automationPreviewRoute = await import('@/app/api/bursar/automation-preview/route');
+    const manualActionsRoute = await import('@/app/api/bursar/manual-actions/route');
+    const currentTermRoute = await import('@/app/api/terms/current/route');
     
     console.log('   Dashboard enhanced route exists');
     console.log('   Automation preview route exists');
@@ -36,7 +36,7 @@ async function testEnhancedBursarImplementation() {
     console.log('\n✅ Test 3: Verifying frontend components...');
     
     // Check if the enhanced dashboard component exists
-    const enhancedDashboardComponent = await import('@/components/bursar/enhanced-bursar-dashboard.tsx');
+    const enhancedDashboardComponent = await import('@/components/bursar/enhanced-bursar-dashboard');
     
     console.log('   Enhanced bursar dashboard component exists');
     

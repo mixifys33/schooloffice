@@ -133,7 +133,7 @@ export default function SchoolAdminDashboardPage() {
         const timeoutId = setTimeout(() => {
           console.log('Dashboard API request timeout - aborting request')
           controller.abort()
-        }, 30000) // Increased timeout to 30 seconds for complex queries
+        }, 60000) // Increased timeout to 60 seconds for complex queries
 
         try {
           const response = await fetch('/api/dashboard/overview', {
@@ -181,10 +181,13 @@ export default function SchoolAdminDashboardPage() {
           setData(dashboardData)
           setError(null)
         } catch (err) {
+          clearTimeout(timeoutId) // Clear timeout on error
+          
           // Check if the error is due to the timeout
           if (controller.signal.aborted) {
-            console.error('Dashboard API request was aborted due to timeout')
-            throw new Error('Request timed out. Please check your connection and try again.')
+            const timeoutError = 'The dashboard is taking longer than expected to load. This may be due to a large amount of data. Please try refreshing the page.'
+            setError(timeoutError)
+            return
           }
           
           console.error('Error fetching dashboard data:', err)
@@ -192,18 +195,20 @@ export default function SchoolAdminDashboardPage() {
           // Provide more specific error messages based on error type
           let errorMessage = 'Unable to load dashboard data. Please try again.'
 
-          if (err.name === 'AbortError') {
-            errorMessage = 'Request timed out. Please check your connection and try again.'
-          } else if (err.message.includes('Failed to fetch')) {
-            errorMessage = 'Cannot connect to server. Please ensure the application is running and try again.'
-          } else if (err.message.includes('401')) {
-            errorMessage = 'Authentication required. Please log in again.'
-          } else if (err.message.includes('403')) {
-            errorMessage = 'Access denied. Please contact your administrator.'
-          } else if (err.message.includes('500')) {
-            errorMessage = 'Server error. Please try again in a moment.'
-          } else if (err instanceof Error) {
-            errorMessage = err.message
+          if (err instanceof Error) {
+            if (err.name === 'AbortError') {
+              errorMessage = 'Request timed out. Please check your connection and try again.'
+            } else if (err.message.includes('Failed to fetch')) {
+              errorMessage = 'Cannot connect to server. Please ensure the application is running and try again.'
+            } else if (err.message.includes('401')) {
+              errorMessage = 'Authentication required. Please log in again.'
+            } else if (err.message.includes('403')) {
+              errorMessage = 'Access denied. Please contact your administrator.'
+            } else if (err.message.includes('500')) {
+              errorMessage = 'Server error. Please try again in a moment.'
+            } else {
+              errorMessage = err.message
+            }
           }
 
           setError(errorMessage)
@@ -216,7 +221,7 @@ export default function SchoolAdminDashboardPage() {
         setLoading(false)
       }
     }
-    fetchDashboardData()
+    fetchDashboardData();
   }, [])
 
   // Add retry functionality

@@ -475,6 +475,20 @@ model School {
   studentSubjects      StudentSubject[]
   combinationSubjects  CombinationSubject[]
   teacherAssignments   TeacherAssignment[]
+  
+  // Website Management Relations
+  websiteSettings          WebsiteSettings?
+  websitePages             WebsitePage[]
+  websitePageSections      PageSection[]
+  websiteNews              WebsiteNews[]
+  websiteEvents            WebsiteEvent[]
+  websiteGalleries         WebsiteGallery[]
+  websiteGalleryImages     WebsiteGalleryImage[]
+  websiteTestimonials      WebsiteTestimonial[]
+  websiteTeamMembers       WebsiteTeamMember[]
+  websiteContactSubmissions WebsiteContactSubmission[]
+  websiteMedia             WebsiteMedia[]
+  websiteMenuItems         WebsiteMenuItem[]
 
   @@index([isActive])
 }
@@ -885,6 +899,7 @@ model Student {
   medicalInfo     String?
   enrollmentDate  DateTime      @default(now())
   status          StudentStatus @default(ACTIVE)
+  creditBalance   Float         @default(0) // Track overpayments/credits across terms
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -2039,6 +2054,52 @@ model FinanceAuditLog {
   @@index([resourceId])
   @@index([timestamp])
   @@index([action])
+}
+
+// Credit Transaction - Track all credit balance movements
+model CreditTransaction {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  studentId     String   @db.ObjectId
+  amount        Float // Positive for credit added, negative for credit used
+  type          String // OVERPAYMENT, REFUND, APPLIED_TO_INVOICE, ADJUSTMENT
+  description   String
+  paymentId     String?  @db.ObjectId // Link to payment if from overpayment
+  invoiceId     String?  @db.ObjectId // Link to invoice if applied
+  refundId      String?  @db.ObjectId // Link to refund if refunded
+  balanceBefore Float
+  balanceAfter  Float
+  createdBy     String   @db.ObjectId
+  createdAt     DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Refund Request - Track refund requests and processing
+model RefundRequest {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId      String   @db.ObjectId
+  studentId     String   @db.ObjectId
+  amount        Float
+  reason        String
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED, PROCESSED
+  requestedBy   String   @db.ObjectId
+  requestedAt   DateTime @default(now())
+  reviewedBy    String?  @db.ObjectId
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  processedBy   String?  @db.ObjectId
+  processedAt   DateTime?
+  paymentMethod String? // How refund was issued
+  reference     String? // Bank reference, cheque number, etc.
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([status])
+  @@index([requestedAt])
 }
 
 // Finance Notification Log - tracks all finance-related notifications
@@ -6372,4 +6433,432 @@ model TeacherAssignment {
   @@index([classId])
   @@index([subjectId])
   @@index([schoolId])
+}
+
+
+// ============================================
+// WEBSITE MANAGEMENT SYSTEM
+// Admin-controlled public school website
+// ============================================
+
+// Website Theme Settings
+model WebsiteSettings {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @unique @db.ObjectId
+  
+  // Basic Info
+  siteName  String   @default("School Website")
+  tagline   String?
+  
+  // Theme Colors
+  primaryColor    String @default("#1e40af")
+  secondaryColor  String @default("#64748b")
+  accentColor     String @default("#f59e0b")
+  backgroundColor String @default("#ffffff")
+  textColor       String @default("#1f2937")
+  
+  // Typography
+  headingFont String @default("Inter")
+  bodyFont    String @default("Inter")
+  
+  // Branding
+  logo        String?
+  favicon     String?
+  bannerImage String?
+  
+  // Contact Info
+  contactEmail String?
+  contactPhone String?
+  address      String?
+  
+  // Social Media
+  facebookUrl  String?
+  twitterUrl   String?
+  instagramUrl String?
+  youtubeUrl   String?
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  
+  // Features
+  showGallery      Boolean @default(true)
+  showEvents       Boolean @default(true)
+  showNews         Boolean @default(true)
+  showTestimonials Boolean @default(true)
+  
+  // Status
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+// Website Pages
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model WebsitePage {
+  id       String     @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String     @db.ObjectId
+  
+  title    String
+  slug     String     // URL-friendly identifier
+  content  String?    // Rich text content
+  excerpt  String?    // Short description
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  // Featured Image
+  featuredImage String?
+  
+  // Page Settings
+  showInMenu Boolean @default(true)
+  menuOrder  Int     @default(0)
+  parentId   String? @db.ObjectId // For nested pages
+  
+  // Status
+  status      PageStatus @default(DRAFT)
+  publishedAt DateTime?
+  
+  // Author
+  createdBy String   @db.ObjectId
+  updatedBy String?  @db.ObjectId
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school   School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  sections PageSection[]
+  parent   WebsitePage?   @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children WebsitePage[]  @relation("PageHierarchy")
+  
+  @@unique([schoolId, slug])
+  @@index([schoolId])
+  @@index([status])
+  @@index([slug])
+}
+
+// Page Sections (Building Blocks)
+enum SectionType {
+  HERO
+  TEXT
+  IMAGE
+  IMAGE_TEXT
+  GALLERY
+  VIDEO
+  STATS
+  TEAM
+  TESTIMONIALS
+  FAQ
+  CTA
+  CONTACT_FORM
+  MAP
+  CUSTOM_HTML
+}
+
+model PageSection {
+  id       String      @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String      @db.ObjectId
+  pageId   String      @db.ObjectId
+  
+  type     SectionType
+  title    String?
+  content  Json        // Flexible content storage
+  order    Int         @default(0)
+  
+  // Styling
+  backgroundColor String?
+  textColor       String?
+  padding         String? @default("medium")
+  
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  page   WebsitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  @@index([pageId])
+  @@index([schoolId])
+  @@index([order])
+}
+
+// News & Announcements
+model WebsiteNews {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  title         String
+  slug          String
+  content       String
+  excerpt       String?
+  featuredImage String?
+  
+  // Author
+  authorName String?
+  authorId   String  @db.ObjectId
+  
+  // Categories
+  category String?
+  tags     String[]
+  
+  // Status
+  status      PageStatus @default(DRAFT)
+  publishedAt DateTime?
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  // Stats
+  views Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@unique([schoolId, slug])
+  @@index([schoolId])
+  @@index([status])
+  @@index([publishedAt])
+}
+
+// Events
+model WebsiteEvent {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  title         String
+  slug          String
+  description   String
+  featuredImage String?
+  
+  // Event Details
+  startDate DateTime
+  endDate   DateTime?
+  location  String?
+  
+  // Registration
+  requiresRegistration Boolean @default(false)
+  registrationLink     String?
+  maxAttendees         Int?
+  
+  // Status
+  status      PageStatus @default(DRAFT)
+  publishedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@unique([schoolId, slug])
+  @@index([schoolId])
+  @@index([status])
+  @@index([startDate])
+}
+
+// Gallery
+model WebsiteGallery {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  title       String
+  description String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  images WebsiteGalleryImage[]
+  
+  @@index([schoolId])
+}
+
+model WebsiteGalleryImage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId  String   @db.ObjectId
+  galleryId String   @db.ObjectId
+  
+  imageUrl    String
+  title       String?
+  description String?
+  order       Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  school  School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  gallery WebsiteGallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  
+  @@index([galleryId])
+  @@index([schoolId])
+  @@index([order])
+}
+
+// Testimonials
+model WebsiteTestimonial {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  name        String
+  role        String? // e.g., "Parent", "Student", "Alumni"
+  content     String
+  rating      Int?    @default(5)
+  photo       String?
+  
+  isVisible Boolean  @default(true)
+  order     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@index([schoolId])
+  @@index([isVisible])
+  @@index([order])
+}
+
+// Team Members / Staff Profiles
+model WebsiteTeamMember {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  name        String
+  position    String
+  bio         String?
+  photo       String?
+  email       String?
+  phone       String?
+  
+  // Social Links
+  linkedinUrl String?
+  twitterUrl  String?
+  
+  isVisible Boolean  @default(true)
+  order     Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@index([schoolId])
+  @@index([isVisible])
+  @@index([order])
+}
+
+// Contact Form Submissions
+model WebsiteContactSubmission {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  name    String
+  email   String
+  phone   String?
+  subject String?
+  message String
+  
+  // Status
+  isRead    Boolean   @default(false)
+  repliedAt DateTime?
+  
+  // Metadata
+  ipAddress String?
+  userAgent String?
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@index([schoolId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Media Library
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+}
+
+model WebsiteMedia {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String    @db.ObjectId
+  
+  fileName    String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  mediaType   MediaType
+  
+  // Metadata
+  title       String?
+  description String?
+  altText     String?
+  
+  // ImageKit specific
+  imagekitFileId String?
+  
+  uploadedBy String   @db.ObjectId
+  uploadedAt DateTime @default(now())
+  
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  @@index([schoolId])
+  @@index([mediaType])
+  @@index([uploadedAt])
+}
+
+// Menu Items (Custom Navigation)
+model WebsiteMenuItem {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId String   @db.ObjectId
+  
+  label    String
+  url      String
+  order    Int      @default(0)
+  parentId String?  @db.ObjectId
+  
+  // Link Type
+  isExternal   Boolean @default(false)
+  openInNewTab Boolean @default(false)
+  
+  isVisible Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  school   School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parent   WebsiteMenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children WebsiteMenuItem[] @relation("MenuHierarchy")
+  
+  @@index([schoolId])
+  @@index([order])
+  @@index([isVisible])
 }

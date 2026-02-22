@@ -28,30 +28,93 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current term if not specified
-    let currentTerm = null;
-    try {
-      if (termId) {
-        currentTerm = await prisma.term.findUnique({
-          where: { id: termId },
-          include: {
-            academicYear: {
-              where: { schoolId }
-            }
-          }
-        });
-      } else {
-        currentTerm = await prisma.term.findFirst({
-          where: {
-            academicYear: {
-              schoolId,
-              isActive: true
-            }
-          },
-          orderBy: { startDate: 'desc' }
-        });
+    const today = new Date()
+    const currentYear = new Date().getFullYear()
+    
+    let currentAcademicYear = await prisma.academicYear.findFirst({
+      where: {
+        schoolId,
+        isCurrent: true
       }
-    } catch (termError) {
-      console.error('Error fetching term:', termError);
+    })
+
+    // Fallback: Find academic year that matches current year
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Fallback: Use isActive flag
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          isActive: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Last resort: Most recent academic year
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: { schoolId },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
+      return NextResponse.json({
+        totalExpected: 0,
+        totalCollected: 0,
+        totalOutstanding: 0,
+        collectionRate: 0,
+        unpaidStudents: []
+      })
+    }
+
+    // Get current term with intelligent fallback
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find term that includes today's date
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Fallback: Most recent term that has started
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Last resort: Most recent term
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: { academicYearId: currentAcademicYear.id },
+        orderBy: { startDate: 'desc' }
+      })
     }
 
     if (!currentTerm) {
@@ -61,70 +124,82 @@ export async function GET(request: NextRequest) {
         totalOutstanding: 0,
         collectionRate: 0,
         unpaidStudents: []
-      });
+      })
     }
 
-    // Get all student accounts for the school
-    let studentAccounts = [];
-    try {
-      studentAccounts = await prisma.studentAccount.findMany({
-        where: { schoolId },
-        include: {
-          student: {
-            include: {
-              class: true,
-              studentGuardians: {
-                include: {
-                  guardian: true
-                }
-              }
-            }
+    // Get all active students with their payments for the term
+    const students = await prisma.student.findMany({
+      where: {
+        schoolId,
+        status: 'ACTIVE'
+      },
+      include: {
+        class: true,
+        payments: {
+          where: {
+            termId: currentTerm.id,
+            status: 'CONFIRMED'
+          }
+        },
+        studentGuardians: {
+          include: {
+            guardian: true
           }
         }
-      });
-    } catch (accountError) {
-      console.error('Error fetching student accounts:', accountError);
-      // Return empty data if database query fails
-      return NextResponse.json({
-        totalExpected: 0,
-        totalCollected: 0,
-        totalOutstanding: 0,
-        collectionRate: 0,
-        unpaidStudents: []
-      });
-    }
+      }
+    })
+
+    // Get fee structures for the term
+    const feeStructures = await prisma.feeStructure.findMany({
+      where: {
+        schoolId,
+        termId: currentTerm.id,
+        isActive: true
+      }
+    })
 
     // Calculate totals
-    let totalExpected = 0;
-    let totalCollected = 0;
-    let totalOutstanding = 0;
-    const unpaidStudents = [];
+    let totalExpected = 0
+    let totalCollected = 0
+    let totalOutstanding = 0
+    const unpaidStudents = []
 
-    for (const account of studentAccounts) {
-      totalExpected += account.totalFees || 0;
-      totalCollected += account.totalPaid || 0;
-      
-      const outstanding = Math.max(0, account.balance || 0);
-      totalOutstanding += outstanding;
+    for (const student of students) {
+      // Find fee structure for this student's class
+      const feeStructure = feeStructures.find(fs => 
+        fs.classId === student.classId && 
+        fs.studentType === 'DAY' // Default to DAY
+      )
 
-      // Add to unpaid list if has outstanding balance
-      if (outstanding > 0) {
-        const primaryGuardian = account.student.studentGuardians.find(g => g.isPrimary)?.guardian;
+      const expectedFee = feeStructure?.totalAmount || 0
+      const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
+      const balance = expectedFee - paidAmount
+
+      totalExpected += expectedFee
+      totalCollected += paidAmount
+
+      // Only count positive balances as outstanding
+      if (balance > 0) {
+        totalOutstanding += balance
+        
+        const primaryGuardian = student.studentGuardians.find(g => g.isPrimary)?.guardian
         
         unpaidStudents.push({
-          id: account.student.id,
-          name: `${account.student.firstName || ''} ${account.student.lastName || ''}`.trim(),
-          class: account.student.class?.name || 'No Class',
-          balance: outstanding,
+          id: student.id,
+          name: `${student.firstName} ${student.lastName}`,
+          class: student.class?.name || 'No Class',
+          balance: balance,
           phone: primaryGuardian?.phone || undefined
-        });
+        })
       }
     }
 
     // Sort unpaid students by balance (highest first)
-    unpaidStudents.sort((a, b) => b.balance - a.balance);
+    unpaidStudents.sort((a, b) => b.balance - a.balance)
 
-    const collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+    const collectionRate = totalExpected > 0 
+      ? Math.min(100, (totalCollected / totalExpected) * 100) 
+      : 0
 
     const result = {
       totalExpected,
@@ -132,9 +207,9 @@ export async function GET(request: NextRequest) {
       totalOutstanding,
       collectionRate: Math.round(collectionRate * 100) / 100,
       unpaidStudents: unpaidStudents.slice(0, 50) // Limit to top 50 for performance
-    };
+    }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result)
 
   } catch (error) {
     console.error('Error fetching financial summary:', error);

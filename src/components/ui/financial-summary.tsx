@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,8 @@ import {
   AlertTriangle,
   Users,
   Eye,
-  Send
+  Send,
+  Loader2
 } from 'lucide-react';
 
 interface FinancialSummaryData {
@@ -40,9 +42,12 @@ export function FinancialSummary({
   className = "",
   showActions = true 
 }: FinancialSummaryProps) {
+  const router = useRouter()
   const [data, setData] = useState<FinancialSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
     fetchFinancialSummary();
@@ -111,6 +116,51 @@ export function FinancialSummary({
     if (rate >= 70) return 'text-[var(--chart-yellow)] bg-[var(--warning-light)]';
     return 'text-[var(--chart-red)] bg-[var(--danger-light)]';
   };
+
+  const handleViewDetails = () => {
+    setNavigating(true)
+    // Navigate to admin-specific financial overview page
+    router.push('/dashboard/school-admin/financial-overview')
+  }
+
+  const handleSendReminders = async () => {
+    if (!displayData.unpaidStudents.length) {
+      alert('No unpaid students to send reminders to')
+      return
+    }
+
+    if (!confirm(`Send payment reminders to ${displayData.unpaidStudents.length} students with outstanding fees?`)) {
+      return
+    }
+
+    try {
+      setSendingReminders(true)
+
+      const response = await fetch('/api/bursar/send-reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentIds: displayData.unpaidStudents.map(s => s.id)
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send reminders')
+      }
+
+      const result = await response.json()
+      
+      alert(`Successfully sent ${result.sent || 0} payment reminders!`)
+    } catch (err) {
+      console.error('Error sending reminders:', err)
+      alert(err instanceof Error ? err.message : 'Failed to send reminders')
+    } finally {
+      setSendingReminders(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -195,14 +245,41 @@ export function FinancialSummary({
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">Financial Overview</h3>
         {showActions && (
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              Details
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleViewDetails}
+              disabled={navigating}
+            >
+              {navigating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Details
+                </>
+              )}
             </Button>
             {displayData.unpaidStudents.length > 0 && (
-              <Button size="sm">
-                <Send className="h-4 w-4 mr-2" />
-                Send Reminders
+              <Button 
+                size="sm"
+                onClick={handleSendReminders}
+                disabled={sendingReminders}
+              >
+                {sendingReminders ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Reminders
+                  </>
+                )}
               </Button>
             )}
           </div>

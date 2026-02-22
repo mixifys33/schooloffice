@@ -337,7 +337,7 @@ export default function ClassTeacherCAEntryPage() {
     // Validate against max score
     if (numValue !== null && caData && activeCaId) {
       const activeCa = caData.caEntries.find(ca => ca.id === activeCaId)
-      if (activeCa && numValue < 0 || numValue > activeCa.maxScore) {
+      if (!activeCa || numValue < 0 || numValue > activeCa.maxScore) {
         return // Invalid value, don't update
       }
     }

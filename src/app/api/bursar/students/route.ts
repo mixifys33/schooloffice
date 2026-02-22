@@ -12,57 +12,175 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const classFilter = searchParams.get('class')
-    const termFilter = searchParams.get('term')
 
-    // Get current active term (the one that includes today's date)
-    const today = new Date()
-    const currentTerm = await prisma.term.findFirst({
+    // Get current academic year with intelligent fallback
+    let currentAcademicYear = await prisma.academicYear.findFirst({
       where: {
-        academicYear: {
+        schoolId: session.user.schoolId,
+        isCurrent: true
+      }
+    })
+
+    console.log('Current academic year (isCurrent=true):', currentAcademicYear ? {
+      id: currentAcademicYear.id,
+      name: currentAcademicYear.name,
+      isCurrent: currentAcademicYear.isCurrent
+    } : 'None found')
+
+    // Intelligent fallback: Find academic year that matches current year or is active
+    if (!currentAcademicYear) {
+      const currentYear = new Date().getFullYear()
+      
+      // Try to find academic year with current year in the name
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId: session.user.schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+      
+      console.log(`Fallback: Academic year matching ${currentYear}:`, currentAcademicYear ? {
+        id: currentAcademicYear.id,
+        name: currentAcademicYear.name
+      } : 'None')
+    }
+
+    // Final fallback: Use isActive flag or most recent
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
           schoolId: session.user.schoolId,
           isActive: true
         },
-        startDate: { lte: today },
-        endDate: { gte: today }
+        orderBy: { createdAt: 'desc' }
+      })
+      
+      console.log('Fallback: Active academic year:', currentAcademicYear ? {
+        id: currentAcademicYear.id,
+        name: currentAcademicYear.name
+      } : 'None')
+    }
+
+    // Last resort: Most recent academic year
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: { schoolId: session.user.schoolId },
+        orderBy: { createdAt: 'desc' }
+      })
+      
+      console.log('Fallback: Most recent academic year:', currentAcademicYear ? {
+        id: currentAcademicYear.id,
+        name: currentAcademicYear.name
+      } : 'None')
+    }
+      
+    if (!currentAcademicYear) {
+      return NextResponse.json(
+        { 
+          error: 'No academic year found. Please create an academic year in settings.',
+          hasAcademicYears: false
+        },
+        { status: 400 }
+      )
+    }
+
+    // Get current term with intelligent fallback
+    const today = new Date()
+    
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
       },
       include: {
         academicYear: true
       }
     })
 
-    // If no term matches today's date, get the most recent term that has started
-    const fallbackTerm = !currentTerm ? await prisma.term.findFirst({
-      where: {
-        academicYear: {
-          schoolId: session.user.schoolId,
-          isActive: true
+    console.log('Current term (isCurrent=true):', currentTerm ? {
+      id: currentTerm.id,
+      name: currentTerm.name,
+      isCurrent: currentTerm.isCurrent
+    } : 'None found')
+
+    // Intelligent fallback: Find term that includes today's date
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
         },
-        startDate: { lte: today }
-      },
-      include: {
-        academicYear: true
-      },
-      orderBy: {
-        startDate: 'desc'
-      }
-    }) : null
+        include: {
+          academicYear: true
+        },
+        orderBy: { startDate: 'desc' }
+      })
+      
+      console.log('Fallback: Term containing today:', currentTerm ? {
+        id: currentTerm.id,
+        name: currentTerm.name,
+        startDate: currentTerm.startDate,
+        endDate: currentTerm.endDate
+      } : 'None')
+    }
 
-    const activeTerm = currentTerm || fallbackTerm
+    // Second fallback: Most recent term that has started
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        include: {
+          academicYear: true
+        },
+        orderBy: { startDate: 'desc' }
+      })
+      
+      console.log('Fallback: Most recent started term:', currentTerm ? {
+        id: currentTerm.id,
+        name: currentTerm.name,
+        startDate: currentTerm.startDate
+      } : 'None')
+    }
 
-    console.log('Current term found:', activeTerm ? {
-      id: activeTerm.id,
-      name: activeTerm.name,
-      academicYear: activeTerm.academicYear.name,
-      startDate: activeTerm.startDate,
-      endDate: activeTerm.endDate
-    } : 'None')
-
-    if (!activeTerm) {
+    // Last resort: Most recent term regardless of dates
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: { academicYearId: currentAcademicYear.id },
+        orderBy: { startDate: 'desc' },
+        include: {
+          academicYear: true
+        }
+      })
+      
+      console.log('Fallback: Most recent term:', currentTerm ? {
+        id: currentTerm.id,
+        name: currentTerm.name
+      } : 'None')
+    }
+      
+    if (!currentTerm) {
       return NextResponse.json(
-        { error: 'No active term found. Please create an academic year and term first.' },
+        { 
+          error: 'No term found. Please create a term in academic settings.',
+          hasTerms: false,
+          academicYearName: currentAcademicYear.name
+        },
         { status: 400 }
       )
     }
+
+    console.log('Using term:', {
+      id: currentTerm.id,
+      name: currentTerm.name,
+      academicYear: currentTerm.academicYear.name,
+      startDate: currentTerm.startDate,
+      endDate: currentTerm.endDate,
+      isCurrent: currentTerm.isCurrent
+    })
 
     // Get all students in the school
     const students = await prisma.student.findMany({
@@ -75,7 +193,7 @@ export async function GET(request: NextRequest) {
         stream: true,
         payments: {
           where: {
-            termId: activeTerm.id
+            termId: currentTerm.id
           },
           orderBy: { receivedAt: 'desc' }
         }
@@ -83,12 +201,21 @@ export async function GET(request: NextRequest) {
     })
 
     console.log('Students found:', students.length)
+    console.log('Sample student payments:', students[0] ? {
+      name: `${students[0].firstName} ${students[0].lastName}`,
+      paymentsCount: students[0].payments.length,
+      payments: students[0].payments.map(p => ({
+        amount: p.amount,
+        termId: p.termId,
+        receivedAt: p.receivedAt
+      }))
+    } : 'No students')
 
     // Get all fee structures for the current term
     const feeStructures = await prisma.feeStructure.findMany({
       where: {
         schoolId: session.user.schoolId,
-        termId: activeTerm.id,
+        termId: currentTerm.id,
         isActive: true
       },
       include: {
@@ -116,16 +243,18 @@ export async function GET(request: NextRequest) {
       className: fs.class.name,
       termName: fs.term.name,
       termId: fs.termId,
-      currentTermId: activeTerm.id,
-      matches: fs.termId === activeTerm.id,
+      currentTermId: currentTerm.id,
+      matches: fs.termId === currentTerm.id,
       studentType: fs.studentType,
       totalAmount: fs.totalAmount
     })))
 
     // Process student data with financial information
     const processedStudents = students.map(student => {
-      // Default to DAY if studentType is not set
-      const studentType = student.studentType || 'DAY'
+      // Determine student type based on available data
+      // TODO: Add a studentType field to Student model or determine from other fields
+      // For now, default to DAY
+      const studentType: 'DAY' | 'BOARDING' = 'DAY'
       
       // Find the fee structure for this student's class and student type
       const feeStructure = feeStructures.find(fs => 
@@ -161,13 +290,18 @@ export async function GET(request: NextRequest) {
 
       // Determine payment status
       let paymentStatus: 'not_paid' | 'partially_paid' | 'fully_paid' = 'not_paid'
-      if (balance === 0 && totalDue > 0) {
+      if (balance <= 0 && totalDue > 0) {
+        // Fully paid or overpaid
         paymentStatus = 'fully_paid'
       } else if (totalPaid > 0 && balance > 0) {
         paymentStatus = 'partially_paid'
       } else if (totalDue > 0 && totalPaid === 0) {
         paymentStatus = 'not_paid'
       }
+
+      // For display purposes, show balance as 0 if overpaid (negative balance)
+      // The actual overpayment is tracked in creditBalance
+      const displayBalance = Math.max(0, balance)
 
       return {
         id: student.id,
@@ -181,12 +315,13 @@ export async function GET(request: NextRequest) {
         status: student.status as 'active' | 'transferred' | 'left',
         totalDue,
         totalPaid,
-        balance,
+        balance: displayBalance, // Show 0 instead of negative
+        actualBalance: balance, // Keep actual balance for internal calculations
         lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null,
         paymentStatus,
         feeStructureId: feeStructure?.id || null,
-        currentTerm: activeTerm.name,
-        currentAcademicYear: activeTerm.academicYear.name
+        currentTerm: currentTerm.name,
+        currentAcademicYear: currentTerm.academicYear.name
       }
     })
 
@@ -201,9 +336,9 @@ export async function GET(request: NextRequest) {
       success: true,
       students: filteredStudents,
       currentTerm: {
-        id: activeTerm.id,
-        name: activeTerm.name,
-        academicYear: activeTerm.academicYear.name
+        id: currentTerm.id,
+        name: currentTerm.name,
+        academicYear: currentTerm.academicYear.name
       }
     })
   } catch (error) {

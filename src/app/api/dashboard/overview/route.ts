@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
     
     const [
       totalStudents,
-      paidStudents,
       school,
+      currentAcademicYear,
       currentTerm,
       todayAttendance,
     ] = await Promise.allSettled([
@@ -82,19 +82,56 @@ export async function GET(request: NextRequest) {
         }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
       ]),
-      // Paid students (PAID pilot type)
-      Promise.race([
-        prisma.student.count({
-          where: { schoolId, status: 'ACTIVE', pilotType: 'PAID' },
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
-      ]),
       // School details for SMS budget
       Promise.race([
         prisma.school.findUnique({
           where: { id: schoolId },
           select: { smsBudgetPerTerm: true, isActive: true, name: true },
         }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
+      ]),
+      // Get current academic year
+      Promise.race([
+        (async () => {
+          const today = new Date()
+          const currentYear = new Date().getFullYear()
+          
+          let academicYear = await prisma.academicYear.findFirst({
+            where: {
+              schoolId,
+              isCurrent: true
+            }
+          })
+
+          if (!academicYear) {
+            academicYear = await prisma.academicYear.findFirst({
+              where: {
+                schoolId,
+                name: { contains: currentYear.toString() }
+              },
+              orderBy: { createdAt: 'desc' }
+            })
+          }
+
+          if (!academicYear) {
+            academicYear = await prisma.academicYear.findFirst({
+              where: {
+                schoolId,
+                isActive: true
+              },
+              orderBy: { createdAt: 'desc' }
+            })
+          }
+
+          if (!academicYear) {
+            academicYear = await prisma.academicYear.findFirst({
+              where: { schoolId },
+              orderBy: { createdAt: 'desc' }
+            })
+          }
+
+          return academicYear
+        })(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), queryTimeout))
       ]),
       // Current term - First get the active academic year for the school, then find the term
@@ -160,10 +197,66 @@ export async function GET(request: NextRequest) {
 
     // Extract values with fallbacks
     const totalStudentsCount = totalStudents.status === 'fulfilled' ? totalStudents.value : 0
-    const paidStudentsCount = paidStudents.status === 'fulfilled' ? paidStudents.value : 0
     const schoolData = school.status === 'fulfilled' ? school.value : null
+    const academicYearData = currentAcademicYear.status === 'fulfilled' ? currentAcademicYear.value : null
     const termData = currentTerm.status === 'fulfilled' ? currentTerm.value : null
     const attendanceData = todayAttendance.status === 'fulfilled' ? todayAttendance.value : []
+
+    // Calculate paid/unpaid students based on actual payments
+    let paidStudentsCount = 0
+    let unpaidStudents = 0
+    
+    if (termData?.id && academicYearData?.id) {
+      try {
+        // Get all active students with their payments
+        const studentsWithPayments = await prisma.student.findMany({
+          where: {
+            schoolId,
+            status: 'ACTIVE'
+          },
+          include: {
+            payments: {
+              where: {
+                termId: termData.id,
+                status: 'CONFIRMED'
+              }
+            }
+          }
+        })
+
+        // Get fee structures for the term
+        const feeStructures = await prisma.feeStructure.findMany({
+          where: {
+            schoolId,
+            termId: termData.id,
+            isActive: true
+          }
+        })
+
+        // Calculate paid vs unpaid
+        for (const student of studentsWithPayments) {
+          const feeStructure = feeStructures.find(fs => 
+            fs.classId === student.classId && 
+            fs.studentType === 'DAY'
+          )
+
+          const expectedFee = feeStructure?.totalAmount || 0
+          const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
+          const balance = expectedFee - paidAmount
+
+          if (balance <= 0 && expectedFee > 0) {
+            paidStudentsCount++
+          } else if (balance > 0) {
+            unpaidStudents++
+          }
+        }
+      } catch (error) {
+        console.warn('Could not calculate paid/unpaid students:', error)
+        unpaidStudents = totalStudentsCount
+      }
+    } else {
+      unpaidStudents = totalStudentsCount
+    }
 
     // SMS sent this term (with error handling)
     let smsSentThisTerm = 0
@@ -179,9 +272,6 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.warn('Could not fetch SMS count:', error)
     }
-
-    // Calculate unpaid students
-    const unpaidStudents = totalStudentsCount - paidStudentsCount
 
     // Calculate SMS balance
     const smsBudget = schoolData?.smsBudgetPerTerm || 0

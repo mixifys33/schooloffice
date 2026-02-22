@@ -15,7 +15,11 @@ import {
   AlertTriangle,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  Send,
+  Bell,
+  History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -61,10 +65,28 @@ const navigationItems = [
     description: 'View individual student fees'
   },
   {
+    name: 'Credit Balances',
+    href: '/dashboard/bursar/credits',
+    icon: DollarSign,
+    description: 'Students with overpayment credits'
+  },
+  {
+    name: 'Refund Requests',
+    href: '/dashboard/bursar/refunds',
+    icon: FileText,
+    description: 'Manage refund requests'
+  },
+  {
     name: 'Defaulter List',
     href: '/dashboard/bursar/defaulters',
     icon: AlertTriangle,
     description: 'Students with outstanding balances'
+  },
+  {
+    name: 'Communications',
+    href: '/dashboard/bursar/communications/reminders',
+    icon: MessageSquare,
+    description: 'Fee-related communications'
   },
   {
     name: 'Financial Reports',

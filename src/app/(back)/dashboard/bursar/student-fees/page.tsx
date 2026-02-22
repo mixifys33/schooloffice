@@ -62,9 +62,10 @@ interface Student {
 interface StudentFeesTableProps {
   students: Student[]
   onStudentClick: (student: Student) => void
+  onRecordPayment: (student: Student) => void
 }
 
-function StudentFeesTable({ students, onStudentClick }: StudentFeesTableProps) {
+function StudentFeesTable({ students, onStudentClick, onRecordPayment }: StudentFeesTableProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
@@ -169,9 +170,31 @@ function StudentFeesTable({ students, onStudentClick }: StudentFeesTableProps) {
                     {student.lastPaymentDate ? new Date(student.lastPaymentDate).toLocaleDateString() : '-'}
                   </td>
                   <td className="py-3 px-4">
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onRecordPayment(student)
+                        }}
+                        title="Record Payment"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Record</span>
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onStudentClick(student)
+                        }}
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -193,6 +216,15 @@ export default function StudentFeesIndexPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedClass, setSelectedClass] = useState<string>('all')
   const [selectedTerm, setSelectedTerm] = useState<string>('current')
+  
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY'>('CASH')
+  const [receiptNumber, setReceiptNumber] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -203,7 +235,8 @@ export default function StudentFeesIndexPage() {
         const response = await fetch('/api/bursar/students')
         
         if (!response.ok) {
-          throw new Error('Failed to fetch student data')
+          const errorData = await response.json().catch(() => ({ error: 'Failed to fetch student data' }))
+          throw new Error(errorData.error || 'Failed to fetch student data')
         }
 
         const data = await response.json()
@@ -222,6 +255,71 @@ export default function StudentFeesIndexPage() {
 
   const handleStudentClick = (student: Student) => {
     window.location.href = `/dashboard/bursar/student-fees/${student.id}`
+  }
+
+  const handleRecordPayment = (student: Student) => {
+    setSelectedStudent(student)
+    setPaymentAmount(student.balance > 0 ? student.balance.toString() : '')
+    setShowPaymentModal(true)
+  }
+
+  const handleSubmitPayment = async () => {
+    if (!selectedStudent || !paymentAmount || !receiptNumber) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      
+      const response = await fetch('/api/bursar/payments/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          amount: parseFloat(paymentAmount),
+          method: paymentMethod,
+          reference: receiptNumber,
+          receivedAt: new Date(paymentDate).toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to record payment')
+      }
+
+      const result = await response.json()
+
+      // Refresh student list - add timestamp to prevent caching
+      await new Promise(resolve => setTimeout(resolve, 300))
+      const studentsResponse = await fetch(`/api/bursar/students?_t=${Date.now()}`)
+      if (studentsResponse.ok) {
+        const data = await studentsResponse.json()
+        setStudents(data.students)
+      }
+
+      // Reset form and close modal
+      setPaymentAmount('')
+      setReceiptNumber('')
+      setPaymentDate(new Date().toISOString().split('T')[0])
+      setShowPaymentModal(false)
+      setSelectedStudent(null)
+      
+      // Show success message with overpayment warning if applicable
+      let message = `Payment recorded successfully! Receipt: ${result.receipt?.receiptNumber || 'Generated'}`
+      if (result.overpayment) {
+        message += `\n\n⚠️ OVERPAYMENT ALERT:\n${result.overpayment.message}`
+      }
+      alert(message)
+    } catch (err) {
+      console.error('Error recording payment:', err)
+      alert(err instanceof Error ? err.message : 'Failed to record payment')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const formatCurrency = (amount: number) => {
@@ -360,7 +458,86 @@ export default function StudentFeesIndexPage() {
       <StudentFeesTable 
         students={students} 
         onStudentClick={handleStudentClick}
+        onRecordPayment={handleRecordPayment}
       />
+
+      {/* Quick Payment Modal */}
+      {showPaymentModal && selectedStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Record Payment - {selectedStudent.name}
+              </CardTitle>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {selectedStudent.className} {selectedStudent.stream ? `(${selectedStudent.stream})` : ''}
+              </p>
+              <p className="text-sm font-medium text-[var(--danger)]">
+                Balance: {formatCurrency(selectedStudent.balance)}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Amount *</label>
+                  <Input 
+                    type="number" 
+                    placeholder="Enter payment amount" 
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Payment Method *</label>
+                  <select 
+                    className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY')}
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="MOBILE_MONEY">Mobile Money</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Receipt Number *</label>
+                  <Input 
+                    placeholder="Enter receipt number" 
+                    value={receiptNumber}
+                    onChange={(e) => setReceiptNumber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Payment Date *</label>
+                  <Input 
+                    type="date" 
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setSelectedStudent(null)
+                    setPaymentAmount('')
+                    setReceiptNumber('')
+                  }}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmitPayment} disabled={submitting}>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  {submitting ? 'Saving...' : 'Save Payment'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

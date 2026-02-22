@@ -221,12 +221,23 @@ function FeeBreakdownCard({ breakdown }: FeeBreakdownCardProps) {
 // MAIN COMPONENT
 // ============================================
 
-export default function StudentFeesPage({ params }: { params: { id: string } }) {
+export default function StudentFeesPage({ params }: { params: Promise<{ id: string }> }) {
   const [student, setStudent] = useState<Student | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
   const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Payment form state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY'>('CASH')
+  const [receiptNumber, setReceiptNumber] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [submitting, setSubmitting] = useState(false)
+
+  // Unwrap params Promise
+  const unwrappedParams = React.use(params)
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -234,7 +245,7 @@ export default function StudentFeesPage({ params }: { params: { id: string } }) 
         setLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/bursar/student-fees/${params.id}`)
+        const response = await fetch(`/api/bursar/student-fees/${unwrappedParams.id}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch student data')
@@ -254,7 +265,7 @@ export default function StudentFeesPage({ params }: { params: { id: string } }) 
     }
 
     fetchStudentData()
-  }, [params.id])
+  }, [unwrappedParams.id])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
@@ -263,6 +274,58 @@ export default function StudentFeesPage({ params }: { params: { id: string } }) 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const handleRecordPayment = async () => {
+    if (!paymentAmount || !receiptNumber) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      
+      const response = await fetch('/api/bursar/payments/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: unwrappedParams.id,
+          amount: parseFloat(paymentAmount),
+          method: paymentMethod,
+          reference: receiptNumber,
+          receivedAt: new Date(paymentDate).toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to record payment')
+      }
+
+      // Refresh student data
+      const studentResponse = await fetch(`/api/bursar/student-fees/${unwrappedParams.id}`)
+      if (studentResponse.ok) {
+        const data = await studentResponse.json()
+        setStudent(data.student)
+        setPayments(data.payments)
+        setFeeBreakdown(data.feeBreakdown)
+      }
+
+      // Reset form
+      setPaymentAmount('')
+      setReceiptNumber('')
+      setPaymentDate(new Date().toISOString().split('T')[0])
+      setShowPaymentModal(false)
+      
+      alert('Payment recorded successfully!')
+    } catch (err) {
+      console.error('Error recording payment:', err)
+      alert(err instanceof Error ? err.message : 'Failed to record payment')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -336,7 +399,7 @@ export default function StudentFeesPage({ params }: { params: { id: string } }) 
           </div>
         </div>
         <div className="flex gap-2">
-          <Button>
+          <Button onClick={() => setShowPaymentModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Record Payment
           </Button>
@@ -398,29 +461,46 @@ export default function StudentFeesPage({ params }: { params: { id: string } }) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Amount</label>
-              <Input type="number" placeholder="Enter payment amount" />
+              <Input 
+                type="number" 
+                placeholder="Enter payment amount" 
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Payment Method</label>
-              <select className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-                <option value="cash">Cash</option>
-                <option value="bank">Bank Transfer</option>
-                <option value="mobile_money">Mobile Money</option>
+              <select 
+                className="w-full p-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY')}
+              >
+                <option value="CASH">Cash</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="MOBILE_MONEY">Mobile Money</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Receipt Number</label>
-              <Input placeholder="Enter receipt number" />
+              <Input 
+                placeholder="Enter receipt number" 
+                value={receiptNumber}
+                onChange={(e) => setReceiptNumber(e.target.value)}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Payment Date</label>
-              <Input type="date" />
+              <Input 
+                type="date" 
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
             </div>
           </div>
           <div className="mt-4 flex justify-end">
-            <Button>
+            <Button onClick={handleRecordPayment} disabled={submitting}>
               <Receipt className="h-4 w-4 mr-2" />
-              Save Payment
+              {submitting ? 'Saving...' : 'Save Payment'}
             </Button>
           </div>
         </CardContent>

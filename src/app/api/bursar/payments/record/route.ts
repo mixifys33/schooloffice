@@ -2,6 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+// Helper function to convert number to words
+function convertToWords(amount: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+  const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+
+  if (amount === 0) return 'Zero Shillings'
+
+  const num = Math.floor(amount)
+  let words = ''
+
+  if (num >= 1000000) {
+    words += convertToWords(Math.floor(num / 1000000)) + ' Million '
+    return words + convertToWords(num % 1000000)
+  }
+
+  if (num >= 1000) {
+    words += convertToWords(Math.floor(num / 1000)) + ' Thousand '
+    return words + convertToWords(num % 1000)
+  }
+
+  if (num >= 100) {
+    words += ones[Math.floor(num / 100)] + ' Hundred '
+    return words + convertToWords(num % 100)
+  }
+
+  if (num >= 20) {
+    words += tens[Math.floor(num / 10)] + ' '
+    return words + ones[num % 10] + ' Shillings'
+  }
+
+  if (num >= 10) {
+    return teens[num - 10] + ' Shillings'
+  }
+
+  return ones[num] + ' Shillings'
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -46,25 +84,136 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get current term for the school
-    const currentTerm = await prisma.term.findFirst({
+    // Get current term using the same intelligent fallback as the students endpoint
+    const today = new Date()
+    const currentYear = new Date().getFullYear()
+    
+    // First, get current academic year with intelligent fallback
+    let currentAcademicYear = await prisma.academicYear.findFirst({
       where: {
-        academicYear: {
-          schoolId: session.user.schoolId,
-          isActive: true
-        }
-      },
-      orderBy: {
-        startDate: 'desc'
+        schoolId: session.user.schoolId,
+        isCurrent: true
       }
     })
 
-    if (!currentTerm) {
+    // Fallback: Find academic year that matches current year
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId: session.user.schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Fallback: Use isActive flag
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId: session.user.schoolId,
+          isActive: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Last resort: Most recent academic year
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: { schoolId: session.user.schoolId },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
       return NextResponse.json(
-        { error: 'No active term found' },
+        { error: 'No academic year found' },
         { status: 400 }
       )
     }
+
+    // Get current term with intelligent fallback
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find term that includes today's date
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Fallback: Most recent term that has started
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Last resort: Most recent term
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: { academicYearId: currentAcademicYear.id },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    if (!currentTerm) {
+      return NextResponse.json(
+        { error: 'No term found' },
+        { status: 400 }
+      )
+    }
+
+    console.log('Payment recording - Using term:', {
+      id: currentTerm.id,
+      name: currentTerm.name,
+      academicYearId: currentAcademicYear.id,
+      academicYearName: currentAcademicYear.name
+    })
+
+    // Get fee structure for this student's class and term
+    const feeStructure = await prisma.feeStructure.findFirst({
+      where: {
+        schoolId: session.user.schoolId,
+        classId: student.classId,
+        termId: currentTerm.id,
+        isActive: true
+      }
+    })
+
+    // Calculate current balance
+    const existingPayments = await prisma.payment.aggregate({
+      where: {
+        studentId,
+        termId: currentTerm.id,
+        status: 'CONFIRMED'
+      },
+      _sum: { amount: true }
+    })
+
+    const totalDue = feeStructure?.totalAmount || 0
+    const totalPaid = existingPayments._sum.amount || 0
+    const balanceBefore = totalDue - totalPaid
+    const balanceAfter = balanceBefore - parseFloat(amount)
+
+    // Check for overpayment
+    const isOverpayment = balanceAfter < 0
+    const overpaymentAmount = isOverpayment ? Math.abs(balanceAfter) : 0
 
     // Create payment record
     const payment = await prisma.payment.create({
@@ -78,23 +227,87 @@ export async function POST(request: NextRequest) {
         bankName: bankName || null,
         chequeNumber: chequeNumber || null,
         mobileNumber: mobileNumber || null,
-        notes: notes || null,
+        notes: isOverpayment 
+          ? `${notes || ''} [OVERPAYMENT: ${overpaymentAmount.toFixed(2)} - Credit added to student balance]`.trim()
+          : notes || null,
         status: 'CONFIRMED',
         receivedBy: session.user.id!,
         receivedAt: new Date(receivedAt)
       }
     })
 
-    // Create receipt
+    console.log('Payment created:', {
+      id: payment.id,
+      studentId: payment.studentId,
+      termId: payment.termId,
+      amount: payment.amount,
+      status: payment.status,
+      receivedAt: payment.receivedAt
+    })
+
+    // If overpayment, add to student credit balance
+    if (isOverpayment) {
+      const currentStudent = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { creditBalance: true }
+      })
+
+      const newCreditBalance = (currentStudent?.creditBalance || 0) + overpaymentAmount
+
+      await prisma.student.update({
+        where: { id: studentId },
+        data: { creditBalance: newCreditBalance }
+      })
+
+      // Record credit transaction
+      await prisma.creditTransaction.create({
+        data: {
+          schoolId: session.user.schoolId,
+          studentId,
+          amount: overpaymentAmount,
+          type: 'OVERPAYMENT',
+          description: `Overpayment from payment ${reference}. Amount: ${overpaymentAmount.toFixed(2)}`,
+          paymentId: payment.id,
+          balanceBefore: currentStudent?.creditBalance || 0,
+          balanceAfter: newCreditBalance,
+          createdBy: session.user.id!
+        }
+      })
+    }
+
+    // Get issuer name from staff profile
+    const issuer = await prisma.staff.findFirst({
+      where: { userId: session.user.id! },
+      select: { 
+        firstName: true,
+        lastName: true
+      }
+    })
+
+    const issuerName = issuer 
+      ? `${issuer.firstName} ${issuer.lastName}`.trim()
+      : session.user.email || 'System'
+
+    // Convert amount to words (simple implementation)
+    const amountInWords = convertToWords(parseFloat(amount))
+
+    // Create receipt with all required fields
     const receipt = await prisma.receipt.create({
       data: {
         schoolId: session.user.schoolId,
         studentId,
         studentName: `${student.firstName} ${student.lastName}`,
-        termId: currentTerm.id,
+        className: student.class.name,
+        termName: currentTerm.name,
         receiptNumber: `RCP-${Date.now()}`,
-        totalAmount: parseFloat(amount),
+        amount: parseFloat(amount),
+        amountInWords,
+        method,
+        reference,
+        balanceBefore,
+        balanceAfter: balanceAfter < 0 ? 0 : balanceAfter, // Don't show negative balance
         issuedBy: session.user.id!,
+        issuedByName: issuerName,
         issuedAt: new Date(receivedAt)
       }
     })
@@ -105,76 +318,22 @@ export async function POST(request: NextRequest) {
       data: { receiptId: receipt.id }
     })
 
-    // Get fee structure for this student's class, student type, and term
-    const feeStructure = await prisma.feeStructure.findFirst({
-      where: {
-        schoolId: session.user.schoolId,
-        classId: student.classId,
-        termId: currentTerm.id,
-        studentType: student.studentType,
-        isActive: true
-      }
-    })
-
-    if (feeStructure) {
-      // Check if invoice exists for this student
-      let invoice = await prisma.invoice.findFirst({
-        where: {
-          schoolId: session.user.schoolId,
-          studentId,
-          termId: currentTerm.id
-        }
-      })
-
-      // Create invoice if it doesn't exist
-      if (!invoice) {
-        invoice = await prisma.invoice.create({
-          data: {
-            schoolId: session.user.schoolId,
-            studentId,
-            termId: currentTerm.id,
-            feeStructureId: feeStructure.id,
-            invoiceNumber: `INV-${Date.now()}`,
-            totalAmount: feeStructure.totalAmount,
-            amountPaid: 0,
-            balance: feeStructure.totalAmount,
-            status: 'PENDING',
-            dueDate: feeStructure.dueDate || new Date(),
-            issuedBy: session.user.id!,
-            issuedAt: new Date()
-          }
-        })
-      }
-
-      // Create payment allocation
-      await prisma.paymentAllocation.create({
-        data: {
-          schoolId: session.user.schoolId,
-          paymentId: payment.id,
-          invoiceId: invoice.id,
-          amount: parseFloat(amount)
-        }
-      })
-
-      // Update invoice amounts
-      const newAmountPaid = invoice.amountPaid + parseFloat(amount)
-      const newBalance = invoice.totalAmount - newAmountPaid
-      const newStatus = newBalance <= 0 ? 'PAID' : newBalance < invoice.totalAmount ? 'PARTIAL' : 'PENDING'
-
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          amountPaid: newAmountPaid,
-          balance: newBalance,
-          status: newStatus
-        }
-      })
-    }
-
     return NextResponse.json({
       success: true,
       payment,
-      receipt
+      receipt,
+      overpayment: isOverpayment ? {
+        amount: overpaymentAmount,
+        message: `Student has overpaid by ${overpaymentAmount.toFixed(2)}. This will be credited to the next term.`,
+        balanceAfter: balanceAfter
+      } : null,
+      balanceInfo: {
+        totalDue,
+        totalPaid: totalPaid + parseFloat(amount),
+        balanceBefore,
+        balanceAfter: balanceAfter < 0 ? 0 : balanceAfter,
+        status: balanceAfter <= 0 ? 'FULLY_PAID' : 'PARTIAL'
+      }
     })
   } catch (error) {
     console.error('Error recording payment:', error)

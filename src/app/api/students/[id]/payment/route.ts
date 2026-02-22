@@ -126,6 +126,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (remainingBalance > 0) {
         await prisma.payment.create({
           data: {
+            schoolId: schoolId,
             studentId: id,
             termId: currentTerm.id,
             amount: amount || remainingBalance,
@@ -133,7 +134,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             reference: reference || `MARK_PAID_${Date.now()}`,
             receivedBy: userId || 'system',
             receivedAt: new Date(),
-            receiptNumber: `RCP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+            status: 'CONFIRMED',
+            notes: `Marked as paid by ${session.user.name || session.user.email || 'School Admin'} (${session.user.role || 'SCHOOL_ADMIN'})`,
           },
         })
       }
@@ -161,6 +163,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           studentStatus: StudentStatus.ACTIVE,
           amount: amount || remainingBalance,
           method: method || PaymentMethod.CASH,
+          markedBy: session.user.name || session.user.email || 'School Admin',
+          markedByRole: session.user.role || 'SCHOOL_ADMIN',
         },
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
         userAgent: request.headers.get('user-agent') || undefined,

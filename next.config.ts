@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     },
   },
   
-  // Disable source maps in production to prevent parsing issues
+  // Disable source maps in production to prevent parsing issues and reduce memory
   productionBrowserSourceMaps: false,
   
   // Ensure no webpack configuration conflicts with Turbopack
@@ -40,6 +40,20 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+  },
+  
+  // Reduce memory usage during build
+  compress: true,
+  
+  // Optimize images
+  images: {
+    unoptimized: false,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
 };
 

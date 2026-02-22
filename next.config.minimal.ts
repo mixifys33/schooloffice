@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true, // Temporarily ignore TS errors to test build
   },
-  eslint: {
-    ignoreDuringBuilds: true, // Temporarily ignore ESLint errors
-  },
   productionBrowserSourceMaps: false,
   experimental: {
     serverActions: {
