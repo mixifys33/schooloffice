@@ -319,7 +319,7 @@ export default function FeesPage() {
         <Toast
           type={toast.type}
           message={toast.message}
-          onClose={hideToast}
+          onDismiss={hideToast}
         />
       )}
 

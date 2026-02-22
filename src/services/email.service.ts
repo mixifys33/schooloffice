@@ -238,43 +238,137 @@ export function generateTeacherInvitationEmail(
   email: string,
   temporaryPassword: string,
   loginUrl: string,
-  schoolName: string
+  schoolName: string,
+  schoolLogo?: string
 ): { subject: string; html: string; text: string } {
   const subject = `Welcome to ${schoolName} - Your Teacher Account`
   
   const html = `
-    <h2>Welcome, ${teacherName}!</h2>
-    <p>You have been invited to join <strong>${schoolName}</strong> as a teacher on the SchoolOffice platform.</p>
-    
-    <h3>Your Login Credentials</h3>
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>Temporary Password:</strong> <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${temporaryPassword}</code></p>
-    
-    <p style="margin-top: 20px;">
-      <a href="${loginUrl}" class="button">Login to Your Account</a>
-    </p>
-    
-    <p style="color: var(--chart-red); margin-top: 20px;">
-      <strong>Important:</strong> You will be required to change your password on first login.
-    </p>
-    
-    <p>If you have any questions, please contact your school administrator.</p>
+    <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333;">
+      <!-- Header with School Logo -->
+      <div style="background: linear-gradient(135deg, #1a56db 0%, #3b82f6 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        ${schoolLogo ? `
+          <div style="background: white; width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <img src="${schoolLogo}" alt="${schoolName}" style="max-width: 80px; max-height: 80px; border-radius: 50%;" />
+          </div>
+        ` : `
+          <div style="background: rgba(255,255,255,0.1); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <div style="color: white; font-size: 48px;">🎓</div>
+          </div>
+        `}
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">${schoolName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px;">Teacher Portal Access</p>
+      </div>
+      
+      <!-- Main Content -->
+      <div style="background: white; padding: 40px 30px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+        <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 24px; font-weight: 600;">Welcome, ${teacherName}! 👋</h2>
+        
+        <p style="color: #374151; font-size: 16px; margin: 0 0 20px;">
+          We're excited to have you join our teaching team! You have been granted access to the <strong>${schoolName}</strong> teacher portal powered by SchoolOffice.
+        </p>
+
+        <div style="background: #f9fafb; border-left: 4px solid #3b82f6; padding: 20px; margin: 25px 0; border-radius: 4px;">
+          <h3 style="color: #1f2937; margin: 0 0 15px; font-size: 18px; font-weight: 600;">📋 What You Can Do</h3>
+          <ul style="color: #374151; margin: 0; padding-left: 20px;">
+            <li style="margin-bottom: 8px;">Manage your classes and students</li>
+            <li style="margin-bottom: 8px;">Enter and track student marks</li>
+            <li style="margin-bottom: 8px;">Take attendance and monitor participation</li>
+            <li style="margin-bottom: 8px;">Generate and view student reports</li>
+            <li style="margin-bottom: 8px;">Communicate with parents and staff</li>
+            <li>Access your teaching schedule and resources</li>
+          </ul>
+        </div>
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; margin: 25px 0; border-radius: 8px;">
+          <h3 style="color: #1e40af; margin: 0 0 15px; font-size: 18px; font-weight: 600;">🔐 Your Login Credentials</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #374151; font-weight: 600; width: 40%;">Email:</td>
+              <td style="padding: 8px 0; color: #1f2937;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #374151; font-weight: 600;">Temporary Password:</td>
+              <td style="padding: 8px 0;">
+                <code style="background: white; color: #1e40af; padding: 8px 12px; border-radius: 4px; font-size: 16px; font-weight: 600; border: 1px solid #bfdbfe; display: inline-block;">${temporaryPassword}</code>
+              </td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #1a56db 0%, #3b82f6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
+            🚀 Login to Your Account
+          </a>
+        </div>
+
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 25px 0; border-radius: 4px;">
+          <p style="color: #991b1b; margin: 0; font-weight: 600;">⚠️ Important Security Notice</p>
+          <p style="color: #7f1d1d; margin: 8px 0 0; font-size: 14px;">
+            You will be required to change your password on first login. Please choose a strong password that you haven't used elsewhere.
+          </p>
+        </div>
+
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 25px 0; border-radius: 4px;">
+          <p style="color: #166534; margin: 0; font-weight: 600;">💡 Getting Started Tips</p>
+          <ul style="color: #15803d; margin: 8px 0 0; padding-left: 20px; font-size: 14px;">
+            <li style="margin-bottom: 6px;">Complete your profile after logging in</li>
+            <li style="margin-bottom: 6px;">Familiarize yourself with the dashboard</li>
+            <li style="margin-bottom: 6px;">Check your assigned classes and subjects</li>
+            <li>Contact the school admin if you need any assistance</li>
+          </ul>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 25px 0 0; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          Need help? Contact your school administrator or reply to this email for assistance.
+        </p>
+      </div>
+      
+      <!-- Footer -->
+      <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px;">
+          Powered by <strong style="color: #3b82f6;">SchoolOffice</strong>
+        </p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          Secure • Reliable • Built for Schools
+        </p>
+      </div>
+    </div>
   `
   
   const text = `
-Welcome, ${teacherName}!
+Welcome to ${schoolName}, ${teacherName}!
 
-You have been invited to join ${schoolName} as a teacher on the SchoolOffice platform.
+We're excited to have you join our teaching team! You have been granted access to the ${schoolName} teacher portal powered by SchoolOffice.
 
-Your Login Credentials:
+WHAT YOU CAN DO:
+• Manage your classes and students
+• Enter and track student marks
+• Take attendance and monitor participation
+• Generate and view student reports
+• Communicate with parents and staff
+• Access your teaching schedule and resources
+
+YOUR LOGIN CREDENTIALS:
 Email: ${email}
 Temporary Password: ${temporaryPassword}
 
 Login URL: ${loginUrl}
 
-IMPORTANT: You will be required to change your password on first login.
+IMPORTANT SECURITY NOTICE:
+⚠️ You will be required to change your password on first login. Please choose a strong password that you haven't used elsewhere.
 
-If you have any questions, please contact your school administrator.
+GETTING STARTED TIPS:
+• Complete your profile after logging in
+• Familiarize yourself with the dashboard
+• Check your assigned classes and subjects
+• Contact the school admin if you need any assistance
+
+Need help? Contact your school administrator or reply to this email for assistance.
+
+---
+Powered by SchoolOffice
+Secure • Reliable • Built for Schools
   `.trim()
   
   return { subject, html, text }
@@ -787,17 +881,15 @@ export class EmailService {
       teacherEmail,
       temporaryPassword,
       loginUrl,
-      schoolName
+      schoolName,
+      branding?.logoUrl
     )
 
-    const finalHtml = branding 
-      ? generateBrandedEmailTemplate(html, branding)
-      : html
-
+    // Don't wrap in branded template since the email already has full styling
     return this.sendEmail({
       to: teacherEmail,
       subject,
-      html: finalHtml,
+      html,
       text,
     })
   }

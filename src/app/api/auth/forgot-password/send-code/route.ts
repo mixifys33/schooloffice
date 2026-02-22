@@ -95,6 +95,70 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If still not found, check Teacher table (for teachers without system access)
+    if (!user) {
+      const teacher = await prisma.teacher.findFirst({
+        where: {
+          schoolId: school.id,
+          OR: [
+            { email: identifier.toLowerCase() },
+            { phone: identifier },
+          ],
+          employmentStatus: 'ACTIVE',
+        },
+        select: {
+          id: true,
+          userId: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+          hasSystemAccess: true,
+        }
+      })
+
+      if (teacher) {
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - Found in Teacher table:`)
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - Teacher ID: ${teacher.id}`)
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - Teacher email: ${teacher.email}`)
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - Teacher phone: ${teacher.phone}`)
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - Has system access: ${teacher.hasSystemAccess}`)
+        console.log(`🔧 [FORGOT PASSWORD DEBUG] - User ID: ${teacher.userId || 'NULL'}`)
+
+        if (!teacher.hasSystemAccess || !teacher.userId) {
+          // Teacher exists but has no system access - return helpful error
+          console.log(`🔧 [FORGOT PASSWORD DEBUG] - Teacher found but has no system access`)
+          return NextResponse.json({
+            success: false,
+            error: 'NO_SYSTEM_ACCESS',
+            message: `Your account (${teacher.firstName} ${teacher.lastName}) exists as a record-only teacher without system access. Please contact your school administrator to grant you system access before you can reset your password.`
+          }, { status: 403 })
+        }
+
+        // Teacher has system access and userId, use it
+        if (teacher.userId) {
+          const teacherUser = await prisma.user.findUnique({
+            where: { id: teacher.userId },
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              isActive: true,
+            }
+          })
+
+          if (teacherUser && teacherUser.isActive) {
+            user = {
+              id: teacherUser.id,
+              email: teacherUser.email || teacher.email,
+              phone: teacherUser.phone || teacher.phone,
+            }
+            console.log(`🔧 [FORGOT PASSWORD DEBUG] - Using Teacher's linked User account`)
+          }
+        }
+      }
+    }
+
     console.log(`🔧 [FORGOT PASSWORD DEBUG] User lookup result:`)
     console.log(`🔧 [FORGOT PASSWORD DEBUG] - School: ${schoolCode} (ID: ${school.id})`)
     console.log(`🔧 [FORGOT PASSWORD DEBUG] - Identifier searched: ${identifier}`)

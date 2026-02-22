@@ -11,10 +11,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import {
-  MessageSquare, Send, History, Bell, Settings, AlertTriangle,
-  Users, Smartphone, Mail, Clock, Filter, Search, RefreshCw,
-  CheckCircle, XCircle, Zap, FileText, BarChart3, Shield,
-  Calendar, Target, Megaphone, AlertCircle, TrendingUp,
+  MessageSquare, Send, History, AlertTriangle,
+  Users, Smartphone, Mail, Clock, RefreshCw,
+  CheckCircle, XCircle, Zap, FileText, BarChart3,
+  Calendar, Megaphone, AlertCircle, TrendingUp,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -514,20 +514,20 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
     }
   }
 
-  const getInitialTemplateType = () => {
+  const getInitialTemplateType = useCallback(() => {
     switch (preset) {
       case 'fee-reminder': return 'FEES_REMINDER'
       case 'attendance-alert': return 'ATTENDANCE_ALERT'
       default: return ''
     }
-  }
+  }, [preset])
 
   const [targetType, setTargetType] = useState<TargetType>(getInitialTargetType())
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [selectedStreams, setSelectedStreams] = useState<string[]>([])
   const [feeThreshold, setFeeThreshold] = useState<number>(0)
   const [attendanceThreshold, setAttendanceThreshold] = useState<number>(75)
-  const [selectedChannel, setSelectedChannel] = useState<MessageChannel>(MessageChannel.SMS)
+  const [selectedChannel] = useState<MessageChannel>(MessageChannel.SMS)
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [customContent, setCustomContent] = useState<string>('')
   const [useCustomContent, setUseCustomContent] = useState<boolean>(false)
@@ -594,7 +594,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
       }
     }
     fetchOptions()
-  }, [])
+  }, [getInitialTemplateType])
 
   // Preview recipient count
   useEffect(() => {
@@ -734,9 +734,9 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
     { value: TargetType.STAFF_ROLE, label: 'Staff by Role', icon: Users },
   ]
 
-  const CHANNEL_OPTIONS = [
-    { value: MessageChannel.SMS, label: 'SMS', icon: Smartphone },
-  ]
+  // const CHANNEL_OPTIONS = [
+  //   { value: MessageChannel.SMS, label: 'SMS', icon: Smartphone },
+  // ]
 
   return (
     <Card>
@@ -934,7 +934,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
             >
               <option value="">Select a template...</option>
               {templates.filter(t => t.channel === 'SMS').map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+                <option key={t.id} value={t.id}>{t.type.replace(/_/g, ' ')}</option>
               ))}
             </select>
             {/* Template count info */}
