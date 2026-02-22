@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
         const message = await prisma.message.create({
           data: {
             schoolId: session.user.schoolId,
-            recipientType: 'GUARDIAN',
-            recipientId: primaryGuardian.id,
-            phoneNumber: primaryGuardian.phone,
-            content: `Dear ${primaryGuardian.firstName || 'Parent/Guardian'}, this is a reminder that ${student.firstName} ${student.lastName} (${student.class.name}) has an outstanding fee balance of UGX ${balance.toLocaleString()} for ${currentTerm.name}. Please make payment at your earliest convenience. Thank you.`,
-            status: 'PENDING',
+            studentId: student.id,
+            guardianId: primaryGuardian.id,
             templateType: 'PAYMENT_REMINDER',
-            sentBy: session.user.id!
+            messageType: 'AUTOMATED',
+            channel: 'SMS',
+            content: `Dear ${primaryGuardian.firstName || 'Parent/Guardian'}, this is a reminder that ${student.firstName} ${student.lastName} (${student.class.name}) has an outstanding fee balance of UGX ${balance.toLocaleString()} for ${currentTerm.name}. Please make payment at your earliest convenience. Thank you.`,
+            status: 'QUEUED'
           }
         })
 

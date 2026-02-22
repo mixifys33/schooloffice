@@ -13,7 +13,9 @@ import {
   ArrowLeft,
   Loader2,
   FileText,
-  Calendar
+  Calendar,
+  Printer,
+  FileSpreadsheet
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +28,18 @@ import {
   getResponsiveSpacingClasses,
   getResponsiveTypographyClasses,
 } from '@/lib/responsive'
+import {
+  exportFinancialOverviewToPDF,
+  exportFinancialOverviewToExcel,
+  printFinancialOverview,
+  type SchoolInfo
+} from '@/lib/print-export-utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Student {
   id: string
@@ -49,7 +63,7 @@ interface FinancialData {
     id: string
     name: string
     academicYear: string
-  }
+  } | null
 }
 
 export default function AdminFinancialOverviewPage() {
@@ -58,9 +72,11 @@ export default function AdminFinancialOverviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
 
   useEffect(() => {
     fetchFinancialData()
+    fetchSchoolInfo()
   }, [])
 
   const fetchFinancialData = async () => {
@@ -85,9 +101,86 @@ export default function AdminFinancialOverviewPage() {
     }
   }
 
+  const fetchSchoolInfo = async () => {
+    try {
+      const response = await fetch('/api/settings/school')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('School API Response:', result)
+        const school = result.school || result
+        console.log('School Data:', school)
+        setSchoolInfo({
+          name: school.name || 'School Name',
+          code: school.code,
+          address: school.address,
+          phone: school.phone,
+          email: school.email,
+          logo: school.logo,
+        })
+      } else {
+        console.error('Failed to fetch school info:', response.status)
+        // Set default school info if fetch fails
+        setSchoolInfo({
+          name: 'School Name',
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching school info:', err)
+      // Set default school info if fetch fails
+      setSchoolInfo({
+        name: 'School Name',
+      })
+    }
+  }
+
   const handleRefresh = () => {
     setRefreshing(true)
     fetchFinancialData()
+  }
+
+  const handlePrint = () => {
+    if (!data || !schoolInfo) return
+    
+    const subtitle = data.currentTerm 
+      ? `${data.currentTerm.name} - ${data.currentTerm.academicYear}` 
+      : 'No Active Term'
+    
+    printFinancialOverview(
+      'financial-overview-content',
+      schoolInfo,
+      'Financial Overview',
+      subtitle
+    )
+  }
+
+  const handleExportPDF = () => {
+    if (!data || !schoolInfo) return
+    
+    const subtitle = data.currentTerm 
+      ? `${data.currentTerm.name} - ${data.currentTerm.academicYear}` 
+      : 'No Active Term'
+    
+    exportFinancialOverviewToPDF(data, {
+      schoolInfo,
+      title: 'Financial Overview',
+      subtitle,
+      orientation: 'landscape',
+      pageSize: 'a4',
+    })
+  }
+
+  const handleExportExcel = () => {
+    if (!data || !schoolInfo) return
+    
+    const subtitle = data.currentTerm 
+      ? `${data.currentTerm.name} - ${data.currentTerm.academicYear}` 
+      : 'No Active Term'
+    
+    exportFinancialOverviewToExcel(data, {
+      schoolInfo,
+      title: 'Financial Overview',
+      subtitle,
+    })
   }
 
   const formatCurrency = (amount: number) => {
@@ -171,9 +264,16 @@ export default function AdminFinancialOverviewPage() {
           <h1 className={getResponsiveTypographyClasses('h1', 'text-[var(--text-primary)]')}>
             Financial Overview
           </h1>
-          <p className={getResponsiveTypographyClasses('body', 'text-[var(--text-secondary)]')}>
-            {data.currentTerm.name} - {data.currentTerm.academicYear}
-          </p>
+          {schoolInfo && (
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              {schoolInfo.name}
+            </p>
+          )}
+          {data.currentTerm && (
+            <p className={getResponsiveTypographyClasses('body', 'text-[var(--text-secondary)]')}>
+              {data.currentTerm.name} - {data.currentTerm.academicYear}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
@@ -193,14 +293,56 @@ export default function AdminFinancialOverviewPage() {
               </>
             )}
           </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            disabled={!data || !schoolInfo}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={!data || !schoolInfo}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Printable Content */}
+      <div id="financial-overview-content">
+        {/* Key Metrics */}
+        {!data.currentTerm && (
+        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div>
+                <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                  No Active Term
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  No current academic term is configured. Please set up an academic year and term to view financial data.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Total Expected"
@@ -319,24 +461,32 @@ export default function AdminFinancialOverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Information Notice */}
-      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                Read-Only View
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                This is a read-only view of financial data for administrative oversight. 
-                To record payments or manage student fees, please contact the Bursar&apos;s Office. 
-                This ensures proper financial controls and audit trails are maintained.
-              </p>
+        {/* Information Notice */}
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 no-print">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                  Read-Only View
+                </p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  This is a read-only view of financial data for administrative oversight. 
+                  To record payments or manage student fees, please contact the Bursar&apos;s Office. 
+                  This ensures proper financial controls and audit trails are maintained.
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* SchoolOffice Branding */}
+        <div className="text-center py-4 no-print">
+          <p className="text-xs text-[var(--text-muted)]">
+            Powered by <span className="font-medium text-[var(--text-secondary)]">SchoolOffice</span>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

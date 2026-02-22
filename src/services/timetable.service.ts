@@ -202,7 +202,13 @@ export class TimetableService {
       if (timetable.length === 0) continue; // Failed to place any slots
       
       // Calculate quality
-      const quality = engine.calculateTimetableQuality(timetable);
+      const timetableSolution: TimetableSolution = {
+        slots: timetable,
+        schoolId: config.schoolId,
+        termId: config.termId,
+        violations: []
+      };
+      const quality = engine.calculateTimetableQuality(timetableSolution);
       
       if (quality > bestQuality) {
         bestTimetable = [...timetable];
@@ -220,7 +226,13 @@ export class TimetableService {
       }
     }
 
-    const violations = engine.validateCompleteTimetable(bestTimetable);
+    const bestTimetableSolution: TimetableSolution = {
+      slots: bestTimetable,
+      schoolId: config.schoolId,
+      termId: config.termId,
+      violations: []
+    };
+    const violations = engine.validateCompleteTimetable(bestTimetableSolution);
     
     // Convert ConstraintViolations to TimetableConflicts
     const conflicts: TimetableConflict[] = violations.map((violation) => ({
@@ -323,7 +335,13 @@ export class TimetableService {
           } as TimetableSlot;
           
           // Check if this placement violates hard constraints
-          const violations = engine.validateHardConstraints(candidateSlot, timetable);
+          const candidateSolution: TimetableSolution = {
+            slots: [...timetable, candidateSlot],
+            schoolId: config.schoolId,
+            termId: config.termId,
+            violations: []
+          };
+          const violations = engine.validateHardConstraints(candidateSlot, candidateSolution);
           
           if (violations.length === 0) {
             // Valid placement found
@@ -662,7 +680,6 @@ export class TimetableService {
         schoolId: draft.schoolId,
         termId: draft.termId,
         timetableId,
-        totalSlots: slots.length,
         filledSlots: slots.length,
         conflictCount: conflicts.length,
         teacherWorkloadStats,

@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
         totalCollected: 0,
         totalOutstanding: 0,
         collectionRate: 0,
-        unpaidStudents: []
+        unpaidStudents: [],
+        currentTerm: null
       });
     }
 
@@ -74,7 +75,8 @@ export async function GET(request: NextRequest) {
         totalCollected: 0,
         totalOutstanding: 0,
         collectionRate: 0,
-        unpaidStudents: []
+        unpaidStudents: [],
+        currentTerm: null
       })
     }
 
@@ -123,7 +125,8 @@ export async function GET(request: NextRequest) {
         totalCollected: 0,
         totalOutstanding: 0,
         collectionRate: 0,
-        unpaidStudents: []
+        unpaidStudents: [],
+        currentTerm: null
       })
     }
 
@@ -184,12 +187,29 @@ export async function GET(request: NextRequest) {
         
         const primaryGuardian = student.studentGuardians.find(g => g.isPrimary)?.guardian
         
+        // Get last payment date
+        let lastPaymentDate: string | null = null
+        if (student.payments.length > 0) {
+          const lastPayment = student.payments.reduce((latest, payment) => {
+            const latestDate = latest.receivedAt ? new Date(latest.receivedAt) : new Date(0)
+            const currentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(0)
+            return currentDate > latestDate ? payment : latest
+          })
+          if (lastPayment?.receivedAt) {
+            lastPaymentDate = new Date(lastPayment.receivedAt).toISOString()
+          }
+        }
+        
         unpaidStudents.push({
           id: student.id,
           name: `${student.firstName} ${student.lastName}`,
           class: student.class?.name || 'No Class',
           balance: balance,
-          phone: primaryGuardian?.phone || undefined
+          totalDue: expectedFee,
+          totalPaid: paidAmount,
+          lastPaymentDate: lastPaymentDate,
+          phone: primaryGuardian?.phone || undefined,
+          email: primaryGuardian?.email || undefined
         })
       }
     }
@@ -206,7 +226,12 @@ export async function GET(request: NextRequest) {
       totalCollected,
       totalOutstanding,
       collectionRate: Math.round(collectionRate * 100) / 100,
-      unpaidStudents: unpaidStudents.slice(0, 50) // Limit to top 50 for performance
+      unpaidStudents: unpaidStudents.slice(0, 50), // Limit to top 50 for performance
+      currentTerm: {
+        id: currentTerm.id,
+        name: currentTerm.name,
+        academicYear: currentAcademicYear.name
+      }
     }
 
     return NextResponse.json(result)
@@ -219,7 +244,8 @@ export async function GET(request: NextRequest) {
       totalCollected: 0,
       totalOutstanding: 0,
       collectionRate: 0,
-      unpaidStudents: []
+      unpaidStudents: [],
+      currentTerm: null
     });
   }
 }

@@ -374,7 +374,7 @@ export class TeacherAccessControlService {
       await this.logUnauthorizedAccess({
         schoolId,
         teacherId: userId,
-        resource: "class",
+        resourceType: "class",
         resourceId: classId,
         reason: result.reason || 'Access denied',
         deviceInfo,
@@ -410,7 +410,7 @@ export class TeacherAccessControlService {
       await this.logUnauthorizedAccess({
         schoolId,
         teacherId: userId,
-        resource: "student",
+        resourceType: "student",
         resourceId: studentId,
         reason: result.reason || 'Access denied',
         deviceInfo,

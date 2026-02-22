@@ -263,7 +263,7 @@ class HardConstraints {
             if (!teacher) return;
             
             // Check if teacher has this subject assigned for this class
-            const isQualified = teacher.staffSubjects.some((ss: any) => 
+            const isQualified = (teacher.staffSubjects as any[]).some((ss: any) => 
               ss.subjectId === slot.subjectId && ss.classId === slot.classId
             );
             
@@ -553,7 +553,7 @@ class TimetableGeneticAlgorithm {
       
       for (let period = 0; period < req.periodsPerWeek; period++) {
         const randomDay = Math.floor(Math.random() * 5) + 1; // 1-5 for weekdays
-        const randomPeriod = Math.floor(Math.random() * timeStructure.periodsPerDay) + 1;
+        const randomPeriod = Math.floor(Math.random() * (timeStructure.periodsPerDay as number)) + 1;
         const randomTeacher = availableTeachers[Math.floor(Math.random() * availableTeachers.length)];
         const randomRoom = rooms.length > 0 ? rooms[Math.floor(Math.random() * rooms.length)] : null;
         
@@ -705,7 +705,9 @@ class TimetableGeneticAlgorithm {
           slot.dayOfWeek = Math.floor(Math.random() * 5) + 1;
           break;
         case 1: // Change period
-          slot.period = Math.floor(Math.random() * this.context.timeStructure.periodsPerDay) + 1;
+          if (this.context.timeStructure && typeof this.context.timeStructure.periodsPerDay === 'number') {
+            slot.period = Math.floor(Math.random() * this.context.timeStructure.periodsPerDay) + 1;
+          }
           break;
         case 2: // Change teacher (if multiple qualified)
           const qualifiedTeachers = this.context.teachers.filter((t: any) => 
@@ -715,7 +717,9 @@ class TimetableGeneticAlgorithm {
           );
           if (qualifiedTeachers.length > 1) {
             const newTeacher = qualifiedTeachers[Math.floor(Math.random() * qualifiedTeachers.length)];
-            slot.teacherId = newTeacher.id;
+            if (newTeacher && typeof newTeacher.id === 'string') {
+              slot.teacherId = newTeacher.id;
+            }
           }
           break;
       }
@@ -757,10 +761,10 @@ export class TimetableConstraintEngine {
     // Initialize genetic algorithm
     const algorithm = new TimetableGeneticAlgorithm(
       context,
-      settings?.populationSize || 100,
-      settings?.maxGenerations || 1000,
-      settings?.mutationRate || 0.1,
-      settings?.crossoverRate || 0.8
+      (settings?.populationSize as number) || 100,
+      (settings?.maxGenerations as number) || 1000,
+      (settings?.mutationRate as number) || 0.1,
+      (settings?.crossoverRate as number) || 0.8
     );
     
     // Generate solution

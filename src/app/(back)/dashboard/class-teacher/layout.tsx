@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Settings,
   User,
-  FolderOpen
+  FolderOpen 
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ThemeToggle } from '@/components/ui/theme-toggle';

@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { StatCard } from '@/components/ui/stat-card'
-
+ 
 interface Template {
   id: string
   name: string
@@ -210,7 +210,7 @@ export default function MessageTemplatesPage() {
                   <Select value={formData.channel} onValueChange={(v) => setFormData({...formData, channel: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SMS">SMS Only</SelectItem>
+                      <SelectItem value="SMS">SMS Only</SelectItem> 
                       <SelectItem value="EMAIL">Email Only</SelectItem>
                       <SelectItem value="BOTH">Both</SelectItem>
                     </SelectContent>
@@ -269,7 +269,7 @@ export default function MessageTemplatesPage() {
                   <div className="flex gap-1 ml-4">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(template)}><Edit className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => handleDuplicate(template)}><Copy className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(template)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
                   </div>
                 </div>
               </div>

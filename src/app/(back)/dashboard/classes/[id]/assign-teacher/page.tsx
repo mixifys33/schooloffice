@@ -10,7 +10,7 @@ import { Toast, useLocalToast } from '@/components/ui/toast'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { cn } from '@/lib/utils'
 
-/**
+/** 
  * Assign Teacher to Class Page
  * Requirements: 4.5 - Update class-teacher assignment via PUT to /api/classes/{id}
  */

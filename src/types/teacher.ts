@@ -698,11 +698,11 @@ export const ACCESS_LEVEL_CAPABILITIES = {
 /**
  * Statuses considered inactive
  */
-export const INACTIVE_STATUSES = [
+export const INACTIVE_STATUSES: TeacherEmploymentStatus[] = [
   TeacherEmploymentStatus.ON_LEAVE,
   TeacherEmploymentStatus.SUSPENDED,
   TeacherEmploymentStatus.LEFT,
-] as const
+]
 
 /**
  * Check if a status is inactive

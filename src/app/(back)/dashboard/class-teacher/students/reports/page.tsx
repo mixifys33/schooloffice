@@ -8,9 +8,9 @@
  * Requirements: 27.1, 27.2, 27.3, 27.4, 27.5, 11.1, 19.1, 19.2
  */
 
-'use client';
+'use client'; 
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +25,6 @@ import {
 } from '@/components/ui/select';
 import { 
   FileText, 
-  BarChart3, 
-  Award,
   Users,
   BookOpen,
   Calendar,
@@ -35,8 +33,6 @@ import {
   Settings
 } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { teacherColors } from '@/lib/teacher-ui-standards';
 import { ReportViewer } from '@/components/teacher/ReportViewer';
 
 interface ClassData {
@@ -67,16 +63,6 @@ export default function ClassTeacherStudentsReportsPage() {
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedClass) {
-      fetchSubjects();
-    }
-  }, [selectedClass]);
 
   const fetchInitialData = async () => {
     try {
@@ -114,7 +100,7 @@ export default function ClassTeacherStudentsReportsPage() {
     }
   };
 
-  const fetchSubjects = async () => {
+  const fetchSubjects = useCallback(async () => {
     if (!selectedClass) return;
 
     try {
@@ -133,15 +119,26 @@ export default function ClassTeacherStudentsReportsPage() {
       console.error('Error fetching subjects:', err);
       setSubjects([]);
     }
-  };
+  }, [selectedClass]);
 
-  const handlePrintReport = (reportData: any) => {
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (selectedClass) {
+      fetchSubjects();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass]);
+
+  const handlePrintReport = (reportData: Record<string, unknown>) => {
     // Handle report printing logic
     console.log('Printing report:', reportData);
     window.print();
   };
 
-  const handleExportReport = (reportData: any) => {
+  const handleExportReport = (reportData: Record<string, unknown>) => {
     // Handle report export logic
     console.log('Exporting report:', reportData);
     // Implement export functionality (PDF, Excel, etc.)

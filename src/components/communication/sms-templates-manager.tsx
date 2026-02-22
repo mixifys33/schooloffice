@@ -5,11 +5,9 @@
  */
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AlertBanner } from '@/components/ui/alert-banner'
 import { SMSTemplateEditor } from './sms-template-editor'
 import {
@@ -18,7 +16,6 @@ import {
   CustomSMSTemplate,
   SMSTemplateValidation,
   SMSTemplatePreview,
-  SMSAutomationRule,
   SMSCreditProtection
 } from '@/types/sms-templates'
 
@@ -31,18 +28,12 @@ interface SMSTemplatesManagerProps {
 export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplatesManagerProps) {
   const [builtInTemplates, setBuiltInTemplates] = useState<BuiltInSMSTemplate[]>([])
   const [customTemplates, setCustomTemplates] = useState<Map<SMSTemplateKey, CustomSMSTemplate>>(new Map())
-  const [automationRules, setAutomationRules] = useState<SMSAutomationRule[]>([])
   const [creditProtection, setCreditProtection] = useState<SMSCreditProtection | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<SMSTemplateKey | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load data on component mount
-  useEffect(() => {
-    loadTemplateData()
-  }, [schoolId])
-
-  const loadTemplateData = async () => {
+  const loadTemplateData = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -63,12 +54,6 @@ export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplates
       })
       setCustomTemplates(customMap)
 
-      // Load automation rules
-      const automationResponse = await fetch(`/api/sms/automation?schoolId=${schoolId}`)
-      if (!automationResponse.ok) throw new Error('Failed to load automation rules')
-      const automationData = await automationResponse.json()
-      setAutomationRules(automationData.rules)
-
       // Load credit protection settings
       const protectionResponse = await fetch(`/api/sms/credit-protection?schoolId=${schoolId}`)
       if (!protectionResponse.ok) throw new Error('Failed to load credit protection')
@@ -84,7 +69,12 @@ export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplates
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [schoolId])
+
+  // Load data on component mount
+  useEffect(() => {
+    loadTemplateData()
+  }, [loadTemplateData])
 
   const handleSaveTemplate = async (templateKey: SMSTemplateKey, content: string) => {
     try {
@@ -199,11 +189,10 @@ export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplates
       <AlertBanner
         type="error"
         message={error}
-        action={
-          <Button variant="outline" size="sm" onClick={loadTemplateData}>
-            Retry
-          </Button>
-        }
+        action={{
+          label: 'Retry',
+          onClick: loadTemplateData
+        }}
       />
     )
   }
@@ -218,7 +207,7 @@ export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplates
         <div>
           <h2 className="text-2xl font-bold">SMS Templates</h2>
           <p className="text-muted-foreground">
-            Manage your school's SMS templates with built-in controls and cost protection
+            Manage your school&apos;s SMS templates with built-in controls and cost protection
           </p>
         </div>
         
@@ -312,7 +301,7 @@ export function SMSTemplatesManager({ schoolId, userRole, userId }: SMSTemplates
         <Card className="p-4">
           <h4 className="font-semibold mb-2">Template Rules</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• SMS has one job - don't try to do two things</li>
+            <li>• SMS has one job - do not try to do two things</li>
             <li>• Character limits prevent cost overruns</li>
             <li>• Required variables ensure message completeness</li>
             <li>• Role restrictions prevent unauthorized sending</li>

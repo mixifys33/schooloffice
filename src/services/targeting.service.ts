@@ -185,7 +185,7 @@ export class TargetingService implements ITargetingService {
         phone: undefined, // Students don't have direct phone numbers
         email: undefined,
         whatsappNumber: undefined,
-        preferredChannel: 'SMS' // Default, will be overridden by guardian preferences
+        preferredChannel: 'SMS' as MessageChannel // Default, will be overridden by guardian preferences
       })
 
       // Add guardians as recipients
@@ -199,7 +199,7 @@ export class TargetingService implements ITargetingService {
           phone: guardian.phone,
           email: guardian.email || undefined,
           whatsappNumber: undefined,
-          preferredChannel: guardian.preferredChannel
+          preferredChannel: guardian.preferredChannel as MessageChannel
         })
       }
     }
@@ -622,11 +622,12 @@ export class TargetingService implements ITargetingService {
       include: {
         studentGuardians: {
           include: {
+            student: true
+          },
+          where: {
             student: {
-              where: {
-                schoolId,
-                status: 'ACTIVE'
-              }
+              schoolId,
+              status: 'ACTIVE'
             }
           }
         }
@@ -645,7 +646,7 @@ export class TargetingService implements ITargetingService {
           phone: guardian.phone,
           email: guardian.email || undefined,
           whatsappNumber: undefined,
-          preferredChannel: guardian.preferredChannel
+          preferredChannel: guardian.preferredChannel as MessageChannel
         }
       })
   }

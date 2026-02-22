@@ -218,6 +218,7 @@ export class TeacherDocumentService {
     // Create the document
     const document = await prisma.teacherDocument.create({
       data: {
+        schoolId: teacher.schoolId,
         teacherId: data.teacherId,
         documentType: data.documentType,
         fileName: data.fileName.trim(),
@@ -232,6 +233,7 @@ export class TeacherDocumentService {
     // Log to teacher history
     await prisma.teacherHistoryEntry.create({
       data: {
+        schoolId: teacher.schoolId,
         teacherId: data.teacherId,
         eventType: TeacherEventType.DOCUMENT_UPLOADED,
         newValue: JSON.stringify({

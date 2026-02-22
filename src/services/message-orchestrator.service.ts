@@ -106,12 +106,21 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
         console.log(`[BULK DEBUG] Getting template with ID: ${params.templateId}`)
         const template = await messageTemplateService.getTemplateById(params.templateId)
         if (!template) {
-          console.log(`[BULK DEBUG] Template not found: ${params.templateId}`)
-          return { jobId, totalRecipients: recipients.length, queued: 0, errors: ['Template not found'] }
+          console.warn(`[BULK DEBUG] Template not found: ${params.templateId}, using custom content or default`)
+          // Use custom message if provided, otherwise use a default
+          if (params.customMessage) {
+            templateContent = params.customMessage
+            templateType = 'GENERAL'
+          } else {
+            // Use a default fee reminder message
+            templateContent = "Dear Parent/Guardian, this is a reminder about outstanding school fees. Please contact the school office for details. Thank you."
+            templateType = 'FEES_REMINDER'
+          }
+        } else {
+          templateContent = template.content
+          templateType = template.type
+          console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
         }
-        templateContent = template.content
-        templateType = template.type
-        console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
       }
       
       const channel = params.channel || MessageChannel.SMS

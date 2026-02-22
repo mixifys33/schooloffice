@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Settings, User, Shield, Key } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { 
   typography, 
   cardStyles, 

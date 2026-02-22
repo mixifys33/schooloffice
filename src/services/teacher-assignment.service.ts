@@ -514,6 +514,7 @@ export class TeacherAssignmentService {
     // Create the examination role assignment
     await prisma.teacherExaminationRoleAssignment.create({
       data: {
+        schoolId,
         teacherId,
         examId,
         role,
@@ -1123,8 +1124,19 @@ export class TeacherAssignmentService {
     newValue?: string,
     reason?: string
   ): Promise<void> {
+    // Get teacher to retrieve schoolId
+    const teacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { schoolId: true },
+    })
+
+    if (!teacher) {
+      throw new Error(`Teacher ${teacherId} not found`)
+    }
+
     await prisma.teacherHistoryEntry.create({
       data: {
+        schoolId: teacher.schoolId,
         teacherId,
         eventType,
         previousValue,

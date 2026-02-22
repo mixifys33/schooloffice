@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
             schoolId: session.user.schoolId,
             messageId: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             senderId: session.user.id,
-            senderRole: session.user.role || 'ACCOUNTANT',
+            senderRole: session.user.role === 'BURSAR' ? 'ACCOUNTANT' : (session.user.role || 'ACCOUNTANT'),
             channel: messageType.toUpperCase() as 'SMS' | 'EMAIL',
             recipientId: student.id,
             recipientType: 'STUDENT',

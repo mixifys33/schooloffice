@@ -1,32 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Home,
   GraduationCap,
   Calendar,
   ClipboardList,
   BookOpen,
   BarChart3,
   FileText,
-  MessageSquare,
-  User,
-  Settings,
   AlertCircle,
-  CheckCircle,
-  Clock,
-  Users,
   TrendingUp,
-  Award,
   FolderOpen,
-  Eye,
-  Edit3,
-  Plus,
   Shield
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessagePanel } from '@/components/teacher'
@@ -35,8 +22,7 @@ import {
   spacing,
   typography,
   cardStyles,
-  teacherColors,
-  transitions
+  teacherColors
 } from '@/lib/teacher-ui-standards'
 import { cn } from '@/lib/utils'
 

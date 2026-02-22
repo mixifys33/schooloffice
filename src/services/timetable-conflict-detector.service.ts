@@ -260,7 +260,7 @@ async function checkTeacherDoubleBooking(
   });
 
   if (conflictingEntry) {
-    const className = conflictingEntry.timetable.class.name;
+    const className = conflictingEntry.timetable.class?.name || 'Unknown Class';
     const subjectName = conflictingEntry.curriculumSubject.subject.name;
     const subjectCode = conflictingEntry.curriculumSubject.subject.code;
     
@@ -340,7 +340,7 @@ async function checkRoomDoubleBooking(
   });
 
   if (conflictingEntry) {
-    const className = conflictingEntry.timetable.class.name;
+    const className = conflictingEntry.timetable.class?.name || 'Unknown Class';
     const subjectName = conflictingEntry.curriculumSubject.subject.name;
     const subjectCode = conflictingEntry.curriculumSubject.subject.code;
     

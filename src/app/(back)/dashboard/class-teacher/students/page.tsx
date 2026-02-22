@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Users, GraduationCap, Calendar, ClipboardList, BookOpen, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react'
+import { ArrowLeft, Users, GraduationCap, Calendar, ClipboardList, BookOpen, AlertCircle, CheckCircle, BarChart3, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessagePanel } from '@/components/teacher'
 import { 
   errorMessages, 
-  spacing, 
+  spacing,  
   typography, 
   cardStyles, 
   teacherColors,

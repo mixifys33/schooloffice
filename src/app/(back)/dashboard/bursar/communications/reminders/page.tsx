@@ -53,7 +53,7 @@ export default function CommunicationsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [classFilter, setClassFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [messageType, setMessageType] = useState<'sms' | 'email' | 'both'>('sms')
+  const [messageType, setMessageType] = useState<'sms'>('sms')
   const [subject, setSubject] = useState('Payment Reminder')
   const [customMessage, setCustomMessage] = useState('Dear {parentName}, this is a reminder that {studentName} has an outstanding fee balance of {balance}. Please settle this amount. Thank you.')
 
@@ -365,14 +365,15 @@ export default function CommunicationsPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Message Type</Label>
-                <Select value={messageType} onValueChange={(v: 'sms' | 'email' | 'both') => setMessageType(v)}>
+                <Select value={messageType} onValueChange={(v: 'sms') => setMessageType(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="sms">SMS Only</SelectItem>
-                    <SelectItem value="email">Email Only</SelectItem>
-                    <SelectItem value="both">Both SMS & Email</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  All parents have phone numbers registered
+                </p>
               </div>
               <div>
                 <Label>Message</Label>
@@ -521,14 +522,15 @@ export default function CommunicationsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Message Type</Label>
-                  <Select value={messageType} onValueChange={(v: 'sms' | 'email' | 'both') => setMessageType(v)}>
+                  <Select value={messageType} onValueChange={(v: 'sms') => setMessageType(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sms">SMS Only</SelectItem>
-                      <SelectItem value="email">Email Only</SelectItem>
-                      <SelectItem value="both">Both SMS & Email</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    All parents have phone numbers registered
+                  </p>
                 </div>
                 <div>
                   <Label>Subject</Label>

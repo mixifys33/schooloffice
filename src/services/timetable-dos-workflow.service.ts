@@ -5,9 +5,11 @@
    
 import { db } from '@/lib/db';
 import { TimetableService } from './timetable.service';
-import type { 
+import { 
   TimetableStatus, 
-  ConflictSeverity
+  ConflictSeverity,
+  GenerateTimetableRequest,
+  GenerateTimetableResponse
 } from '@/types/timetable';
 import type { TimetableDraft } from '@prisma/client';
 
