@@ -1,45 +1,105 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { dosSubjectService } from '@/services/dos-subject.service';
-import { auth } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !session?.user?.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify DoS role
-    const userRoles = Array.isArray(session.user.roles) ? session.user.roles : [session.user.role]
-    const hasDoSRole = userRoles.includes('DOS') || userRoles.includes('SCHOOL_ADMIN')
+    const session = await auth()
     
-    if (!hasDoSRole) {
-      return NextResponse.json({ error: 'Only DoS can assign subjects to classes' }, { status: 403 });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json();
-    const { classId, assignments } = body;
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const { classId, assignments } = body
 
     if (!classId || !Array.isArray(assignments)) {
-      return NextResponse.json(
-        { error: 'Class ID and assignments array are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
-    const result = await dosSubjectService.assignSubjectsToClass(
-      session.user.schoolId,
-      session.user.id,
-      classId,
-      assignments
-    );
+    // Verify class belongs to school
+    const classExists = await prisma.class.findFirst({
+      where: { id: classId, schoolId }
+    })
 
-    return NextResponse.json(result);
+    if (!classExists) {
+      return NextResponse.json({ error: 'Class not found' }, { status: 404 })
+    }
+
+    // Get existing curriculum subjects for this class
+    const existing = await prisma.curriculumSubject.findMany({
+      where: { classId, schoolId }
+    })
+
+    const existingSubjectIds = new Set(existing.map(e => e.subjectId))
+    const newSubjectIds = new Set(assignments.map((a: any) => a.subjectId))
+
+    // Delete curriculum subjects that are no longer assigned
+    const toDelete = existing.filter(e => !newSubjectIds.has(e.subjectId))
+    if (toDelete.length > 0) {
+      await prisma.curriculumSubject.deleteMany({
+        where: {
+          id: { in: toDelete.map(d => d.id) }
+        }
+      })
+    }
+
+    // Create or update curriculum subjects
+    for (const assignment of assignments) {
+      const { subjectId, markStructure } = assignment
+
+      // Verify subject exists and belongs to school
+      const subject = await prisma.subject.findFirst({
+        where: { id: subjectId, schoolId }
+      })
+
+      if (!subject) {
+        continue // Skip invalid subjects
+      }
+
+      if (existingSubjectIds.has(subjectId)) {
+        // Update existing
+        await prisma.curriculumSubject.updateMany({
+          where: { classId, subjectId, schoolId },
+          data: {
+            isActive: true,
+            updatedAt: new Date()
+          }
+        })
+      } else {
+        // Create new
+        await prisma.curriculumSubject.create({
+          data: {
+            schoolId,
+            classId,
+            subjectId,
+            isCore: true,
+            caWeight: 40,
+            examWeight: 60,
+            minPassMark: 50,
+            periodsPerWeek: 4,
+            isActive: true,
+            dosApproved: false
+          }
+        })
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Class subjects updated successfully'
+    })
+
   } catch (error) {
-    console.error('Error assigning subjects to class:', error);
+    console.error('Error updating class subjects:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to assign subjects' },
+      { error: 'Failed to update class subjects' },
       { status: 500 }
-    );
+    )
   }
 }

@@ -68,6 +68,11 @@ const navItems = [
     icon: <BookOpen className="h-5 w-5" /> 
   },
   { 
+    href: '/dos/curriculum', 
+    label: 'Curriculum Setup', 
+    icon: <CheckCircle2 className="h-5 w-5" /> 
+  },
+  { 
     href: '/dos/assessments', 
     label: 'Assessments', 
     icon: <ClipboardCheck className="h-5 w-5" /> 

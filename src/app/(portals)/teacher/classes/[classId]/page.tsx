@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -70,7 +70,7 @@ interface ClassDetailData {
 
 type TabType = 'students' | 'attendance' | 'performance'
 
-export default function ClassDetailPage() {
+function ClassDetailPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const classId = params.classId as string
@@ -478,5 +478,13 @@ function PerformanceTab({ summary }: { summary: PerformanceSummary }) {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ClassDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <ClassDetailPageContent />
+    </Suspense>
   )
 }

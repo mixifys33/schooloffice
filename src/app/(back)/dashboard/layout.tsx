@@ -85,10 +85,6 @@ const adminNavItems: PermissionNavItem[] = [
     label: 'Staff',
     icon: <Users className="h-5 w-5" />,
     permission: 'view_students', // Staff management requires student view permission at minimum
-    children: [
-      { href: '/dashboard/staff', label: 'All Staff' },
-      { href: '/dashboard/staff/assignments', label: 'Assignments' },
-    ],
   },
   {
     href: '/dashboard/assignments',

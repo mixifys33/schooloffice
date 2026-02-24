@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -75,7 +75,7 @@ interface AssignedClassSubject {
   subjectName: string;
 }
 
-export default function ContinuousAssessmentPage() {
+function ContinuousAssessmentPageContent() {
   const searchParams = useSearchParams()
   const classIdParam = searchParams.get('classId')
   const subjectIdParam = searchParams.get('subjectId')
@@ -736,5 +736,13 @@ export default function ContinuousAssessmentPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ContinuousAssessmentPage() {
+  return (
+    <Suspense fallback={<SkeletonLoader variant="card" count={3} />}>
+      <ContinuousAssessmentPageContent />
+    </Suspense>
   )
 }

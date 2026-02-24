@@ -1,223 +1,125 @@
-/**
- * Teacher Attendance History API Route
- * Requirements: 5.1, 5.2, 5.3
- * - GET: Get attendance history for teacher's assigned classes
- * - Display past attendance records in read-only format
- * - Show date, student name, status, and recording timestamp
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role, AttendanceStatus } from '@/types/enums'
-
-interface AttendanceHistoryRecord {
-  id: string
-  date: string
-  studentId: string
-  studentName: string
-  admissionNumber: string
-  status: AttendanceStatus
-  recordedAt: string
-  recordedBy: string
-  remarks?: string
-}
-
-interface ClassAttendanceHistory {
-  classId: string
-  className: string
-  streamName: string | null
-  records: AttendanceHistoryRecord[]
-  summary: {
-    totalRecords: number
-    presentCount: number
-    absentCount: number
-    lateCount: number
-  }
-}
 
 /**
  * GET /api/teacher/attendance/history
- * Get attendance history for teacher's assigned classes
- * Query params: classId (optional), startDate (optional), endDate (optional)
- * Requirements: 5.1, 5.2 - Display past attendance records in read-only format
+ * Returns attendance history records for the logged-in teacher
  */
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Access denied. Teacher role required.' },
-        { status: 403 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       )
     }
 
-    const schoolId = session.user.schoolId
-    if (!schoolId) {
-      return NextResponse.json(
-        { error: 'No school context found' },
-        { status: 400 }
-      )
-    }
-
-    // Get staff/teacher record
-    const staff = await prisma.staff.findFirst({
-      where: {
-        userId: session.user.id,
-        schoolId,
-      },
-      select: { id: true },
+    // Get teacher record
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
     })
 
-    if (!staff) {
+    if (!teacher) {
       return NextResponse.json(
-        { error: 'No staff profile linked to this account' },
+        { error: 'Teacher profile not found' },
         { status: 404 }
       )
     }
 
-    const { searchParams } = new URL(request.url)
-    const classId = searchParams.get('classId')
-    const startDateParam = searchParams.get('startDate')
-    const endDateParam = searchParams.get('endDate')
-
-    // Get classes assigned to this teacher
-    const staffClasses = await prisma.staffClass.findMany({
-      where: { staffId: staff.id },
-      include: {
-        class: {
-          include: {
-            streams: true,
-          }
-        }
-      }
-    })
-
-    const assignedClassIds = staffClasses.map(sc => sc.classId)
-
-    // If classId is provided, validate it's assigned to this teacher
-    if (classId && !assignedClassIds.includes(classId)) {
-      return NextResponse.json(
-        { error: 'You are not assigned to this class' },
-        { status: 403 }
-      )
-    }
-
-    // Build date filter - default to last 30 days
-    const endDate = endDateParam ? new Date(endDateParam) : new Date()
-    endDate.setHours(23, 59, 59, 999)
-    
-    const startDate = startDateParam 
-      ? new Date(startDateParam) 
-      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000)
-    startDate.setHours(0, 0, 0, 0)
-
-    // Get attendance records
-    const targetClassIds = classId ? [classId] : assignedClassIds
-    
-    const attendanceRecords = await prisma.attendance.findMany({
+    // Get teacher's assigned classes
+    const teacherAssignments = await prisma.teacherAssignment.findMany({
       where: {
-        classId: { in: targetClassIds },
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
+        teacherId: teacher.id
       },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            admissionNumber: true,
-          }
-        },
+      select: {
+        classId: true,
         class: {
           select: {
             id: true,
             name: true,
-            streams: {
-              select: { name: true },
-              take: 1,
-            }
+            streamName: true
           }
         }
       },
-      orderBy: [
-        { date: 'desc' },
-        { student: { lastName: 'asc' } },
-      ],
+      distinct: ['classId']
     })
 
-    // Group records by class
-    const recordsByClass = new Map<string, {
-      classId: string
-      className: string
-      streamName: string | null
-      records: AttendanceHistoryRecord[]
-    }>()
+    const classIds = teacherAssignments.map(ta => ta.classId)
 
-    for (const record of attendanceRecords) {
-      if (!recordsByClass.has(record.classId)) {
-        recordsByClass.set(record.classId, {
-          classId: record.classId,
-          className: record.class.name,
-          streamName: record.class.streams[0]?.name || null,
-          records: [],
-        })
-      }
+    // Get attendance records for these classes
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        classId: {
+          in: classIds
+        }
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            streamName: true
+          }
+        },
+        attendanceRecords: {
+          select: {
+            status: true
+          }
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      take: 100 // Limit to last 100 records
+    })
 
-      recordsByClass.get(record.classId)!.records.push({
+    // Transform records
+    const records = attendanceRecords.map(record => {
+      const presentCount = record.attendanceRecords.filter(r => r.status === 'PRESENT').length
+      const absentCount = record.attendanceRecords.filter(r => r.status === 'ABSENT').length
+      const lateCount = record.attendanceRecords.filter(r => r.status === 'LATE').length
+      const totalStudents = record.attendanceRecords.length
+
+      // Can edit if record is from today or yesterday
+      const recordDate = new Date(record.date)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      const canEdit = recordDate >= yesterday
+
+      return {
         id: record.id,
-        date: record.date.toISOString().split('T')[0],
-        studentId: record.studentId,
-        studentName: `${record.student.firstName} ${record.student.lastName}`,
-        admissionNumber: record.student.admissionNumber || '',
-        status: record.status as AttendanceStatus,
-        recordedAt: record.recordedAt.toISOString(),
-        recordedBy: record.recordedBy,
-        remarks: record.remarks || undefined,
-      })
-    }
-
-    // Build response with summaries
-    const classHistories: ClassAttendanceHistory[] = []
-    
-    for (const [, classData] of recordsByClass) {
-      const summary = {
-        totalRecords: classData.records.length,
-        presentCount: classData.records.filter(r => r.status === AttendanceStatus.PRESENT).length,
-        absentCount: classData.records.filter(r => r.status === AttendanceStatus.ABSENT).length,
-        lateCount: classData.records.filter(r => r.status === AttendanceStatus.LATE).length,
+        date: record.date.toISOString(),
+        classId: record.classId,
+        className: record.class.name,
+        streamName: record.class.streamName,
+        totalStudents,
+        presentCount,
+        absentCount,
+        lateCount,
+        recordedAt: record.createdAt.toISOString(),
+        canEdit
       }
+    })
 
-      classHistories.push({
-        ...classData,
-        summary,
-      })
-    }
-
-    // Sort by class name
-    classHistories.sort((a, b) => a.className.localeCompare(b.className))
+    // Get unique classes for filter dropdown
+    const classes = teacherAssignments.map(ta => ({
+      id: ta.class.id,
+      name: ta.class.name + (ta.class.streamName ? ` - ${ta.class.streamName}` : '')
+    }))
 
     return NextResponse.json({
-      classes: classHistories,
-      dateRange: {
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-      },
-      assignedClasses: staffClasses.map(sc => ({
-        classId: sc.classId,
-        className: sc.class.name,
-        streamName: sc.class.streams[0]?.name || null,
-      })),
+      records,
+      classes
     })
+
   } catch (error) {
-    console.error('Error fetching teacher attendance history:', error)
+    console.error('Error fetching attendance history:', error)
     return NextResponse.json(
       { error: 'Failed to fetch attendance history' },
       { status: 500 }

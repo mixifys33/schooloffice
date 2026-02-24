@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { CheckCircle, BookOpen } from 'lucide-react';
 
 interface Class {
   id: string;
@@ -23,6 +25,12 @@ interface ClassSubject {
   subject: Subject;
 }
 
+interface ClassWithAssignments {
+  classId: string;
+  className: string;
+  subjects: Subject[];
+}
+
 interface SubjectAssignment {
   subjectId: string;
   maxMark: number;
@@ -31,16 +39,20 @@ interface SubjectAssignment {
 }
 
 export default function ClassSubjectAssignment() {
+  const { toast } = useToast();
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
-  const [currentAssignments, setCurrentAssignments] = useState<ClassSubject[]>([]);
   const [assignments, setAssignments] = useState<SubjectAssignment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [allAssignments, setAllAssignments] = useState<ClassWithAssignments[]>([]);
+  const [loadingAllAssignments, setLoadingAllAssignments] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
+    fetchAllAssignments();
   }, []);
 
   useEffect(() => {
@@ -67,8 +79,8 @@ export default function ClassSubjectAssignment() {
 
       setClasses(classesData.classes || []);
       setSubjects(subjectsData.subjects?.filter((s: Subject) => s.isActive) || []);
-    } catch (err) {
-      setError('Failed to load data');
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
     }
   };
 
@@ -77,7 +89,6 @@ export default function ClassSubjectAssignment() {
       const response = await fetch(`/api/classes/${classId}/subjects`);
       if (response.ok) {
         const data = await response.json();
-        setCurrentAssignments(data.classSubjects || []);
         
         // Initialize assignments from current data
         const currentAssignmentData = data.classSubjects?.map((cs: ClassSubject) => ({
@@ -89,8 +100,51 @@ export default function ClassSubjectAssignment() {
         
         setAssignments(currentAssignmentData);
       }
-    } catch (err) {
-      console.error('Failed to fetch class subjects:', err);
+    } catch (error) {
+      console.error('Failed to fetch class subjects:', error);
+    }
+  };
+
+  const fetchAllAssignments = async () => {
+    try {
+      setLoadingAllAssignments(true);
+      const response = await fetch('/api/classes/subjects');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Group by class
+        const grouped: { [key: string]: ClassWithAssignments } = {};
+        
+        interface RelationshipData {
+          classId: string;
+          className: string;
+          subjectId: string;
+          subjectName: string;
+          subjectCode: string;
+        }
+        
+        data.relationships?.forEach((rel: RelationshipData) => {
+          if (!grouped[rel.classId]) {
+            grouped[rel.classId] = {
+              classId: rel.classId,
+              className: rel.className,
+              subjects: []
+            };
+          }
+          grouped[rel.classId].subjects.push({
+            id: rel.subjectId,
+            name: rel.subjectName,
+            code: rel.subjectCode,
+            isActive: true
+          });
+        });
+        
+        setAllAssignments(Object.values(grouped));
+      }
+    } catch (error) {
+      console.error('Failed to fetch all assignments:', error);
+    } finally {
+      setLoadingAllAssignments(false);
     }
   };
 
@@ -109,7 +163,7 @@ export default function ClassSubjectAssignment() {
     }
   };
 
-  const handleAssignmentChange = (subjectId: string, field: keyof SubjectAssignment, value: any) => {
+  const handleAssignmentChange = (subjectId: string, field: keyof SubjectAssignment, value: number | boolean) => {
     setAssignments(prev => prev.map(a => 
       a.subjectId === subjectId ? { ...a, [field]: value } : a
     ));
@@ -120,6 +174,7 @@ export default function ClassSubjectAssignment() {
 
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch('/api/dos/subjects/class-assignments', {
@@ -143,9 +198,34 @@ export default function ClassSubjectAssignment() {
         throw new Error(error.error || 'Failed to save assignments');
       }
 
+      const data = await response.json();
+      
+      // Show success toast
+      toast({
+        title: 'Success!',
+        description: `${assignments.length} subject(s) assigned to ${selectedClassName}`,
+        variant: 'success',
+        duration: 5000
+      });
+
+      // Show success message in UI
+      setSuccessMessage(`Successfully assigned ${assignments.length} subject(s) to ${selectedClassName}`);
+
+      // Refresh the assignments to show updated data
       await fetchClassSubjects(selectedClass);
+      await fetchAllAssignments();
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save assignments');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save assignments';
+      setError(errorMessage);
+      
+      // Show error toast
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000
+      });
     } finally {
       setLoading(false);
     }
@@ -165,6 +245,13 @@ export default function ClassSubjectAssignment() {
       {error && (
         <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] text-[var(--chart-red)] px-4 py-3 rounded">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded flex items-center gap-2">
+          <CheckCircle className="h-5 w-5" />
+          <span>{successMessage}</span>
         </div>
       )}
 
@@ -191,6 +278,31 @@ export default function ClassSubjectAssignment() {
 
         {selectedClass && (
           <div className="p-6">
+            {/* Summary of assigned subjects */}
+            {assignments.length > 0 && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                  <h4 className="font-semibold text-blue-900">
+                    Currently Assigned: {assignments.length} subject(s)
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {assignments.map(assignment => {
+                    const subject = subjects.find(s => s.id === assignment.subjectId);
+                    return subject ? (
+                      <span
+                        key={assignment.subjectId}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                      >
+                        {subject.name} ({subject.code})
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
             <h3 className="text-lg font-semibold mb-4">
               Subjects for {selectedClassName}
             </h3>
@@ -282,10 +394,23 @@ export default function ClassSubjectAssignment() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={handleSave}
-                disabled={loading}
-                className="bg-[var(--chart-blue)] text-[var(--white-pure)] px-6 py-2 rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                disabled={loading || assignments.length === 0}
+                className="bg-[var(--chart-blue)] text-[var(--white-pure)] px-6 py-2 rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {loading ? 'Saving...' : 'Save Assignments'}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Save Assignments
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -296,6 +421,77 @@ export default function ClassSubjectAssignment() {
             Select a class to manage subject assignments
           </div>
         )}
+      </div>
+
+      {/* All Assignments Overview */}
+      <div className="bg-[var(--bg-main)] rounded-lg border">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+            All Class-Subject Assignments
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Overview of all curriculum assignments across classes
+          </p>
+        </div>
+
+        <div className="p-6">
+          {loadingAllAssignments ? (
+            <div className="text-center py-8 text-[var(--text-muted)]">
+              <div className="animate-spin h-8 w-8 border-4 border-[var(--chart-blue)] border-t-transparent rounded-full mx-auto mb-2"></div>
+              Loading assignments...
+            </div>
+          ) : allAssignments.length === 0 ? (
+            <div className="text-center py-8 text-[var(--text-muted)]">
+              <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">No assignments yet</p>
+              <p className="text-sm mt-1">Start by selecting a class above and assigning subjects</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allAssignments.map((classAssignment) => (
+                <div
+                  key={classAssignment.classId}
+                  className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg text-[var(--text-primary)]">
+                      {classAssignment.className}
+                    </h3>
+                    <span className="text-sm font-medium text-[var(--chart-blue)] bg-blue-50 px-2 py-1 rounded">
+                      {classAssignment.subjects.length} subjects
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {classAssignment.subjects.map((subject) => (
+                      <div
+                        key={subject.id}
+                        className="flex items-center justify-between p-2 bg-[var(--bg-surface)] rounded text-sm"
+                      >
+                        <span className="font-medium text-[var(--text-primary)]">
+                          {subject.name}
+                        </span>
+                        <span className="text-[var(--text-muted)] text-xs">
+                          {subject.code}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedClass(classAssignment.classId);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="mt-3 w-full text-sm text-[var(--chart-blue)] hover:text-[var(--accent-hover)] font-medium"
+                  >
+                    Edit assignments →
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

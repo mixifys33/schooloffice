@@ -99,6 +99,11 @@ export default function ReportsPage() {
   // Fetch classes and terms on mount
   useEffect(() => {
     const fetchFilters = async () => {
+      // Skip fetching during SSR/build
+      if (typeof window === 'undefined') {
+        return
+      }
+
       try {
         const [classesRes, termsRes] = await Promise.all([
           fetch('/api/classes'),
@@ -132,6 +137,11 @@ export default function ReportsPage() {
     classId: string,
     termId: string
   ) => {
+    // Skip fetching during SSR/build
+    if (typeof window === 'undefined') {
+      return
+    }
+
     try {
       setSearchLoading(true)
       const params = new URLSearchParams({
@@ -145,7 +155,9 @@ export default function ReportsPage() {
 
       // Add timeout to prevent hanging
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      const timeoutId = setTimeout(() => {
+        controller.abort(new Error('Request timeout after 30 seconds'))
+      }, 30000) // 30 second timeout
 
       const response = await fetch(`/api/reports?${params}`, {
         signal: controller.signal,

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -78,7 +78,7 @@ interface AssignedClassSubject {
   subjectName: string
 }
 
-export default function MarksEntryPage() {
+function MarksEntryPageContent() {
   const searchParams = useSearchParams()
   const classIdParam = searchParams.get('classId')
   const subjectIdParam = searchParams.get('subjectId')
@@ -664,5 +664,13 @@ export default function MarksEntryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function MarksEntryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <MarksEntryPageContent />
+    </Suspense>
   )
 }

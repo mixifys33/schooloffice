@@ -59,8 +59,7 @@ export interface ProfileUpdateInput {
 
 /**
  * GET /api/teacher/profile
- * Retrieves the authenticated teacher's profile
- * Requirements: 10.1, 10.4 - Display editable and read-only fields
+ * Retrieves the authenticated teacher's profile with workload data
  */
 export async function GET(request: NextRequest) {
   try {
@@ -86,7 +85,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get teacher record with all necessary data
+    // Get teacher record with assignments
     const teacher = await prisma.teacher.findFirst({
       where: {
         schoolId,
@@ -98,12 +97,17 @@ export async function GET(request: NextRequest) {
         lastName: true,
         phone: true,
         email: true,
+        address: true,
         photo: true,
         jobTitle: true,
         department: true,
-        employmentType: true,
-        assignedSubjectIds: true,
-        assignedClassIds: true,
+        dateOfAppointment: true,
+        teacherAssignments: {
+          include: {
+            subject: true,
+            class: true,
+          },
+        },
         classTeacherForIds: true,
       },
     })
@@ -115,67 +119,55 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get subject names for assigned subjects
-    const subjects = teacher.assignedSubjectIds.length > 0
-      ? await prisma.subject.findMany({
+    // Build workload items
+    const workload = await Promise.all(
+      teacher.teacherAssignments.map(async (assignment) => {
+        const studentCount = await prisma.student.count({
           where: {
-            id: { in: teacher.assignedSubjectIds },
-            schoolId,
-          },
-          select: {
-            id: true,
-            name: true,
+            classId: assignment.classId,
+            status: 'ACTIVE',
           },
         })
-      : []
 
-    // Get class names for assigned classes
-    const classes = teacher.assignedClassIds.length > 0
-      ? await prisma.class.findMany({
-          where: {
-            id: { in: teacher.assignedClassIds },
-            schoolId,
-          },
-          select: {
-            id: true,
-            name: true,
-          },
-        })
-      : []
+        return {
+          id: assignment.id,
+          className: assignment.class.name,
+          streamName: null,
+          subjectName: assignment.subject.name,
+          periodsPerWeek: 4, // Default value
+          studentCount,
+          isClassTeacher: teacher.classTeacherForIds.includes(assignment.classId),
+        }
+      })
+    )
 
-    // Get class names for class teacher assignments
-    const classTeacherClasses = teacher.classTeacherForIds.length > 0
-      ? await prisma.class.findMany({
-          where: {
-            id: { in: teacher.classTeacherForIds },
-            schoolId,
-          },
-          select: {
-            id: true,
-            name: true,
-          },
-        })
-      : []
+    // Calculate workload stats
+    const uniqueClasses = new Set(teacher.teacherAssignments.map(a => a.classId))
+    const uniqueSubjects = new Set(teacher.teacherAssignments.map(a => a.subjectId))
+    const totalPeriods = workload.reduce((sum, item) => sum + item.periodsPerWeek, 0)
+    const totalStudents = workload.reduce((sum, item) => sum + item.studentCount, 0)
 
-    // Build response with editable and read-only sections
-    const response: TeacherProfileResponse = {
-      editable: {
-        phone: teacher.phone,
-        email: teacher.email,
-        photo: teacher.photo,
-      },
-      readOnly: {
+    // Build response
+    const response = {
+      profile: {
         id: teacher.id,
         firstName: teacher.firstName,
         lastName: teacher.lastName,
-        fullName: `${teacher.firstName} ${teacher.lastName}`,
-        role: 'Teacher',
-        jobTitle: teacher.jobTitle,
+        email: teacher.email,
+        phone: teacher.phone,
+        address: teacher.address || '',
+        position: teacher.jobTitle,
         department: teacher.department,
-        employmentType: teacher.employmentType,
-        assignedSubjects: subjects,
-        assignedClasses: classes,
-        classTeacherFor: classTeacherClasses,
+        hireDate: teacher.dateOfAppointment.toISOString(),
+        qualifications: [], // TODO: Add qualifications if available
+        photo: teacher.photo,
+      },
+      workload,
+      workloadStats: {
+        totalClasses: uniqueClasses.size,
+        totalSubjects: uniqueSubjects.size,
+        totalPeriods,
+        totalStudents,
       },
     }
 

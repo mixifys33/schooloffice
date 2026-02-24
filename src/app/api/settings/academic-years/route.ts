@@ -9,35 +9,121 @@ import { prisma } from '@/lib/db'
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!session?.user?.schoolId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
     }
 
     const academicYears = await prisma.academicYear.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
+      where: { schoolId },
       include: {
         terms: {
-          orderBy: {
-            startDate: 'asc',
-          },
+          orderBy: { startDate: 'asc' },
         },
       },
-      orderBy: {
-        startDate: 'desc',
-      },
+      orderBy: { startDate: 'desc' },
     })
 
     return NextResponse.json({ academicYears })
   } catch (error) {
     console.error('Error fetching academic years:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch academic years' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PUT /api/settings/academic-years
+ * Update an academic year (e.g., set as active)
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    }
+
+    // Check if user has permission (admin or school admin)
+    const userRole = session.user.role
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'SCHOOL_ADMIN') {
+      return NextResponse.json(
+        { error: 'You do not have permission to update academic years' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { id, isActive } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Academic year ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Verify the academic year belongs to this school
+    const academicYear = await prisma.academicYear.findFirst({
+      where: {
+        id,
+        schoolId,
+      },
+    })
+
+    if (!academicYear) {
+      return NextResponse.json(
+        { error: 'Academic year not found' },
+        { status: 404 }
+      )
+    }
+
+    // If setting as active, deactivate all other years first
+    if (isActive === true) {
+      await prisma.academicYear.updateMany({
+        where: {
+          schoolId,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      })
+    }
+
+    // Update the academic year
+    const updatedYear = await prisma.academicYear.update({
+      where: { id },
+      data: {
+        isActive: isActive !== undefined ? isActive : academicYear.isActive,
+      },
+      include: {
+        terms: {
+          orderBy: { startDate: 'asc' },
+        },
+      },
+    })
+
+    return NextResponse.json({
+      message: 'Academic year updated successfully',
+      academicYear: updatedYear,
+    })
+  } catch (error) {
+    console.error('Error updating academic year:', error)
+    return NextResponse.json(
+      { error: 'Failed to update academic year' },
       { status: 500 }
     )
   }
@@ -50,18 +136,28 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!session?.user?.schoolId) {
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    }
+
+    // Check if user has permission
+    const userRole = session.user.role
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'SCHOOL_ADMIN') {
       return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
+        { error: 'You do not have permission to create academic years' },
+        { status: 403 }
       )
     }
 
     const body = await request.json()
     const { name, startDate, endDate, isActive } = body
 
-    // Validate required fields
     if (!name || !startDate || !endDate) {
       return NextResponse.json(
         { error: 'Name, start date, and end date are required' },
@@ -69,56 +165,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate dates
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-
-    if (start >= end) {
-      return NextResponse.json(
-        { error: 'Start date must be before end date' },
-        { status: 400 }
-      )
-    }
-
-    // Check for overlapping academic years
-    const overlapping = await prisma.academicYear.findFirst({
-      where: {
-        schoolId: session.user.schoolId,
-        OR: [
-          {
-            AND: [
-              { startDate: { lte: start } },
-              { endDate: { gte: start } },
-            ],
-          },
-          {
-            AND: [
-              { startDate: { lte: end } },
-              { endDate: { gte: end } },
-            ],
-          },
-          {
-            AND: [
-              { startDate: { gte: start } },
-              { endDate: { lte: end } },
-            ],
-          },
-        ],
-      },
-    })
-
-    if (overlapping) {
-      return NextResponse.json(
-        { error: 'Academic year dates overlap with existing academic year' },
-        { status: 400 }
-      )
-    }
-
-    // If this is set to active, deactivate other academic years
-    if (isActive) {
+    // If setting as active, deactivate all other years first
+    if (isActive === true) {
       await prisma.academicYear.updateMany({
         where: {
-          schoolId: session.user.schoolId,
+          schoolId,
           isActive: true,
         },
         data: {
@@ -130,311 +181,25 @@ export async function POST(request: NextRequest) {
     // Create the academic year
     const academicYear = await prisma.academicYear.create({
       data: {
+        schoolId,
         name,
-        startDate: start,
-        endDate: end,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
         isActive: isActive || false,
-        schoolId: session.user.schoolId,
       },
-      select: {
-        id: true,
-        name: true,
-        startDate: true,
-        endDate: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        terms: true,
       },
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
+      message: 'Academic year created successfully',
       academicYear,
-      message: 'Academic year created successfully' 
-    })
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating academic year:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * PUT /api/settings/academic-years
- * Update an academic year
- */
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth()
-
-    if (!session?.user?.schoolId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
-    const body = await request.json()
-    const { id, name, startDate, endDate, isActive } = body
-
-    // Validate required fields
-    if (!id || !name || !startDate || !endDate) {
-      return NextResponse.json(
-        { error: 'ID, name, start date, and end date are required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate dates
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-
-    if (start >= end) {
-      return NextResponse.json(
-        { error: 'Start date must be before end date' },
-        { status: 400 }
-      )
-    }
-
-    // Check if academic year exists and belongs to the school
-    const existingYear = await prisma.academicYear.findFirst({
-      where: {
-        id,
-        schoolId: session.user.schoolId,
-      },
-    })
-
-    if (!existingYear) {
-      return NextResponse.json(
-        { error: 'Academic year not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check for overlapping academic years (excluding current one)
-    const overlapping = await prisma.academicYear.findFirst({
-      where: {
-        schoolId: session.user.schoolId,
-        id: { not: id },
-        OR: [
-          {
-            AND: [
-              { startDate: { lte: start } },
-              { endDate: { gte: start } },
-            ],
-          },
-          {
-            AND: [
-              { startDate: { lte: end } },
-              { endDate: { gte: end } },
-            ],
-          },
-          {
-            AND: [
-              { startDate: { gte: start } },
-              { endDate: { lte: end } },
-            ],
-          },
-        ],
-      },
-    })
-
-    if (overlapping) {
-      return NextResponse.json(
-        { error: 'Academic year dates overlap with existing academic year' },
-        { status: 400 }
-      )
-    }
-
-    // If this is set to active, deactivate other academic years
-    if (isActive) {
-      await prisma.academicYear.updateMany({
-        where: {
-          schoolId: session.user.schoolId,
-          isActive: true,
-          id: { not: id },
-        },
-        data: {
-          isActive: false,
-        },
-      })
-    }
-
-    // Update the academic year
-    const academicYear = await prisma.academicYear.update({
-      where: { id },
-      data: {
-        name,
-        startDate: start,
-        endDate: end,
-        isActive: isActive || false,
-      },
-      select: {
-        id: true,
-        name: true,
-        startDate: true,
-        endDate: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    })
-
-    return NextResponse.json({ 
-      academicYear,
-      message: 'Academic year updated successfully' 
-    })
-  } catch (error) {
-    console.error('Error updating academic year:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * DELETE /api/settings/academic-years
- * Delete an academic year
- */
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await auth()
-
-    if (!session?.user?.schoolId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-    const cascade = searchParams.get('cascade') === 'true'
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Academic year ID is required' },
-        { status: 400 }
-      )
-    }
-
-    // Check if academic year exists and belongs to the school
-    const existingYear = await prisma.academicYear.findFirst({
-      where: {
-        id,
-        schoolId: session.user.schoolId,
-      },
-    })
-
-    if (!existingYear) {
-      return NextResponse.json(
-        { error: 'Academic year not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check if there are any terms associated with this academic year
-    const termsCount = await prisma.term.count({
-      where: {
-        academicYearId: id,
-      },
-    })
-
-    if (termsCount > 0 && !cascade) {
-      return NextResponse.json(
-        { 
-          error: 'Cannot delete academic year with associated terms',
-          termsCount,
-          canCascade: true
-        },
-        { status: 400 }
-      )
-    }
-
-    // If cascade is true, delete all associated terms first
-    if (cascade && termsCount > 0) {
-      // Get all terms for this academic year
-      const terms = await prisma.term.findMany({
-        where: {
-          academicYearId: id,
-        },
-      })
-
-      // Check if any terms have associated data that would prevent deletion
-      for (const term of terms) {
-        const [
-          examsCount, 
-          resultsCount, 
-          paymentsCount, 
-          feeStructuresCount, 
-          timetablesCount,
-          caEntriesCount,
-          examEntriesCount
-        ] = await Promise.all([
-          prisma.exam.count({ where: { termId: term.id } }),
-          prisma.result.count({ where: { termId: term.id } }),
-          prisma.payment.count({ where: { termId: term.id } }),
-          prisma.feeStructure.count({ where: { termId: term.id } }),
-          prisma.timetableDraft.count({ where: { termId: term.id } }),
-          prisma.cAEntry.count({ where: { termId: term.id } }),
-          prisma.examEntry.count({ where: { termId: term.id } }),
-        ])
-
-        if (
-          examsCount > 0 || 
-          resultsCount > 0 || 
-          paymentsCount > 0 || 
-          feeStructuresCount > 0 || 
-          timetablesCount > 0 ||
-          caEntriesCount > 0 ||
-          examEntriesCount > 0
-        ) {
-          const dependencies: any = {
-            exams: examsCount,
-            results: resultsCount,
-            payments: paymentsCount,
-            feeStructures: feeStructuresCount,
-            timetables: timetablesCount,
-            caEntries: caEntriesCount,
-            examEntries: examEntriesCount
-          }
-          
-          return NextResponse.json(
-            { 
-              error: `Cannot delete term "${term.name}" as it has associated data. Please clean up these dependencies first.`,
-              termName: term.name,
-              dependencies
-            },
-            { status: 400 }
-          )
-        }
-      }
-
-      // Delete all terms
-      await prisma.term.deleteMany({
-        where: {
-          academicYearId: id,
-        },
-      })
-    }
-
-    // Delete the academic year
-    await prisma.academicYear.delete({
-      where: { id },
-    })
-
-    return NextResponse.json({ 
-      message: cascade && termsCount > 0 
-        ? `Academic year and ${termsCount} associated term(s) deleted successfully`
-        : 'Academic year deleted successfully',
-      deletedTermsCount: cascade ? termsCount : 0
-    })
-  } catch (error) {
-    console.error('Error deleting academic year:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to create academic year' },
       { status: 500 }
     )
   }

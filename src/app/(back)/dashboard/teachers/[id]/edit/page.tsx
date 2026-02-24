@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -52,7 +52,7 @@ const DEFAULT_DEPARTMENTS = [
   'Administration',
 ]
 
-export default function EditTeacherPage() {
+function EditTeacherPageContent() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
@@ -381,5 +381,13 @@ export default function EditTeacherPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function EditTeacherPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <EditTeacherPageContent />
+    </Suspense>
   )
 }

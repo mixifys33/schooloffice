@@ -3,18 +3,16 @@ const nextConfig = {
   reactCompiler: false,
   
   // TypeScript configuration
-  // ⚠️ WARNING: ignoreBuildErrors allows build to succeed with TypeScript errors
-  // This is DANGEROUS for production as it deploys broken code
-  // Only use during development or if you have a separate type-checking process
+  // WARNING: Ignoring TypeScript errors - build will succeed even with type errors
   typescript: {
-    ignoreBuildErrors: true, // Changed from false - CAUTION!
+    ignoreBuildErrors: true, // DANGER: Ignores all TypeScript errors during build
   },
   
-  // ESLint configuration
-  // ⚠️ WARNING: Ignoring ESLint errors during build
-  eslint: {
-    ignoreDuringBuilds: true, // Ignore ESLint errors during build
-  },
+  // Note: eslint configuration removed - deprecated in Next.js 16
+  // Use .eslintrc.json or package.json eslint config instead
+  
+  // Note: eslint configuration removed - deprecated in Next.js 16
+  // Use .eslintrc.json or package.json eslint config instead
   
   // Turbopack configuration for Next.js 16 (minimal to avoid warnings)
   turbopack: {},

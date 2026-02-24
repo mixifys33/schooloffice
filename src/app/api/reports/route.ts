@@ -81,7 +81,23 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Get students first, then their results
+    // Get ALL students matching the filter (for accurate counts)
+    const allStudents = await prisma.student.findMany({
+      where: studentWhere,
+      select: {
+        id: true,
+        classId: true,
+        results: {
+          where: { termId: currentTermId },
+          select: { 
+            id: true,
+            publishedReportCard: { select: { isAccessible: true } }
+          }
+        }
+      }
+    })
+
+    // Get students for current page with full details
     const students = await prisma.student.findMany({
       where: studentWhere,
       include: {
@@ -104,22 +120,22 @@ export async function GET(request: NextRequest) {
     })
 
     // Get total count of students (not results)
-    const total = await prisma.student.count({ where: studentWhere })
+    const total = allStudents.length
 
-    // Get payment information for these students
-    const studentIds = students.map(s => s.id)
+    // Get payment information for ALL students (for accurate summary)
+    const allStudentIds = allStudents.map(s => s.id)
     const [payments, feeStructures] = await Promise.all([
       prisma.payment.groupBy({
         by: ['studentId'],
         where: {
-          studentId: { in: studentIds },
+          studentId: { in: allStudentIds },
           termId: currentTermId,
         },
         _sum: { amount: true },
       }),
       prisma.feeStructure.findMany({
         where: {
-          classId: { in: students.map(s => s.classId) },
+          classId: { in: [...new Set(allStudents.map(s => s.classId))] },
           termId: currentTermId,
         },
         select: { classId: true, totalAmount: true }
@@ -129,7 +145,32 @@ export async function GET(request: NextRequest) {
     const paymentMap = new Map(payments.map(p => [p.studentId, p._sum.amount || 0]))
     const feeMap = new Map(feeStructures.map(f => [f.classId, f.totalAmount]))
 
-    // Map students to results format
+    // Calculate summary from ALL students
+    let totalPaidStudents = 0
+    let totalUnpaidStudents = 0
+    let totalPublishedReports = 0
+    let totalStudentsWithResults = 0
+
+    allStudents.forEach(student => {
+      const totalFees = feeMap.get(student.classId) || 0
+      const totalPaid = paymentMap.get(student.id) || 0
+      const isPaid = totalPaid >= totalFees
+      
+      if (student.results.length > 0) {
+        totalStudentsWithResults++
+        if (student.results[0].publishedReportCard) {
+          totalPublishedReports++
+        }
+      }
+      
+      if (isPaid) {
+        totalPaidStudents++
+      } else {
+        totalUnpaidStudents++
+      }
+    })
+
+    // Map students to results format (only for current page)
     const mappedResults = students
       .filter(student => student.results.length > 0)
       .map(student => {
@@ -159,25 +200,20 @@ export async function GET(request: NextRequest) {
         }
       })
 
-    // Calculate summary
-    const paidCount = mappedResults.filter(r => r.paymentStatus === 'PAID').length
-    const unpaidCount = mappedResults.filter(r => r.paymentStatus === 'NOT_PAID').length
-    const publishedCount = mappedResults.filter(r => r.isPublished).length
-
     return NextResponse.json({
       results: mappedResults,
       pagination: {
         page,
         pageSize,
-        total: mappedResults.length, // Use actual results count
-        totalPages: Math.ceil(mappedResults.length / pageSize),
+        total: totalStudentsWithResults,
+        totalPages: Math.ceil(totalStudentsWithResults / pageSize),
       },
       summary: {
-        totalStudents: mappedResults.length,
-        publishedReports: publishedCount,
-        unpublishedReports: mappedResults.length - publishedCount,
-        paidStudents: paidCount,
-        unpaidStudents: unpaidCount,
+        totalStudents: allStudents.length,
+        publishedReports: totalPublishedReports,
+        unpublishedReports: totalStudentsWithResults - totalPublishedReports,
+        paidStudents: totalPaidStudents,
+        unpaidStudents: totalUnpaidStudents,
       },
     })
   } catch (error) {

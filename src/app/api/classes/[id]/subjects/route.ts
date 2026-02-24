@@ -1,86 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
-interface RouteParams {
-  params: Promise<{ id: string }>
-}
-
-// POST: Assign subjects to a class
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const session = await auth();
-    if (!session?.user?.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await auth()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: classId } = await params;
-    const { subjectIds } = await request.json();
-
-    if (!Array.isArray(subjectIds)) {
-      return NextResponse.json(
-        { error: 'subjectIds must be an array' },
-        { status: 400 }
-      );
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 })
     }
 
-    // Verify class belongs to school and is O-Level
-    const classData = await prisma.class.findFirst({
+    const { id: classId } = await params
+
+    // Verify class belongs to school
+    const classExists = await prisma.class.findFirst({
+      where: { id: classId, schoolId }
+    })
+
+    if (!classExists) {
+      return NextResponse.json({ error: 'Class not found' }, { status: 404 })
+    }
+
+    // Get curriculum subjects for this class
+    const curriculumSubjects = await prisma.curriculumSubject.findMany({
       where: {
-        id: classId,
-        schoolId: session.user.schoolId,
+        classId,
+        schoolId,
+        isActive: true
       },
-    });
-
-    if (!classData) {
-      return NextResponse.json({ error: 'Class not found' }, { status: 404 });
-    }
-
-    if (classData.levelType !== 'O_LEVEL') {
-      return NextResponse.json(
-        { error: 'Subject assignment is only available for O-Level classes' },
-        { status: 400 }
-      );
-    }
-
-    // Delete existing assignments
-    await prisma.classSubject.deleteMany({
-      where: { classId },
-    });
-
-    // Create new assignments
-    if (subjectIds.length > 0) {
-      // Verify all subjects exist and belong to school
-      const subjects = await prisma.subject.findMany({
-        where: {
-          id: { in: subjectIds },
-          schoolId: session.user.schoolId,
-          levelType: 'O_LEVEL',
-        },
-      });
-
-      if (subjects.length !== subjectIds.length) {
-        return NextResponse.json(
-          { error: 'Some subjects not found or not O-Level' },
-          { status: 400 }
-        );
+      include: {
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            isActive: true
+          }
+        }
       }
+    })
 
-      await prisma.classSubject.createMany({
-        data: subjectIds.map((subjectId) => ({
-          schoolId: session.user.schoolId!,
-          classId,
-          subjectId,
-        })),
-      });
-    }
+    // Transform to match expected format
+    const classSubjects = curriculumSubjects.map(cs => ({
+      id: cs.id,
+      maxMark: 100, // Default, can be customized later
+      appearsOnReport: true,
+      affectsPosition: true,
+      subject: cs.subject
+    }))
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      classSubjects
+    })
+
   } catch (error) {
-    console.error('Error assigning subjects to class:', error);
+    console.error('Error fetching class subjects:', error)
     return NextResponse.json(
-      { error: 'Failed to assign subjects' },
+      { error: 'Failed to fetch class subjects' },
       { status: 500 }
-    );
+    )
   }
 }

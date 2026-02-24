@@ -3,508 +3,346 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { 
-  ArrowLeft, 
-  AlertCircle, 
   Calendar,
-  Clock,
-  User,
+  ChevronLeft,
+  Download,
+  Filter,
+  Search,
+  Users,
   CheckCircle2,
   XCircle,
-  Clock3,
-  Filter,
-  ChevronDown
+  Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
+import { 
+  cardStyles, 
+  typography, 
+  spacing, 
+  teacherColors, 
+  errorMessages,
+  transitions 
+} from '@/lib/teacher-ui-standards'
+import { cn } from '@/lib/utils'
 
 /**
  * Teacher Attendance History Page
- * Requirements: 5.1, 5.2, 5.3
- * - Display past attendance records in read-only format
- * - Show date, student name, status, and recording timestamp
- * - Prevent modification without admin approval workflow
+ * View past attendance records with filtering and export capabilities
  */
 
-type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE'
-
-interface AttendanceHistoryRecord {
+interface AttendanceRecord {
   id: string
   date: string
-  studentId: string
-  studentName: string
-  admissionNumber: string
-  status: AttendanceStatus
+  classId: string
+  className: string
+  streamName: string | null
+  totalStudents: number
+  presentCount: number
+  absentCount: number
+  lateCount: number
   recordedAt: string
-  recordedBy: string
-  remarks?: string
+  canEdit: boolean
 }
 
-interface ClassAttendanceHistory {
+interface AttendanceFilters {
   classId: string
-  className: string
-  streamName: string | null
-  records: AttendanceHistoryRecord[]
-  summary: {
-    totalRecords: number
-    presentCount: number
-    absentCount: number
-    lateCount: number
-  }
+  startDate: string
+  endDate: string
+  searchTerm: string
 }
 
-interface AssignedClass {
-  classId: string
-  className: string
-  streamName: string | null
-}
-
-interface HistoryData {
-  classes: ClassAttendanceHistory[]
-  dateRange: {
-    startDate: string
-    endDate: string
-  }
-  assignedClasses: AssignedClass[]
-}
-
-export default function TeacherAttendanceHistoryPage() {
-  const [data, setData] = useState<HistoryData | null>(null)
+export default function AttendanceHistoryPage() {
+  const [records, setRecords] = useState<AttendanceRecord[]>([])
+  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>([])
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
-  // Filters
-  const [selectedClassId, setSelectedClassId] = useState<string>('')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
-  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState<AttendanceFilters>({
+    classId: '',
+    startDate: '',
+    endDate: '',
+    searchTerm: '',
+  })
 
-  const fetchHistory = useCallback(async () => {
+  const fetchAttendanceHistory = useCallback(async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (selectedClassId) params.append('classId', selectedClassId)
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
-
-      const response = await fetch(`/api/teacher/attendance/history?${params.toString()}`)
+      const response = await fetch('/api/teacher/attendance/history')
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch attendance history')
+        throw new Error('Failed to fetch attendance history')
       }
-      const historyData: HistoryData = await response.json()
-      setData(historyData)
-      
-      // Set default date range from response if not already set
-      if (!startDate && historyData.dateRange.startDate) {
-        setStartDate(historyData.dateRange.startDate)
-      }
-      if (!endDate && historyData.dateRange.endDate) {
-        setEndDate(historyData.dateRange.endDate)
-      }
+      const data = await response.json()
+      setRecords(data.records || [])
+      setFilteredRecords(data.records || [])
+      setClasses(data.classes || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load attendance history')
+      setError('Unable to load attendance history')
       console.error('Error fetching attendance history:', err)
     } finally {
       setLoading(false)
     }
-  }, [selectedClassId, startDate, endDate])
+  }, [])
 
   useEffect(() => {
-    fetchHistory()
-  }, [fetchHistory])
+    fetchAttendanceHistory()
+  }, [fetchAttendanceHistory])
 
-  const handleApplyFilters = () => {
-    fetchHistory()
-    setShowFilters(false)
+  // Apply filters
+  useEffect(() => {
+    let filtered = [...records]
+
+    if (filters.classId) {
+      filtered = filtered.filter(r => r.classId === filters.classId)
+    }
+
+    if (filters.startDate) {
+      filtered = filtered.filter(r => new Date(r.date) >= new Date(filters.startDate))
+    }
+
+    if (filters.endDate) {
+      filtered = filtered.filter(r => new Date(r.date) <= new Date(filters.endDate))
+    }
+
+    if (filters.searchTerm) {
+      const term = filters.searchTerm.toLowerCase()
+      filtered = filtered.filter(r => 
+        r.className.toLowerCase().includes(term) ||
+        r.streamName?.toLowerCase().includes(term)
+      )
+    }
+
+    setFilteredRecords(filtered)
+  }, [filters, records])
+
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Date', 'Class', 'Total Students', 'Present', 'Absent', 'Late', 'Attendance %']
+    const rows = filteredRecords.map(r => [
+      new Date(r.date).toLocaleDateString(),
+      r.className + (r.streamName ? ` - ${r.streamName}` : ''),
+      r.totalStudents,
+      r.presentCount,
+      r.absentCount,
+      r.lateCount,
+      `${((r.presentCount / r.totalStudents) * 100).toFixed(1)}%`
+    ])
+
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendance-history-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const handleClearFilters = () => {
-    setSelectedClassId('')
-    setStartDate('')
-    setEndDate('')
-  }
-
-  if (loading && !data) {
+  if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6">
-        <div className="flex items-center gap-2">
-          <Link 
-            href="/portals/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Attendance
-          </Link>
-        </div>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">Attendance History</h1>
+      <div className={cn(spacing.section, 'p-4 sm:p-6')}>
+        <SkeletonLoader variant="text" count={2} />
         <SkeletonLoader variant="card" count={4} />
       </div>
     )
   }
 
-  if (error && !data) {
-    return (
-      <div className="p-4 sm:p-6">
-        <div className="mb-4">
-          <Link 
-            href="/portals/teacher/attendance"
-            className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Attendance
-          </Link>
-        </div>
-        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
-          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
-            <AlertCircle className="h-5 w-5" />
-            <span>{error}</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className={cn(spacing.section, 'p-4 sm:p-6')}>
       {/* Header */}
-      <div>
+      <div className="mb-6">
         <Link 
-          href="/portals/teacher/attendance"
-          className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-2"
+          href="/teacher/attendance"
+          className="inline-flex items-center gap-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-4"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" />
           Back to Attendance
         </Link>
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-            Attendance History
-          </h1>
+        
+        <h1 className={cn(typography.h1, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+          Attendance History
+        </h1>
+        <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-2')}>
+          View and export past attendance records
+        </p>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4 mb-6">
+          <p className="text-[var(--chart-red)] dark:text-[var(--danger)]">{error}</p>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className={cn(cardStyles.base, cardStyles.normal, 'p-4 mb-6')}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className={cn(typography.caption, 'block mb-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+              Class
+            </label>
+            <select
+              value={filters.classId}
+              onChange={(e) => setFilters({ ...filters, classId: e.target.value })}
+              className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)]"
+            >
+              <option value="">All Classes</option>
+              {classes.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={cn(typography.caption, 'block mb-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+              Start Date
+            </label>
+            <Input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className={cn(typography.caption, 'block mb-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+              End Date
+            </label>
+            <Input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className={cn(typography.caption, 'block mb-2 text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+              Search
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+              <Input
+                type="text"
+                placeholder="Search class..."
+                value={filters.searchTerm}
+                onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
+          <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
+            Showing {filteredRecords.length} of {records.length} records
+          </p>
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
+            onClick={handleExport}
+            disabled={filteredRecords.length === 0}
+            className="gap-2"
           >
-            <Filter className="h-4 w-4" />
-            Filters
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            <Download className="h-4 w-4" />
+            Export CSV
           </Button>
         </div>
-        {data?.dateRange && (
-          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">
-            Showing records from {formatDate(data.dateRange.startDate)} to {formatDate(data.dateRange.endDate)}
-          </p>
-        )}
       </div>
-
-      {/* Read-only Notice - Requirement 5.3 */}
-      <div className="bg-[var(--info-light)] dark:bg-[var(--info-dark)]/30 border border-[var(--info-light)] dark:border-[var(--info-dark)] rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Clock className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)] mt-0.5" />
-          <div>
-            <p className="font-medium text-[var(--info-dark)] dark:text-[var(--info)]">
-              Read-Only View
-            </p>
-            <p className="text-sm text-[var(--accent-hover)] dark:text-[var(--info)] mt-1">
-              Historical attendance records cannot be modified. Contact administration if corrections are needed.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {/* Class Filter */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
-                Class
-              </label>
-              <select
-                value={selectedClassId}
-                onChange={(e) => setSelectedClassId(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
-              >
-                <option value="">All Classes</option>
-                {data?.assignedClasses.map((cls) => (
-                  <option key={cls.classId} value={cls.classId}>
-                    {cls.className}{cls.streamName ? ` (${cls.streamName})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
-              />
-            </div>
-
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)] mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-md bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" size="sm" onClick={handleClearFilters}>
-              Clear
-            </Button>
-            <Button size="sm" onClick={handleApplyFilters}>
-              Apply Filters
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* History Content */}
-      {data?.classes && data.classes.length > 0 ? (
-        <div className="space-y-6">
-          {data.classes.map((classHistory) => (
-            <ClassHistorySection key={classHistory.classId} classHistory={classHistory} />
-          ))}
-        </div>
-      ) : (
-        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8 text-center">
-          <div className="mx-auto w-12 h-12 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-full flex items-center justify-center mb-4">
-            <Calendar className="h-6 w-6 text-[var(--text-muted)]" />
-          </div>
-          <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2">
-            No Attendance Records
-          </h3>
-          <p className="text-[var(--text-muted)] dark:text-[var(--text-muted)] max-w-sm mx-auto">
-            No attendance records found for the selected date range and filters.
-          </p>
-        </div>
-      )}
-
-      {/* Loading overlay for filter changes */}
-      {loading && data && (
-        <div className="fixed inset-0 bg-[var(--text-primary)]/20 dark:bg-[var(--text-primary)]/40 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg p-4 shadow-lg">
-            <div className="animate-spin h-6 w-6 border-2 border-[var(--chart-blue)] border-t-transparent rounded-full mx-auto" />
-            <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] mt-2">Loading...</p>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-
-/**
- * Format date string for display
- */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-UG', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
-
-/**
- * Format timestamp for display
- */
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp)
-  return date.toLocaleString('en-UG', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-/**
- * Get status icon component
- */
-function StatusIcon({ status }: { status: AttendanceStatus }) {
-  switch (status) {
-    case 'PRESENT':
-      return <CheckCircle2 className="h-4 w-4 text-[var(--chart-green)] dark:text-[var(--success)]" />
-    case 'ABSENT':
-      return <XCircle className="h-4 w-4 text-[var(--chart-red)] dark:text-[var(--danger)]" />
-    case 'LATE':
-      return <Clock3 className="h-4 w-4 text-[var(--chart-yellow)] dark:text-[var(--warning)]" />
-    default:
-      return null
-  }
-}
-
-/**
- * Get status badge styling
- */
-function getStatusBadgeClass(status: AttendanceStatus): string {
-  switch (status) {
-    case 'PRESENT':
-      return 'bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 text-[var(--chart-green)] dark:text-[var(--success)]'
-    case 'ABSENT':
-      return 'bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 text-[var(--chart-red)] dark:text-[var(--danger)]'
-    case 'LATE':
-      return 'bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 text-[var(--warning-dark)] dark:text-[var(--warning)]'
-    default:
-      return 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--text-muted)]'
-  }
-}
-
-interface ClassHistorySectionProps {
-  classHistory: ClassAttendanceHistory
-}
-
-/**
- * Class History Section Component
- * Displays attendance history for a single class
- * Requirements: 5.1, 5.2 - Show date, student name, status, and recording timestamp
- */
-function ClassHistorySection({ classHistory }: ClassHistorySectionProps) {
-  const [expanded, setExpanded] = useState(true)
-
-  // Group records by date for better organization
-  const recordsByDate = classHistory.records.reduce((acc, record) => {
-    if (!acc[record.date]) {
-      acc[record.date] = []
-    }
-    acc[record.date].push(record)
-    return acc
-  }, {} as Record<string, AttendanceHistoryRecord[]>)
-
-  const sortedDates = Object.keys(recordsByDate).sort((a, b) => 
-    new Date(b).getTime() - new Date(a).getTime()
-  )
-
-  return (
-    <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] overflow-hidden">
-      {/* Class Header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--info-light)] dark:bg-[var(--info-dark)]">
-            <Calendar className="h-5 w-5 text-[var(--chart-blue)] dark:text-[var(--chart-blue)]" />
-          </div>
-          <div className="text-left">
-            <h3 className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-              {classHistory.className}
-              {classHistory.streamName && (
-                <span className="text-[var(--text-muted)] dark:text-[var(--text-muted)] font-normal">
-                  {' '}({classHistory.streamName})
-                </span>
-              )}
-            </h3>
-            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-              {classHistory.summary.totalRecords} records
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {/* Summary Stats */}
-          <div className="hidden sm:flex items-center gap-3 text-sm">
-            <span className="flex items-center gap-1 text-[var(--chart-green)] dark:text-[var(--success)]">
-              <CheckCircle2 className="h-4 w-4" />
-              {classHistory.summary.presentCount}
-            </span>
-            <span className="flex items-center gap-1 text-[var(--chart-red)] dark:text-[var(--danger)]">
-              <XCircle className="h-4 w-4" />
-              {classHistory.summary.absentCount}
-            </span>
-            <span className="flex items-center gap-1 text-[var(--chart-yellow)] dark:text-[var(--warning)]">
-              <Clock3 className="h-4 w-4" />
-              {classHistory.summary.lateCount}
-            </span>
-          </div>
-          <ChevronDown 
-            className={`h-5 w-5 text-[var(--text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`} 
-          />
-        </div>
-      </button>
 
       {/* Records List */}
-      {expanded && (
-        <div className="border-t border-[var(--border-default)] dark:border-[var(--border-strong)]">
-          {sortedDates.map((date) => (
-            <div key={date} className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)] last:border-b-0">
-              {/* Date Header */}
-              <div className="px-4 py-2 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)]/50">
-                <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
-                  {formatDate(date)}
-                </span>
-              </div>
+      {filteredRecords.length === 0 ? (
+        <div className={cn(cardStyles.base, cardStyles.normal, 'p-8 text-center')}>
+          <Calendar className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+          <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2')}>
+            No Records Found
+          </h3>
+          <p className={cn(typography.body, 'text-[var(--text-muted)]')}>
+            {filters.classId || filters.startDate || filters.endDate || filters.searchTerm
+              ? 'Try adjusting your filters'
+              : 'No attendance records available yet'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredRecords.map(record => {
+            const attendanceRate = (record.presentCount / record.totalStudents) * 100
 
-              {/* Records for this date */}
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {recordsByDate[date].map((record) => (
-                  <AttendanceRecordRow key={record.id} record={record} />
-                ))}
+            return (
+              <div
+                key={record.id}
+                className={cn(cardStyles.base, cardStyles.normal, 'p-4 hover:shadow-md', transitions.base)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                        {record.className}
+                        {record.streamName && (
+                          <span className="text-[var(--text-secondary)] dark:text-[var(--text-muted)] ml-2">
+                            - {record.streamName}
+                          </span>
+                        )}
+                      </h3>
+                      <span className={cn(
+                        'px-2 py-1 rounded text-xs font-medium',
+                        attendanceRate >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        attendanceRate >= 75 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      )}>
+                        {attendanceRate.toFixed(1)}%
+                      </span>
+                    </div>
+
+                    <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-3')}>
+                      {new Date(record.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-[var(--text-muted)]" />
+                        <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                          {record.totalStudents} Total
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                          {record.presentCount} Present
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-600" />
+                        <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                          {record.absentCount} Absent
+                        </span>
+                      </div>
+                      {record.lateCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-yellow-600" />
+                          <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
+                            {record.lateCount} Late
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {record.canEdit && (
+                    <Link href={`/teacher/attendance/edit/${record.id}`}>
+                      <Button variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
-    </div>
-  )
-}
-
-interface AttendanceRecordRowProps {
-  record: AttendanceHistoryRecord
-}
-
-/**
- * Individual Attendance Record Row
- * Requirements: 5.2 - Show date, student name, status, and recording timestamp
- */
-function AttendanceRecordRow({ record }: AttendanceRecordRowProps) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/30">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center">
-          <User className="h-4 w-4 text-[var(--text-muted)] dark:text-[var(--text-muted)]" />
-        </div>
-        <div>
-          <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm">
-            {record.studentName}
-          </div>
-          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-            {record.admissionNumber}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4">
-        {/* Status Badge */}
-        <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(record.status)}`}>
-          <StatusIcon status={record.status} />
-          {record.status.charAt(0) + record.status.slice(1).toLowerCase()}
-        </span>
-
-        {/* Recording Timestamp */}
-        <div className="hidden sm:block text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] text-right">
-          <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatTimestamp(record.recordedAt)}
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

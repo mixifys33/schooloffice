@@ -19,7 +19,7 @@ import { Toast, useLocalToast } from '@/components/ui/toast'
  * - Export payment report
  */
 
-interface FeeListItem {
+interface FeeListItem extends Record<string, unknown> {
   id: string
   admissionNumber: string
   name: string

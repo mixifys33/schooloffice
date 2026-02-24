@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { SubjectManager } from '@/components/dos/subject-manager';
+import SubjectManager from '@/components/dos/subject-manager';
 
 export const metadata: Metadata = {
   title: 'Subject Management - DOS Portal',

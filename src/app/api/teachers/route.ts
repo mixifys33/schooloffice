@@ -217,50 +217,66 @@ export async function POST(request: NextRequest) {
     // Create teacher using the service (Requirements 1.1-1.6)
     const teacher = await teacherManagementService.createTeacher(schoolId, teacherData, userId)
 
-    // Create StaffResponsibility records for class teacher assignments
-    if (classTeacherFor && Array.isArray(classTeacherFor) && classTeacherFor.length > 0) {
+    // Create TeacherAssignment records for subject-class assignments
+    // We need to create an assignment for each combination of subject and class
+    if (assignedSubjects && Array.isArray(assignedSubjects) && assignedSubjects.length > 0 &&
+        assignedClasses && Array.isArray(assignedClasses) && assignedClasses.length > 0) {
       const { prisma } = await import('@/lib/db')
       
-      for (const classId of classTeacherFor) {
-        try {
-          await prisma.staffResponsibility.create({
-            data: {
-              schoolId,
-              staffId: teacher.id,
-              type: 'CLASS_TEACHING',
-              details: { classId },
-              assignedBy: userId,
-            },
-          })
-        } catch (err) {
-          console.error(`Failed to create CLASS_TEACHING responsibility for class ${classId}:`, err)
+      // Create assignments for each subject-class combination
+      for (const subjectId of assignedSubjects) {
+        for (const classId of assignedClasses) {
+          try {
+            await prisma.teacherAssignment.create({
+              data: {
+                schoolId,
+                teacherId: teacher.id,
+                subjectId: typeof subjectId === 'string' ? subjectId : subjectId.subjectId || subjectId,
+                classId: typeof classId === 'string' ? classId : classId.classId || classId,
+              },
+            })
+          } catch (err) {
+            // Ignore duplicate errors (unique constraint violation)
+            if ((err as any).code !== 'P2002') {
+              console.error(`Failed to create TeacherAssignment for subject ${subjectId} and class ${classId}:`, err)
+            }
+          }
         }
       }
     }
 
-    // Create StaffSubject records for subject assignments
-    if (assignedSubjects && Array.isArray(assignedSubjects) && assignedSubjects.length > 0) {
+    // Update teacher's assigned arrays (for backward compatibility and quick lookups)
+    if ((assignedSubjects && assignedSubjects.length > 0) || 
+        (assignedClasses && assignedClasses.length > 0) || 
+        (assignedStreams && assignedStreams.length > 0) ||
+        (classTeacherFor && classTeacherFor.length > 0)) {
       const { prisma } = await import('@/lib/db')
       
-      for (const assignment of assignedSubjects) {
-        try {
-          // assignment can be either a string (subjectId) or an object { subjectId, classId }
-          const subjectId = typeof assignment === 'string' ? assignment : assignment.subjectId
-          const classId = typeof assignment === 'object' ? assignment.classId : null
-          
-          if (subjectId && classId) {
-            await prisma.staffSubject.create({
-              data: {
-                schoolId,
-                staffId: teacher.id,
-                subjectId,
-                classId,
-              },
-            })
-          }
-        } catch (err) {
-          console.error(`Failed to create StaffSubject assignment:`, err)
-        }
+      const updateData: any = {}
+      
+      if (assignedSubjects && Array.isArray(assignedSubjects)) {
+        updateData.assignedSubjectIds = assignedSubjects.map((a: any) => 
+          typeof a === 'string' ? a : a.subjectId
+        ).filter((id: string) => id)
+      }
+      
+      if (assignedClasses && Array.isArray(assignedClasses)) {
+        updateData.assignedClassIds = assignedClasses
+      }
+      
+      if (assignedStreams && Array.isArray(assignedStreams)) {
+        updateData.assignedStreamIds = assignedStreams
+      }
+      
+      if (classTeacherFor && Array.isArray(classTeacherFor)) {
+        updateData.classTeacherForIds = classTeacherFor
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await prisma.teacher.update({
+          where: { id: teacher.id },
+          data: updateData,
+        })
       }
     }
 

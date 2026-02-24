@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -91,7 +91,7 @@ interface AssignedClassSubject {
   subjectName: string
 }
 
-export default function CAEntryPage() {
+function CAEntryPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const classIdParam = searchParams.get('classId')
@@ -863,5 +863,12 @@ export default function CAEntryPage() {
         </div>
       )}
     </div>
+  )
+}
+export default function CAEntryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <CAEntryPageContent />
+    </Suspense>
   )
 }

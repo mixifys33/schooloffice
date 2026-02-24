@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role } from '@/types/enums'
 
 /**
- * ASSIGNMENT MANAGEMENT API
- * 
- * Allows Admin and School Admin to create, update, and delete teaching assignments.
- * This is where the truth table is maintained.
- * 
- * Core Principle: OWNERSHIP
- * - Admin owns staffing decisions
- * - DoS owns academic structure but cannot assign staff
- * - Teachers cannot negotiate assignments
+ * POST /api/staff/assignments/manage
+ * Create a new staff assignment (teacher to class/subject)
  */
-
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
@@ -23,165 +14,153 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only Admin and School Admin can create assignments
-    const allowedRoles = [Role.ADMIN, Role.SCHOOL_ADMIN]
-    if (!allowedRoles.includes(session.user.role as Role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
-    }
-
     const schoolId = session.user.schoolId
     if (!schoolId) {
-      return NextResponse.json({ error: 'School context required' }, { status: 400 })
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
     }
 
-    const { teacherId, classId, subjectId, isPrimary } = await request.json()
+    // Check if user has permission (admin or school admin)
+    const userRole = session.user.role
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'SCHOOL_ADMIN' && userRole !== 'DEPUTY') {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage assignments' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { teacherId, classId, subjectId, isPrimary } = body
 
     if (!teacherId || !classId || !subjectId) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: teacherId, classId, subjectId' 
-      }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Teacher, class, and subject are required' },
+        { status: 400 }
+      )
     }
 
-    // Get current term
-    const currentAcademicYear = await prisma.academicYear.findFirst({
-      where: { schoolId, isCurrent: true }
-    })
-
-    if (!currentAcademicYear) {
-      return NextResponse.json({ error: 'No current academic year found' }, { status: 400 })
-    }
-
-    const currentTerm = await prisma.term.findFirst({
-      where: { academicYearId: currentAcademicYear.id, isCurrent: true }
-    })
-
-    if (!currentTerm) {
-      return NextResponse.json({ error: 'No current term found' }, { status: 400 })
-    }
-
-    // Verify the teacher belongs to this school
-    const teacher = await prisma.staff.findFirst({
-      where: { id: teacherId, schoolId, isActive: true }
+    // Verify teacher exists and belongs to this school
+    const teacher = await prisma.teacher.findFirst({
+      where: {
+        id: teacherId,
+        schoolId,
+      },
     })
 
     if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found or inactive' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Teacher not found' },
+        { status: 404 }
+      )
     }
 
-    // Verify the class belongs to this school
-    const classData = await prisma.class.findFirst({
-      where: { id: classId, schoolId, isActive: true }
+    // Verify class exists and belongs to this school
+    const classExists = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        schoolId,
+      },
     })
 
-    if (!classData) {
-      return NextResponse.json({ error: 'Class not found or inactive' }, { status: 400 })
+    if (!classExists) {
+      return NextResponse.json(
+        { error: 'Class not found' },
+        { status: 404 }
+      )
     }
 
-    // Verify the curriculum subject exists (class-subject relationship)
-    const curriculumSubject = await prisma.curriculumSubject.findFirst({
+    // Verify subject exists and belongs to this school
+    const subjectExists = await prisma.subject.findFirst({
       where: {
+        id: subjectId,
+        schoolId,
+      },
+    })
+
+    if (!subjectExists) {
+      return NextResponse.json(
+        { error: 'Subject not found' },
+        { status: 404 }
+      )
+    }
+
+    // Check if assignment already exists
+    const existingAssignment = await prisma.teacherAssignment.findFirst({
+      where: {
+        teacherId,
         classId,
         subjectId,
-        isActive: true
+        schoolId,
       },
-      include: {
-        subject: true
-      }
-    })
-
-    if (!curriculumSubject) {
-      return NextResponse.json({ 
-        error: 'This subject is not assigned to this class' 
-      }, { status: 400 })
-    }
-
-    if (!curriculumSubject.subject.isActive) {
-      return NextResponse.json({ 
-        error: 'Inactive subjects cannot be assigned' 
-      }, { status: 400 })
-    }
-
-    // Check for existing assignment
-    const existingAssignment = await prisma.staffSubject.findFirst({
-      where: {
-        staffId: teacherId,
-        curriculumSubjectId: curriculumSubject.id,
-        termId: currentTerm.id
-      }
     })
 
     if (existingAssignment) {
-      return NextResponse.json({ 
-        error: 'This teacher is already assigned to this subject' 
-      }, { status: 400 })
-    }
-
-    // If this is a primary assignment, check for conflicts
-    if (isPrimary) {
-      const existingPrimary = await prisma.staffSubject.findFirst({
-        where: {
-          curriculumSubjectId: curriculumSubject.id,
-          termId: currentTerm.id,
-          isPrimary: true
-        },
-        include: {
-          staff: true
-        }
-      })
-
-      if (existingPrimary) {
-        return NextResponse.json({ 
-          error: `${existingPrimary.staff.firstName} ${existingPrimary.staff.lastName} is already the primary teacher for this subject` 
-        }, { status: 400 })
-      }
+      return NextResponse.json(
+        { error: 'This assignment already exists' },
+        { status: 400 }
+      )
     }
 
     // Create the assignment
-    const assignment = await prisma.staffSubject.create({
+    const assignment = await prisma.teacherAssignment.create({
       data: {
-        staffId: teacherId,
-        curriculumSubjectId: curriculumSubject.id,
-        termId: currentTerm.id,
-        isPrimary: isPrimary || false,
-        createdBy: session.user.id
+        schoolId,
+        teacherId,
+        classId,
+        subjectId,
       },
       include: {
-        staff: {
+        teacher: {
           select: {
             firstName: true,
             lastName: true,
-            employeeNumber: true
-          }
+          },
         },
-        curriculumSubject: {
-          include: {
-            subject: {
-              select: {
-                name: true,
-                code: true
-              }
-            },
-            class: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
-      }
+        class: {
+          select: {
+            name: true,
+          },
+        },
+        subject: {
+          select: {
+            name: true,
+            code: true,
+          },
+        },
+      },
+    })
+
+    // Also update the teacher's assigned arrays for quick lookups
+    // Only add if not already present
+    const currentTeacher = await prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: {
+        assignedClassIds: true,
+        assignedSubjectIds: true,
+      },
+    })
+
+    const updatedClassIds = currentTeacher?.assignedClassIds || []
+    const updatedSubjectIds = currentTeacher?.assignedSubjectIds || []
+
+    if (!updatedClassIds.includes(classId)) {
+      updatedClassIds.push(classId)
+    }
+    if (!updatedSubjectIds.includes(subjectId)) {
+      updatedSubjectIds.push(subjectId)
+    }
+
+    await prisma.teacher.update({
+      where: { id: teacherId },
+      data: {
+        assignedClassIds: updatedClassIds,
+        assignedSubjectIds: updatedSubjectIds,
+      },
     })
 
     return NextResponse.json({
       message: 'Assignment created successfully',
-      assignment: {
-        id: assignment.id,
-        teacher: `${assignment.staff.firstName} ${assignment.staff.lastName}`,
-        class: assignment.curriculumSubject.class.name,
-        subject: assignment.curriculumSubject.subject.name,
-        isPrimary: assignment.isPrimary
-      }
-    })
-
+      assignment,
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating assignment:', error)
     return NextResponse.json(
@@ -191,6 +170,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * DELETE /api/staff/assignments/manage
+ * Delete a staff assignment
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth()
@@ -199,76 +182,115 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only Admin and School Admin can delete assignments
-    const allowedRoles = [Role.ADMIN, Role.SCHOOL_ADMIN]
-    if (!allowedRoles.includes(session.user.role as Role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    }
+
+    // Check if user has permission
+    const userRole = session.user.role
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'SCHOOL_ADMIN' && userRole !== 'DEPUTY') {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage assignments' },
+        { status: 403 }
+      )
     }
 
     const { searchParams } = new URL(request.url)
     const assignmentId = searchParams.get('id')
 
     if (!assignmentId) {
-      return NextResponse.json({ error: 'Assignment ID required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Assignment ID is required' },
+        { status: 400 }
+      )
     }
 
-    // For the composite ID format "teacherId-classId-subjectId", we need to parse it
-    const parts = assignmentId.split('-')
-    if (parts.length !== 3) {
-      return NextResponse.json({ error: 'Invalid assignment ID format' }, { status: 400 })
-    }
-
-    const [teacherId, classId, subjectId] = parts
-
-    // Get current term
-    const currentAcademicYear = await prisma.academicYear.findFirst({
-      where: { schoolId: session.user.schoolId, isCurrent: true }
-    })
-
-    if (!currentAcademicYear) {
-      return NextResponse.json({ error: 'No current academic year found' }, { status: 400 })
-    }
-
-    const currentTerm = await prisma.term.findFirst({
-      where: { academicYearId: currentAcademicYear.id, isCurrent: true }
-    })
-
-    if (!currentTerm) {
-      return NextResponse.json({ error: 'No current term found' }, { status: 400 })
-    }
-
-    // Find the curriculum subject
-    const curriculumSubject = await prisma.curriculumSubject.findFirst({
-      where: { classId, subjectId }
-    })
-
-    if (!curriculumSubject) {
-      return NextResponse.json({ error: 'Curriculum subject not found' }, { status: 400 })
-    }
-
-    // Find and delete the assignment
-    const assignment = await prisma.staffSubject.findFirst({
+    // Verify assignment exists and belongs to this school
+    const assignment = await prisma.teacherAssignment.findFirst({
       where: {
-        staffId: teacherId,
-        curriculumSubjectId: curriculumSubject.id,
-        termId: currentTerm.id
-      }
+        id: assignmentId,
+        schoolId,
+      },
     })
 
     if (!assignment) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Assignment not found' },
+        { status: 404 }
+      )
     }
 
-    await prisma.staffSubject.delete({
-      where: { id: assignment.id }
+    // Delete the assignment
+    await prisma.teacherAssignment.delete({
+      where: { id: assignmentId },
     })
 
-    return NextResponse.json({ message: 'Assignment deleted successfully' })
-
+    return NextResponse.json({
+      message: 'Assignment deleted successfully',
+    })
   } catch (error) {
     console.error('Error deleting assignment:', error)
     return NextResponse.json(
       { error: 'Failed to delete assignment' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * GET /api/staff/assignments/manage
+ * Get all staff assignments for the school
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    }
+
+    const assignments = await prisma.teacherAssignment.findMany({
+      where: { schoolId },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        subject: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+      orderBy: [
+        { teacher: { lastName: 'asc' } },
+        { class: { name: 'asc' } },
+        { subject: { name: 'asc' } },
+      ],
+    })
+
+    return NextResponse.json({ assignments })
+  } catch (error) {
+    console.error('Error fetching assignments:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch assignments' },
       { status: 500 }
     )
   }

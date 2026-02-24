@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get staff record for the user (which includes teacher functionality)
-    const staff = await prisma.staff.findFirst({
+    // Get teacher record for the user
+    const teacher = await prisma.teacher.findFirst({
       where: {
         schoolId,
         userId: session.user.id,
@@ -84,24 +84,24 @@ export async function GET(request: NextRequest) {
         id: true,
         firstName: true,
         lastName: true,
-        role: true,
-        status: true,
+        employmentStatus: true,
+        classTeacherForIds: true,
       },
     })
 
-    if (!staff) {
+    if (!teacher) {
       return NextResponse.json(
         { 
-          error: 'No staff profile linked to this account',
-          details: 'Your staff profile is not set up. Please contact your school administrator.'
+          error: 'No teacher profile linked to this account',
+          details: 'Your teacher profile is not set up. Please contact your school administrator.'
         },
         { status: 404 }
       )
     }
 
-    // Get staff subject assignments
-    const staffSubjects = await prisma.staffSubject.findMany({
-      where: { staffId: staff.id },
+    // Get teacher assignments (subject-class combinations)
+    const teacherAssignments = await prisma.teacherAssignment.findMany({
+      where: { teacherId: teacher.id },
       include: {
         subject: { select: { id: true, name: true } },
         class: { 
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Requirements: 3.1, 3.4 - Return only classes explicitly assigned to the teacher
-    if (staffSubjects.length === 0) {
+    if (teacherAssignments.length === 0) {
       return NextResponse.json({ classes: [] })
     }
 
@@ -128,26 +128,26 @@ export async function GET(request: NextRequest) {
     // Requirements: 3.2 - Include subject name, class name, student count
     const assignedClasses: AssignedClassData[] = []
 
-    for (const staffSubject of staffSubjects) {
+    for (const assignment of teacherAssignments) {
       // Get student count for this class
       const studentCount = await prisma.student.count({
         where: {
-          classId: staffSubject.classId,
+          classId: assignment.classId,
           status: StudentStatus.ACTIVE,
         },
       })
 
-      // Check if staff is class teacher for this class (simplified check)
-      const isClassTeacher = false // TODO: Implement proper class teacher check
+      // Check if teacher is class teacher for this class
+      const isClassTeacher = teacher.classTeacherForIds?.includes(assignment.classId) || false
 
       assignedClasses.push({
-        id: `${staffSubject.classId}-${staffSubject.subjectId}`,
-        classId: staffSubject.classId,
-        className: staffSubject.class.name,
-        streamName: staffSubject.class.streams.length > 0 ? staffSubject.class.streams[0].name : null,
+        id: `${assignment.classId}-${assignment.subjectId}`,
+        classId: assignment.classId,
+        className: assignment.class.name,
+        streamName: assignment.class.streams.length > 0 ? assignment.class.streams[0].name : null,
         subject: {
-          id: staffSubject.subject.id,
-          name: staffSubject.subject.name,
+          id: assignment.subject.id,
+          name: assignment.subject.name,
         },
         studentCount,
         isClassTeacher,

@@ -89,6 +89,7 @@ export async function POST(
     // Create grade range
     const gradeRange = await prisma.gradeRange.create({
       data: {
+        schoolId,
         gradingSystemId,
         grade: grade.trim(),
         minScore: parseFloat(minScore.toString()),

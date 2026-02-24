@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -94,7 +94,7 @@ interface AssignedClassSubject {
   subjectName: string
 }
 
-export default function ClassTeacherCAEntryPage() {
+function ClassTeacherCAEntryPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const classIdParam = searchParams.get('classId')
@@ -1299,5 +1299,12 @@ export default function ClassTeacherCAEntryPage() {
         </div>
       )}
     </div>
+  )
+}
+export default function ClassTeacherCAEntryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <ClassTeacherCAEntryPageContent />
+    </Suspense>
   )
 }

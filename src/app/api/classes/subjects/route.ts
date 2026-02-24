@@ -29,11 +29,10 @@ export async function GET(request: NextRequest) {
       where: {
         schoolId,
         isActive: true,
-        class: {
-          isActive: true
-        },
         subject: {
-          isActive: true
+          is: {
+            isActive: true
+          }
         }
       },
       select: {

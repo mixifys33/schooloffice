@@ -86,10 +86,37 @@ export async function GET(request: NextRequest) {
       });
 
       if (!currentAcademicYear) {
-        return NextResponse.json(
-          { error: 'No current academic year found' },
-          { status: 404 }
-        );
+        // If no current academic year, get the most recent one
+        const latestAcademicYear = await prisma.academicYear.findFirst({
+          where: { schoolId },
+          select: { id: true },
+          orderBy: { startDate: 'desc' },
+        });
+
+        if (!latestAcademicYear) {
+          return NextResponse.json(
+            { error: 'No academic years found. Please create an academic year first.' },
+            { status: 404 }
+          );
+        }
+
+        const terms = await prisma.term.findMany({
+          where: {
+            academicYearId: latestAcademicYear.id,
+          },
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+          },
+          orderBy: { startDate: 'asc' },
+        });
+
+        return NextResponse.json({ 
+          terms,
+          warning: 'No current academic year set. Showing terms from the most recent academic year.'
+        });
       }
 
       const terms = await prisma.term.findMany({

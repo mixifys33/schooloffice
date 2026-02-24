@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ interface NewSubject {
   prerequisites: string[];
 }
 
-export default function AddSubjectPage() {
+function AddSubjectPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subjectType = searchParams.get('type') as 'core' | 'elective' || 'core';
@@ -159,4 +159,11 @@ export default function AddSubjectPage() {
       </Card>
     </div>
   );
+}
+export default function AddSubjectPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <AddSubjectPageContent />
+    </Suspense>
+  )
 }

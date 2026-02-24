@@ -281,45 +281,6 @@ export default function DoSDashboard() {
         </Button>
       </div>
 
-      {/* Academic Status Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-        <StatCard
-          title="Curriculum"
-          value={`${academicStatus.curriculumCompliance}%`}
-          subtitle="Classes approved"
-          color={academicStatus.curriculumCompliance >= 90 ? "green" : academicStatus.curriculumCompliance >= 70 ? "yellow" : "red"}
-          icon={<BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />}
-        />
-        <StatCard
-          title="Assessments"
-          value={`${academicStatus.assessmentCompletion}%`}
-          subtitle="CA completion"
-          color={academicStatus.assessmentCompletion >= 90 ? "green" : academicStatus.assessmentCompletion >= 70 ? "yellow" : "red"}
-          icon={<CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />}
-        />
-        <StatCard
-          title="Exams"
-          value={`${academicStatus.examProgress}%`}
-          subtitle="Marking progress"
-          color={academicStatus.examProgress >= 90 ? "green" : academicStatus.examProgress >= 70 ? "yellow" : "red"}
-          icon={<GraduationCap className="h-4 w-4 sm:h-5 sm:w-5" />}
-        />
-        <StatCard
-          title="Reports"
-          value={`${academicStatus.reportReadiness}%`}
-          subtitle="Ready for generation"
-          color={academicStatus.reportReadiness >= 90 ? "green" : academicStatus.reportReadiness >= 70 ? "yellow" : "red"}
-          icon={<FileText className="h-4 w-4 sm:h-5 sm:w-5" />}
-        />
-        <StatCard
-          title="Promotion"
-          value={`${academicStatus.promotionReadiness}%`}
-          subtitle="Decisions ready"
-          color={academicStatus.promotionReadiness >= 90 ? "green" : academicStatus.promotionReadiness >= 70 ? "yellow" : "red"}
-          icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
-        />
-      </div>
-
       {/* Critical Alerts */}
       {criticalAlerts.length > 0 && (
         <Card className="border-[var(--danger-light)] bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] dark:border-[var(--danger-dark)]">
@@ -360,63 +321,7 @@ export default function DoSDashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pending Approvals */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Pending DoS Approvals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {pendingApprovals.assessmentPlans > 0 && (
-                <Link href="/dos/assessments" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-[var(--chart-green)]" />
-                    <span>Assessment Plans</span>
-                  </div>
-                  <Badge variant="outline">{pendingApprovals.assessmentPlans}</Badge>
-                </Link>
-              )}
-              {pendingApprovals.examResults > 0 && (
-                <Link href="/dos/exams" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-[var(--chart-purple)]" />
-                    <span>Exam Results</span>
-                  </div>
-                  <Badge variant="outline">{pendingApprovals.examResults}</Badge>
-                </Link>
-              )}
-              {pendingApprovals.finalScores > 0 && (
-                <Link href="/dos/scores" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
-                  <div className="flex items-center gap-2">
-                    <Calculator className="h-4 w-4 text-[var(--chart-yellow)]" />
-                    <span>Final Scores</span>
-                  </div>
-                  <Badge variant="outline">{pendingApprovals.finalScores}</Badge>
-                </Link>
-              )}
-              {pendingApprovals.reportCards > 0 && (
-                <Link href="/dos/reports" className="flex items-center justify-between p-3 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)] rounded">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-[var(--chart-red)]" />
-                    <span>Report Cards</span>
-                  </div>
-                  <Badge variant="outline">{pendingApprovals.reportCards}</Badge>
-                </Link>
-              )}
-              {Object.values(pendingApprovals).every(count => count === 0) && (
-                <div className="text-center py-4 text-[var(--text-muted)]">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-[var(--success)]" />
-                  <p>All approvals up to date</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {/* Class Status Overview */}
         <Card>
           <CardHeader>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -34,7 +34,7 @@ const ISSUE_OPTIONS = [
   { value: 'other', label: 'Other issue' },
 ]
 
-export default function ContactAdminPage() {
+function ContactAdminForm() {
   const searchParams = useSearchParams()
   
   const [formData, setFormData] = useState<FormData>({
@@ -259,5 +259,26 @@ export default function ContactAdminPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+
+// Wrapper component with Suspense boundary
+export default function ContactAdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full">
+        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg shadow-sm border border-[var(--border-default)] dark:border-[var(--border-strong)] p-8">
+          <div className="text-center">
+            <div className="animate-pulse">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ContactAdminForm />
+    </Suspense>
   )
 }

@@ -1,160 +1,124 @@
-/**
- * Teacher Attendance API Route
- * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
- * - GET: Get assigned classes with attendance status for today
- * - Validate teacher assignment before allowing entry
- * - Implement time-based locking based on cutoff configuration
- */
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { Role } from '@/types/enums'
-import { schoolSettingsService, AttendanceSettings } from '@/services/school-settings.service'
-
-/**
- * Check if current time is past the attendance cutoff time
- */
-function isAfterCutoffTime(cutoffTime: string): boolean {
-  const now = new Date()
-  const [hours, minutes] = cutoffTime.split(':').map(Number)
-  
-  const cutoff = new Date()
-  cutoff.setHours(hours, minutes, 0, 0)
-  
-  return now > cutoff
-}
 
 /**
  * GET /api/teacher/attendance
- * Get assigned classes with attendance status for today
- * Requirements: 4.1, 4.6 - Display assigned classes, validate teacher assignment
+ * Get teacher's assigned classes with attendance status for today
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth()
+    
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userRole = session.user.activeRole || session.user.role
-    if (userRole !== Role.TEACHER && userRole !== Role.SCHOOL_ADMIN && userRole !== Role.DEPUTY) {
-      return NextResponse.json(
-        { error: 'Access denied. Teacher role required.' },
-        { status: 403 }
-      )
-    }
-
+    const userId = session.user.id
     const schoolId = session.user.schoolId
+
     if (!schoolId) {
-      return NextResponse.json(
-        { error: 'No school context found' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
     }
 
-    // Get staff/teacher record
-    const staff = await prisma.staff.findFirst({
+    // Get teacher record
+    const teacher = await prisma.teacher.findFirst({
       where: {
-        userId: session.user.id,
+        userId,
         schoolId,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        canTakeAttendance: true,
+        teacherAssignments: {
+          include: {
+            class: true,
+          },
+        },
+      },
     })
 
-    if (!staff) {
-      return NextResponse.json(
-        { error: 'No staff profile linked to this account' },
-        { status: 404 }
-      )
+    if (!teacher) {
+      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    // Get attendance settings for lock state
-    // Requirements: 4.3, 4.4, 4.5 - Time-based locking
-    const attendanceSettings = await schoolSettingsService.getSettings<AttendanceSettings>(
-      schoolId,
-      'attendance'
-    )
+    if (!teacher.canTakeAttendance) {
+      return NextResponse.json({ 
+        error: 'You do not have permission to take attendance',
+        classes: [],
+        lockState: {
+          isLocked: true,
+          cutoffTime: '',
+          canEdit: false,
+          message: 'You do not have permission to take attendance. Contact your administrator.',
+        }
+      }, { status: 403 })
+    }
 
-    const cutoffTime = attendanceSettings.absentCutoffTime || '17:00'
-    const isLocked = isAfterCutoffTime(cutoffTime)
+    // Get unique classes from teacher assignments
+    const uniqueClasses = new Map()
+    teacher.teacherAssignments.forEach(ta => {
+      if (!uniqueClasses.has(ta.classId)) {
+        uniqueClasses.set(ta.classId, ta.class)
+      }
+    })
 
-    // Get today's date normalized to start of day
+    // Get today's date (normalized to start of day)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Get classes assigned to this teacher via StaffClass
-    // Requirements: 4.6 - Only assigned classes
-    const staffClasses = await prisma.staffClass.findMany({
-      where: { staffId: staff.id },
-      include: {
-        class: {
-          include: {
-            streams: true,
-            _count: {
-              select: { students: { where: { status: 'ACTIVE' } } }
-            }
-          }
+    // Check if attendance is locked (after cutoff time, e.g., 5 PM)
+    const now = new Date()
+    const cutoffHour = 17 // 5 PM
+    const cutoffTime = new Date(today)
+    cutoffTime.setHours(cutoffHour, 0, 0, 0)
+    
+    const isLocked = now > cutoffTime
+    const canEdit = !isLocked
+
+    // Build class list with attendance status
+    const classes = await Promise.all(
+      Array.from(uniqueClasses.values()).map(async (cls) => {
+        // Get student count
+        const studentCount = await prisma.student.count({
+          where: {
+            classId: cls.id,
+            status: 'ACTIVE',
+          },
+        })
+
+        // Check if attendance has been taken today
+        const attendanceCount = await prisma.attendance.count({
+          where: {
+            classId: cls.id,
+            date: today,
+            recordedBy: teacher.id,
+          },
+        })
+
+        const attendanceStatus = attendanceCount > 0 ? 'done' : (isLocked ? 'locked' : 'not_taken')
+
+        return {
+          id: cls.id,
+          classId: cls.id,
+          className: cls.name,
+          streamName: null,
+          studentCount,
+          attendanceStatus,
+          isLocked,
+          lockMessage: isLocked ? `Attendance entry closed at ${cutoffHour}:00. Contact admin to reopen.` : undefined,
         }
-      }
-    })
-
-    // Get attendance records for today for these classes
-    const classIds = staffClasses.map(sc => sc.classId)
-    const todayAttendance = await prisma.attendance.findMany({
-      where: {
-        classId: { in: classIds },
-        date: today,
-      },
-      select: {
-        classId: true,
-        studentId: true,
-      }
-    })
-
-    // Group attendance by class to determine status
-    const attendanceByClass = new Map<string, Set<string>>()
-    todayAttendance.forEach(record => {
-      if (!attendanceByClass.has(record.classId)) {
-        attendanceByClass.set(record.classId, new Set())
-      }
-      attendanceByClass.get(record.classId)!.add(record.studentId)
-    })
-
-    // Build response with attendance status
-    const classes = staffClasses.map(sc => {
-      const studentCount = sc.class._count.students
-      const attendedStudents = attendanceByClass.get(sc.classId)?.size || 0
-      const attendanceStatus = attendedStudents >= studentCount && studentCount > 0 
-        ? 'done' 
-        : isLocked 
-          ? 'locked' 
-          : 'not_taken'
-
-      return {
-        id: sc.id,
-        classId: sc.classId,
-        className: sc.class.name,
-        streamName: sc.class.streams[0]?.name || null,
-        studentCount,
-        attendanceStatus,
-        isLocked: isLocked && attendanceStatus !== 'done',
-        lockMessage: isLocked && attendanceStatus !== 'done' 
-          ? `Attendance cutoff time (${cutoffTime}) has passed. Contact administration for approval.`
-          : undefined
-      }
-    })
+      })
+    )
 
     return NextResponse.json({
       classes,
       lockState: {
         isLocked,
-        cutoffTime,
-        canEdit: !isLocked,
-        message: isLocked 
-          ? `Attendance cutoff time (${cutoffTime}) has passed. Contact administration for approval to make changes.`
-          : undefined
+        cutoffTime: cutoffTime.toISOString(),
+        canEdit,
+        message: isLocked ? `Attendance entry is locked after ${cutoffHour}:00. Contact your administrator to reopen.` : undefined,
       },
-      date: today.toISOString()
     })
   } catch (error) {
     console.error('Error fetching teacher attendance:', error)

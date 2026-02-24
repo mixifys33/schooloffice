@@ -127,6 +127,20 @@ export default function ProfileWorkloadPage() {
 
   const { profile, workload, workloadStats } = data
 
+  // Additional safety checks
+  if (!profile || !workloadStats) {
+    return (
+      <div className="p-4 sm:p-6">
+        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)] border border-[var(--danger-light)] dark:border-[var(--danger-dark)] rounded-lg p-4">
+          <div className="flex items-center gap-2 text-[var(--chart-red)] dark:text-[var(--danger)]">
+            <AlertCircle className="h-5 w-5" />
+            <span>Profile data is incomplete</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={cn(spacing.section, 'p-4 sm:p-6')}>
       {/* Success/Error Messages */}
@@ -150,44 +164,44 @@ export default function ProfileWorkloadPage() {
               <div className="text-center">
                 <div className="mx-auto mb-4">
                   <div className="h-24 w-24 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center text-xl font-medium text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-                    {profile.firstName[0]}{profile.lastName[0]}
+                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
                   </div>
                 </div>
                 
                 <h2 className={cn(typography.h2, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                  {profile.firstName} {profile.lastName}
+                  {profile?.firstName} {profile?.lastName}
                 </h2>
                 <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-4')}>
-                  {profile.position} • {profile.department}
+                  {profile?.position} • {profile?.department}
                 </p>
                 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
                     <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Email</span>
-                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.email}</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile?.email}</span>
                   </div>
                   
                   <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
                     <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Phone</span>
-                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.phone}</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile?.phone}</span>
                   </div>
                   
                   <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
                     <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Address</span>
-                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile.address}</span>
+                    <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>{profile?.address}</span>
                   </div>
                   
                   <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
                     <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Hire Date</span>
                     <span className={cn(typography.body, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                      {new Date(profile.hireDate).toLocaleDateString('en-UG', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      {profile?.hireDate && new Date(profile.hireDate).toLocaleDateString('en-UG', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between py-2">
                     <span className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>Qualifications</span>
                     <div className="text-right">
-                      {profile.qualifications.map((qual, idx) => (
+                      {profile?.qualifications?.map((qual, idx) => (
                         <Badge key={idx} variant="outline" className="ml-1">
                           {qual}
                         </Badge>

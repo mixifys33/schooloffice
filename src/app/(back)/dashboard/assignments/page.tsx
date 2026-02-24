@@ -37,6 +37,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/hooks/use-toast'
 
 /**
  * ASSIGNMENTS PAGE - ADMIN DASHBOARD
@@ -103,6 +104,7 @@ interface NewAssignmentData {
 
 export default function AssignmentsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -110,6 +112,8 @@ export default function AssignmentsPage() {
   const [showNewAssignmentModal, setShowNewAssignmentModal] = useState(false)
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'active' | 'inactive' | 'assigned' | 'unassigned' | 'conflict'>('all')
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc' | 'desc'} | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
   
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([])
   const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>([])
@@ -191,24 +195,47 @@ export default function AssignmentsPage() {
 
       // Load subjects
       const subjectsResponse = await fetch('/api/subjects?active=true')
+      console.log('📖 Subjects API response status:', subjectsResponse.status)
       if (subjectsResponse.ok) {
         const subjectsData = await subjectsResponse.json()
-        if (subjectsData.subjects && Array.isArray(subjectsData.subjects)) {
+        console.log('📖 Subjects API response data:', subjectsData)
+        
+        // The API returns an array directly, not wrapped in an object
+        if (Array.isArray(subjectsData)) {
+          console.log('✅ Setting subjects:', subjectsData.length)
+          setSubjects(subjectsData.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            code: s.code
+          })))
+        } else if (subjectsData.subjects && Array.isArray(subjectsData.subjects)) {
+          // Fallback for wrapped response
+          console.log('✅ Setting subjects (wrapped):', subjectsData.subjects.length)
           setSubjects(subjectsData.subjects.map((s: any) => ({
             id: s.id,
             name: s.name,
             code: s.code
           })))
+        } else {
+          console.warn('⚠️ Unexpected subjects response format:', subjectsData)
         }
+      } else {
+        console.error('❌ Failed to fetch subjects:', subjectsResponse.status)
       }
 
       // Load class-subject relationships
       const classSubjectsResponse = await fetch('/api/classes/subjects')
       if (classSubjectsResponse.ok) {
         const classSubjectsData = await classSubjectsResponse.json()
+        console.log('📊 Class-Subject Relationships Response:', classSubjectsData)
         if (classSubjectsData.relationships && Array.isArray(classSubjectsData.relationships)) {
+          console.log('✅ Setting classSubjects:', classSubjectsData.relationships)
           setClassSubjects(classSubjectsData.relationships)
+        } else {
+          console.warn('⚠️ No relationships array found in response')
         }
+      } else {
+        console.error('❌ Failed to fetch class-subjects:', classSubjectsResponse.status)
       }
 
     } catch (err) {
@@ -223,6 +250,11 @@ export default function AssignmentsPage() {
 
   const handleCreateAssignment = async () => {
     try {
+      setIsCreating(true)
+      setError(null)
+
+      console.log('📤 Creating assignment with data:', newAssignment)
+
       const response = await fetch('/api/staff/assignments/manage', {
         method: 'POST',
         headers: {
@@ -231,11 +263,22 @@ export default function AssignmentsPage() {
         body: JSON.stringify(newAssignment)
       })
 
+      console.log('📥 Response status:', response.status)
+
       const result = await response.json()
+      console.log('📥 Response data:', result)
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create assignment')
+        throw new Error(result.error || result.message || 'Failed to create assignment')
       }
+
+      // Show success toast
+      toast({
+        title: 'Success',
+        description: 'Assignment created successfully',
+        variant: 'success',
+        duration: 3000
+      })
 
       // Reset form and close modal
       setNewAssignment({
@@ -250,8 +293,19 @@ export default function AssignmentsPage() {
       await loadAssignments()
 
     } catch (err) {
-      console.error('Error creating assignment:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create assignment')
+      console.error('❌ Error creating assignment:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create assignment'
+      setError(errorMessage)
+      
+      // Show error toast
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000
+      })
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -261,6 +315,9 @@ export default function AssignmentsPage() {
     }
 
     try {
+      setIsDeleting(assignmentId)
+      setError(null)
+
       const response = await fetch(`/api/staff/assignments/manage?id=${assignmentId}`, {
         method: 'DELETE'
       })
@@ -271,12 +328,31 @@ export default function AssignmentsPage() {
         throw new Error(result.error || 'Failed to delete assignment')
       }
 
+      // Show success toast
+      toast({
+        title: 'Success',
+        description: 'Assignment removed successfully',
+        variant: 'success',
+        duration: 3000
+      })
+
       // Reload assignments
       await loadAssignments()
 
     } catch (err) {
       console.error('Error deleting assignment:', err)
-      setError(err instanceof Error ? err.message : 'Failed to delete assignment')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete assignment'
+      setError(errorMessage)
+      
+      // Show error toast
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000
+      })
+    } finally {
+      setIsDeleting(null)
     }
   }
 
@@ -368,6 +444,15 @@ export default function AssignmentsPage() {
   const availableSubjects = subjects.filter(subject =>
     classSubjects.some(cs => cs.classId === newAssignment.classId && cs.subjectId === subject.id)
   )
+
+  // Debug logging
+  if (newAssignment.classId) {
+    console.log('🔍 Filtering subjects for class:', newAssignment.classId)
+    console.log('📚 All subjects:', subjects.length)
+    console.log('🔗 All classSubjects:', classSubjects.length)
+    console.log('🔗 ClassSubjects for this class:', classSubjects.filter(cs => cs.classId === newAssignment.classId))
+    console.log('✅ Available subjects:', availableSubjects.length, availableSubjects)
+  }
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc'
@@ -995,15 +1080,23 @@ export default function AssignmentsPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowNewAssignmentModal(false)}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateAssignment}
-                  disabled={!newAssignment.teacherId || !newAssignment.classId || !newAssignment.subjectId}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={!newAssignment.teacherId || !newAssignment.classId || !newAssignment.subjectId || isCreating}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create Assignment
+                  {isCreating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Assignment'
+                  )}
                 </Button>
               </div>
             </div>

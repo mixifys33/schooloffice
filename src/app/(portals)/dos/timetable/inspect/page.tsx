@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -74,7 +74,7 @@ interface InspectionData {
   suggestions: string[]
 }
 
-export default function TimetableInspectionPage() {
+function TimetableInspectionPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const timetableId = searchParams.get('id')
@@ -464,5 +464,13 @@ export default function TimetableInspectionPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function TimetableInspectionPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <TimetableInspectionPageContent />
+    </Suspense>
   )
 }
