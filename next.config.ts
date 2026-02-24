@@ -45,6 +45,10 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    // Ensure middleware is properly traced for deployment
+    outputFileTracingIncludes: {
+      '/': ['./middleware.ts'],
+    },
   },
   
   // Reduce memory usage during build
