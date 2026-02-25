@@ -7,11 +7,7 @@ import {
   Search,
   BookOpen,
   User,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  FileText,
-  TrendingUp
+  FileText
 } from 'lucide-react'
 import { AlertBanner } from '@/components/ui/alert-banner'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
@@ -166,7 +162,7 @@ export default function DoSAssessmentPlansPage() {
           </div>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
+            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'planned' | 'active' | 'completed' | 'overdue')}
             className="px-4 py-2 border rounded-md"
           >
             <option value="all">All Status</option>

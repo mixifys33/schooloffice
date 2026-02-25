@@ -452,7 +452,7 @@ export default function DoSAssignmentsPage() {
             <span className="text-sm font-medium text-[var(--info-dark)]">Active filters:</span>
             {searchTerm && (
               <Badge variant="secondary">
-                Search: "{searchTerm}"
+                Search: &quot;{searchTerm}&quot;
               </Badge>
             )}
             {filterStatus !== 'all' && (

@@ -7,9 +7,7 @@ import {
   Minus,
   RefreshCw,
   Search,
-  BookOpen,
   User,
-  AlertCircle,
   BarChart3,
   Award,
   Target
