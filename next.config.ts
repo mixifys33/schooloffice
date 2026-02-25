@@ -11,15 +11,6 @@ const nextConfig = {
   // Note: eslint configuration removed - deprecated in Next.js 16
   // Use .eslintrc.json or package.json eslint config instead
   
-  // Note: eslint configuration removed - deprecated in Next.js 16
-  // Use .eslintrc.json or package.json eslint config instead
-  
-  // Turbopack configuration for Next.js 16 (minimal to avoid warnings)
-  turbopack: {},
-  
-  // Development indicators configuration (removed in Next.js 16)
-  // devIndicators config is minimal in Next.js 16
-  
   // Reduce logging to minimize console noise
   logging: {
     fetches: {
@@ -29,9 +20,6 @@ const nextConfig = {
   
   // Disable source maps in production to prevent parsing issues and reduce memory
   productionBrowserSourceMaps: false,
-  
-  // Ensure no webpack configuration conflicts with Turbopack
-  webpack: undefined,
   
   // Add error handling for unhandled rejections
   onDemandEntries: {
