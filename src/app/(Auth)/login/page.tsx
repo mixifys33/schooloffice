@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { FormField, PasswordField } from '@/components/ui/form-field'
 import { Toast, ToastContainer } from '@/components/ui/toast'
+import { AIChatWidget } from '@/components/ai-assistant/ai-chat-widget'
 
 /**
  * School-First Login Page
@@ -554,14 +555,14 @@ function LoginPageContent() {
           
           {/* Register Link */}
           <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-            Don&apos;t have a school account?{' '}
-            <a 
-              href="/register"
-              className="text-[var(--chart-blue)] dark:text-[var(--chart-blue)] hover:text-[var(--accent-hover)] dark:hover:text-[var(--chart-blue)] transition-colors font-medium"
-            >
-              Register your school
-            </a>
+            Don&apos;t have a school account?
           </p>
+          <a 
+            href="/register"
+            className="inline-block mt-2 px-6 py-2.5 border-2 border-[var(--chart-blue)] text-[var(--chart-blue)] dark:border-[var(--chart-blue)] dark:text-[var(--chart-blue)] hover:bg-[var(--chart-blue)] hover:text-white dark:hover:bg-[var(--chart-blue)] dark:hover:text-white rounded-lg font-medium transition-all duration-200"
+          >
+            Register your school
+          </a>
           
           <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Having trouble?{' '}
@@ -596,6 +597,7 @@ export default function LoginPage() {
       </div>
     }>
       <LoginPageContent />
+      <AIChatWidget />
     </Suspense>
   )
 }

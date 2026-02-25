@@ -6,6 +6,7 @@ import { RolesSection } from "@/components/homepage/roles-section";
 import { SecuritySection } from "@/components/homepage/security-section";
 import { TargetAudienceSection } from "@/components/homepage/target-audience-section";
 import { FinalCTASection } from "@/components/homepage/final-cta-section";
+import { AIChatWidget } from "@/components/ai-assistant/ai-chat-widget";
 
 export default function HomePage() {
   return (
@@ -18,6 +19,7 @@ export default function HomePage() {
       <SecuritySection />
       <TargetAudienceSection />
       <FinalCTASection />
+      <AIChatWidget />
     </main>
   );
 }

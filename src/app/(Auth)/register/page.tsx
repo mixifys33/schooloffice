@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { FormField, SelectField, PasswordField } from '@/components/ui/form-field'
 import { Toast, ToastContainer } from '@/components/ui/toast'
+import { AIChatWidget } from '@/components/ai-assistant/ai-chat-widget'
 
 /**
  * School Registration Page
@@ -619,6 +620,7 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
+      <AIChatWidget />
     </div>
   )
 }
