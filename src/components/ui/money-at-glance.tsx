@@ -85,8 +85,8 @@ export function MoneyAtGlance({
 
   useEffect(() => {
     fetchMoneyData()
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchMoneyData, 30000)
+    // Auto-refresh every 5 minutes (optimized for performance)
+    const interval = setInterval(fetchMoneyData, 300000)
     return () => clearInterval(interval)
   }, [fetchMoneyData])
 

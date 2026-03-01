@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { PasswordResetGuard } from '@/components/auth/password-reset-guard'
 import { Role, StaffRole } from '@/types/enums'
+import { AIChatToggle } from '@/components/ai-assistant/ai-chat-toggle'
 
 /**
  * Admin Dashboard Layout
@@ -276,7 +277,7 @@ const teacherNavItems: PermissionNavItem[] = [
     icon: <BookOpen className="h-5 w-5" />,
     children: [
       { href: '/teacher/assessments', label: 'Assessments Overview' },
-      { href: '/teacher/assessments/ca', label: 'Continuous Assessment' },
+      { href: '/teacher/assessments/ca-entry', label: 'Continuous Assessment' },
       { href: '/teacher/assessments/exam', label: 'Exam Management' },
       { href: '/teacher/marks', label: 'Enter Marks' },
       { href: '/teacher/reports', label: 'Generate Reports' },
@@ -475,8 +476,8 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
 
     if (session?.user) {
       fetchNotificationCount()
-      // Poll every 30 seconds for updates
-      const interval = setInterval(fetchNotificationCount, 30000)
+      // Poll every 5 minutes for updates (optimized for performance)
+      const interval = setInterval(fetchNotificationCount, 300000)
       return () => clearInterval(interval)
     }
   }, [session])
@@ -540,10 +541,14 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   // Check if we're in routes that have their own standalone layouts
   const isDosRoute = pathname.startsWith('/dos')
   const isBursarRoute = pathname.startsWith('/dashboard/bursar')
+  const isTeacherRoute = pathname.startsWith('/dashboard/teacher')
+  const isClassTeacherRoute = pathname.startsWith('/dashboard/class-teacher')
+  const isParentRoute = pathname.startsWith('/dashboard/parent')
+  const isStudentRoute = pathname.startsWith('/dashboard/student')
   
   // If this is a route with its own layout, render children without the admin dashboard layout
   // BUT we must do this AFTER all hooks have been called
-  if (isDosRoute || isBursarRoute) {
+  if (isDosRoute || isBursarRoute || isTeacherRoute || isClassTeacherRoute || isParentRoute || isStudentRoute) {
     return (
       <>
         {children}
@@ -584,6 +589,10 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             <div className="hidden xs:block">
               <ThemeToggle />
             </div>
+            
+            {/* AI Assistant Toggle */}
+            <AIChatToggle />
+            
             <Button 
               variant="ghost" 
               size="touch-icon" 

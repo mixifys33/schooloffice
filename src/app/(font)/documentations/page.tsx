@@ -1,11 +1,27 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { FileText, Search, Book, HelpCircle, ArrowLeft } from 'lucide-react'
+import { FileText, Search, Book, HelpCircle, ArrowLeft, Loader2 } from 'lucide-react'
 
 export default function DocumentationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
+  const [allFiles, setAllFiles] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Fetch all available documentation files
+    fetch('/api/documentation')
+      .then(res => res.json())
+      .then(data => {
+        setAllFiles(data.files.map((f: any) => f.name))
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('Failed to fetch docs:', err)
+        setLoading(false)
+      })
+  }, [])
 
   const docs = [
     {
@@ -79,12 +95,30 @@ export default function DocumentationsPage() {
               className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
           </div>
+          
+          {!loading && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {allFiles.length} documentation files available
+              </p>
+              <Link
+                href="/documentations/browse"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+              >
+                Browse All →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {filteredDocs.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : filteredDocs.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-400">
               No documentation found matching "{searchQuery}"
@@ -103,11 +137,9 @@ export default function DocumentationsPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {category.items.map((item) => (
-                    <a
+                    <Link
                       key={item.file}
-                      href={`https://github.com/yourusername/schooloffice/blob/main/documentations/${item.file}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/documentations/${item.file.replace('.md', '')}`}
                       className="block p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-lg transition-all"
                     >
                       <div className="flex items-start">
@@ -121,7 +153,7 @@ export default function DocumentationsPage() {
                           </p>
                         </div>
                       </div>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>

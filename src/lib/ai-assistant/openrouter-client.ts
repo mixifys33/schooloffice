@@ -57,8 +57,8 @@ class OpenRouterClient {
         const requestBody = {
           model: this.model,
           messages,
-          temperature: 0.8, // More natural, human-like conversation
-          max_tokens: 1200, // Allow very detailed, thorough explanations
+          temperature: 0.7, // Slightly lower for faster, more focused responses
+          max_tokens: 600, // Reduced from 1200 to 600 for faster responses
           stream: false,
         }
         

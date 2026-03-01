@@ -198,7 +198,7 @@ function ClassDetailPageContent() {
             </Button>
             {data.subject && (
               <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link href={`/portals/teacher/marks?classId=${classId}&subjectId=${data.subject.id}`}>
+                <Link href={`/teacher/marks?classId=${classId}&subjectId=${data.subject.id}`}>
                   <BookOpen className="h-4 w-4" />
                   Enter Marks
                 </Link>

@@ -38,10 +38,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   return (
     <NextAuthSessionProvider
-      // Refetch session every 5 minutes to keep it fresh
-      refetchInterval={5 * 60}
-      // Refetch on window focus to ensure session is current
-      refetchOnWindowFocus={true}
+      // Refetch session every 10 minutes to reduce server load
+      refetchInterval={10 * 60}
+      // Only refetch on window focus if session is older than 5 minutes
+      refetchOnWindowFocus={false}
       // Don't show errors to users - handle them gracefully
       onError={(error) => {
         // Log to console for debugging but don't show to users

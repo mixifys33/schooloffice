@@ -1,224 +1,194 @@
-# School Website Management System
+# School Website Management System - User Guide
 
 ## Overview
 
-A comprehensive admin-controlled website management system where school administrators can design, customize, and manage their public-facing school website entirely from their dashboard. The website can be hosted separately and will dynamically fetch all content from the school management system database.
+A comprehensive website management platform that empowers school administrators to create, customize, and maintain their institution's public website through an intuitive dashboard interface. The system provides a complete content management solution with professional-grade features while maintaining security and ease of use.
 
-## Features
+## Key Features
 
-### 1. Admin Dashboard - Website Section
+### Administrative Dashboard
 
-Located at: `/super-admin/website` or `/school-admin/website`
+Access your website management tools through the dedicated Website section in your admin panel.
 
-#### 1.1 Website Settings
+#### Website Configuration
 
-- Site name, tagline, and branding
-- Theme customization (colors, fonts)
-- Logo and favicon upload
-- Contact information
-- Social media links
-- SEO settings (meta title, description, keywords)
-- Publish/unpublish website
+- **Brand Identity**: Configure your school's name, tagline, and visual branding
+- **Theme Customization**: Personalize colors, typography, and visual elements
+- **Media Assets**: Upload and manage logos, favicons, and brand imagery
+- **Contact Details**: Maintain accurate contact information and location data
+- **Social Integration**: Connect your social media profiles
+- **Search Optimization**: Configure meta information for better search visibility
+- **Publication Control**: Enable or disable your website's public visibility
 
-#### 1.2 Page Builder
+#### Page Creation System
 
-- Create unlimited pages with drag-and-drop sections
-- Pre-built section types:
-  - Hero sections
-  - Text blocks
-  - Image galleries
-  - Video embeds
-  - Statistics/counters
-  - Team members
-  - Testimonials
-  - FAQ sections
-  - Call-to-action buttons
+Build unlimited pages using our intuitive drag-and-drop interface:
+
+**Available Content Sections:**
+
+- Hero banners with compelling visuals
+- Rich text content blocks
+- Photo galleries and carousels
+- Video content integration
+- Statistical displays and counters
+- Staff and faculty showcases
+- Community testimonials
+- Frequently asked questions
+- Action buttons and links
   - Contact forms
-  - Maps
-  - Custom HTML
-- Page hierarchy (parent/child pages)
-- SEO settings per page
-- Draft/Published status
+- Interactive maps
+- Custom content areas
 
-#### 1.3 Content Management
+**Page Management:**
 
-- **News & Announcements**: Create blog-style posts
-- **Events**: Manage school events with dates and registration
-- **Gallery**: Upload and organize photos in albums
-- **Testimonials**: Collect and display testimonials
-- **Team**: Showcase staff and leadership
-- **Media Library**: Centralized file management
+- Organize pages in hierarchical structures
+- Individual SEO optimization per page
+- Draft and published status controls
+- Preview functionality before publishing
 
-#### 1.4 Navigation Builder
+#### Content Management
 
-- Custom menu creation
-- Drag-and-drop menu ordering
-- Nested menu items
-- External links support
+- **News & Updates**: Share school announcements and news stories
+- **Event Calendar**: Promote upcoming events with registration capabilities
+- **Photo Galleries**: Organize and display school activities and achievements
+- **Community Testimonials**: Showcase positive feedback from students and parents
+- **Staff Directory**: Present your team and leadership
+- **Media Center**: Centralized storage for all digital assets
 
-#### 1.5 Contact Form Management
+#### Navigation Management
 
-- View submissions
-- Mark as read/replied
-- Email notifications
+- Create custom menu structures
+- Organize menu items with drag-and-drop functionality
+- Support for multi-level navigation
+- Include external website links
 
-### 2. Public Website
+#### Communication Tools
 
-Separate Next.js application that:
+- Review contact form submissions
+- Track message status and responses
+- Automated notification system
 
-- Fetches all content via API from main system
-- Fully responsive design
-- SEO optimized
-- Fast loading with caching
-- Can be hosted on separate domain/subdomain
+### Public Website Features
 
-### 3. API Endpoints
+Your public-facing website includes:
 
-All endpoints under `/api/website/`
+- **Responsive Design**: Optimized viewing on all devices
+- **Fast Performance**: Optimized loading speeds with intelligent caching
+- **Search Engine Friendly**: Built-in SEO optimization
+- **Accessibility Compliant**: Designed for users with diverse needs
+- **Professional Appearance**: Modern, clean design templates
+- **Real-time Updates**: Changes appear immediately on your live site
 
-- Settings CRUD
-- Pages CRUD
-- Sections CRUD
-- News CRUD
-- Events CRUD
-- Gallery CRUD
-- Testimonials CRUD
-- Team CRUD
-- Media upload/management
-- Contact form submissions
-- Public read-only endpoints for website
+## Getting Started
 
-## Technical Stack
+### Initial Setup
 
-- **Database**: MongoDB (Prisma ORM)
-- **Admin Dashboard**: Next.js App Router
-- **Public Website**: Next.js (separate app)
-- **File Storage**: ImageKit
-- **Styling**: Tailwind CSS
-- **UI Components**: Radix UI
+1. **Access Your Dashboard**: Navigate to the Website section from your admin menu
+2. **Configure Basic Settings**: Set your school name, contact information, and branding
+3. **Choose Your Theme**: Select colors and fonts that match your school's identity
+4. **Upload Your Logo**: Add your school's official logo and favicon
 
-## Database Schema
+### Creating Your First Page
 
-See `prisma/schema-website.prisma` for complete schema
+1. **Navigate to Pages**: Select "Pages" from the website management menu
+2. **Create New Page**: Click "Add New Page" and enter your page title
+3. **Build Your Content**: Use the drag-and-drop editor to add sections
+4. **Preview Your Work**: Use the preview function to see how your page will appear
+5. **Publish When Ready**: Change status from "Draft" to "Published"
 
-## Implementation Steps
+### Adding Content
 
-### Phase 1: Database & API
+1. **News Articles**: Share important announcements and school news
+2. **Event Listings**: Promote upcoming activities and important dates
+3. **Photo Galleries**: Showcase school life and student achievements
+4. **Staff Profiles**: Introduce your team to the community
 
-1. ✅ Create Prisma schema for website models
-2. Add relations to School model
-3. Create API endpoints for all CRUD operations
-4. Implement file upload for media
+### Managing Navigation
 
-### Phase 2: Admin Dashboard
+1. **Access Menu Builder**: Go to Navigation in your website settings
+2. **Add Menu Items**: Create links to your pages and external resources
+3. **Organize Structure**: Drag items to arrange your menu hierarchy
+4. **Save Changes**: Your navigation updates automatically on your live site
 
-1. Create website management section in admin
-2. Build settings page
-3. Build page builder with section components
-4. Build content management pages
-5. Build media library
-6. Build navigation builder
+## Best Practices
 
-### Phase 3: Public Website
+### Content Guidelines
 
-1. Setup separate Next.js app
-2. Create API client for fetching data
-3. Build dynamic page renderer
-4. Build section components
-5. Implement SEO
-6. Add caching strategy
+- **Keep Information Current**: Regularly update news, events, and contact information
+- **Use High-Quality Images**: Upload clear, professional photos that represent your school well
+- **Write Clear Headlines**: Use descriptive titles that help visitors find information quickly
+- **Maintain Consistent Tone**: Develop a voice that reflects your school's personality and values
 
-### Phase 4: Integration & Testing
+### SEO Optimization
 
-1. Test all CRUD operations
-2. Test file uploads
-3. Test public website rendering
-4. Performance optimization
-5. SEO validation
+- **Page Titles**: Create unique, descriptive titles for each page
+- **Meta Descriptions**: Write compelling summaries that encourage clicks from search results
+- **Image Descriptions**: Add alt text to images for accessibility and search optimization
+- **Regular Updates**: Fresh content helps improve search engine rankings
 
-## File Structure
+### Security Considerations
 
-```
-src/
-├── app/
-│   ├── (portals)/
-│   │   └── school-admin/
-│   │       └── website/
-│   │           ├── page.tsx (Dashboard)
-│   │           ├── settings/
-│   │           ├── pages/
-│   │           ├── news/
-│   │           ├── events/
-│   │           ├── gallery/
-│   │           ├── testimonials/
-│   │           ├── team/
-│   │           ├── media/
-│   │           ├── navigation/
-│   │           └── contact-submissions/
-│   └── api/
-│       └── website/
-│           ├── settings/
-│           ├── pages/
-│           ├── sections/
-│           ├── news/
-│           ├── events/
-│           ├── gallery/
-│           ├── testimonials/
-│           ├── team/
-│           ├── media/
-│           ├── navigation/
-│           └── contact/
-└── components/
-    └── website/
-        ├── admin/
-        │   ├── PageBuilder.tsx
-        │   ├── SectionEditor.tsx
-        │   ├── MediaLibrary.tsx
-        │   └── ThemeCustomizer.tsx
-        └── public/
-            ├── sections/
-            │   ├── HeroSection.tsx
-            │   ├── TextSection.tsx
-            │   ├── GallerySection.tsx
-            │   └── ...
-            └── layouts/
-                ├── Header.tsx
-                ├── Footer.tsx
-                └── Layout.tsx
+- **Regular Backups**: Your content is automatically backed up, but maintain your own records of important information
+- **Access Control**: Only provide website management access to authorized personnel
+- **Content Review**: Review all content before publishing to ensure accuracy and appropriateness
+- **Contact Form Monitoring**: Regularly check and respond to contact form submissions
 
-school-website/ (Separate App)
-├── src/
-│   ├── app/
-│   │   ├── page.tsx
-│   │   ├── [slug]/
-│   │   ├── news/
-│   │   ├── events/
-│   │   └── contact/
-│   ├── components/
-│   └── lib/
-│       └── api-client.ts
-└── package.json
-```
+## Technical Information
 
-## Usage Flow
+### System Architecture
 
-1. **Admin logs into school management system**
-2. **Navigates to Website section from sidebar**
-3. **Configures website settings** (theme, branding, SEO)
-4. **Creates pages** using drag-and-drop page builder
-5. **Adds content** (news, events, gallery, testimonials)
-6. **Customizes navigation** menu
-7. **Publishes website**
-8. **Public website** automatically reflects all changes
-9. **Website can be hosted** on custom domain (e.g., www.schoolname.com)
+The platform utilizes modern web technologies to ensure reliability, security, and performance:
 
-## Benefits
+- **Database Management**: Secure, scalable database infrastructure
+- **Content Delivery**: Fast, global content distribution network
+- **File Storage**: Professional-grade media storage and optimization
+- **Security**: Industry-standard encryption and protection measures
 
-- ✅ No coding required for admin
-- ✅ Complete control over website appearance
-- ✅ Real-time updates
-- ✅ SEO optimized
-- ✅ Mobile responsive
-- ✅ Centralized content management
-- ✅ Can be hosted anywhere
-- ✅ Connects perfectly to main system database
+### Performance Features
+
+- **Automatic Optimization**: Images and content are automatically optimized for web delivery
+- **Caching System**: Intelligent caching ensures fast page loading times
+- **Mobile Optimization**: Responsive design adapts to all screen sizes
+- **Search Engine Optimization**: Built-in features help improve search visibility
+
+## Support and Maintenance
+
+### Regular Maintenance
+
+- **Content Updates**: Keep information current and accurate
+- **Image Management**: Regularly review and optimize media files
+- **Performance Monitoring**: The system automatically monitors and maintains optimal performance
+- **Security Updates**: Security measures are automatically updated and maintained
+
+### Getting Help
+
+- **Documentation**: Comprehensive guides available within your admin dashboard
+- **Support Resources**: Access help articles and tutorials
+- **Technical Support**: Contact support team for technical assistance
+- **Training Materials**: Video tutorials and step-by-step guides available
+
+## Frequently Asked Questions
+
+**Q: How quickly do changes appear on my live website?**
+A: Changes are typically visible within minutes of saving and publishing.
+
+**Q: Can I preview changes before they go live?**
+A: Yes, use the preview function to see how pages will appear before publishing.
+
+**Q: Is my website mobile-friendly?**
+A: All websites are automatically optimized for mobile devices and tablets.
+
+**Q: Can I use my own domain name?**
+A: Yes, your website can be configured to work with your school's custom domain.
+
+**Q: How do I backup my content?**
+A: Content is automatically backed up regularly. You can also export content through your dashboard.
+
+**Q: Can multiple people manage the website?**
+A: Yes, you can provide access to multiple authorized staff members with appropriate permissions.
+
+## Conclusion
+
+This website management system provides everything needed to create and maintain a professional school website. The intuitive interface, combined with powerful features, enables you to effectively communicate with your school community while maintaining complete control over your online presence.
+
+Regular updates and fresh content will help ensure your website serves as an effective communication tool for students, parents, and the broader community. Take advantage of all available features to create an engaging, informative, and professional online presence for your institution.

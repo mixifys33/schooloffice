@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { readdir, stat } from 'fs/promises'
+import { join } from 'path'
+import { existsSync } from 'fs'
 
 /**
  * GET /api/teacher/evidence
@@ -25,6 +28,8 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         assignedClassIds: true,
         assignedSubjectIds: true,
       },
@@ -76,9 +81,63 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // For now, return empty evidence files array since we don't have a specific evidence file model
-    // This can be extended when the evidence file storage system is implemented
+    // Read uploaded files from filesystem
     const evidenceFiles = []
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidence', session.user.schoolId!)
+    
+    if (existsSync(uploadDir)) {
+      try {
+        const files = await readdir(uploadDir)
+        
+        for (const fileName of files) {
+          // Only show files uploaded by this teacher
+          if (fileName.startsWith(teacher.id)) {
+            const filePath = join(uploadDir, fileName)
+            const fileStats = await stat(filePath)
+            const publicPath = `/uploads/evidence/${session.user.schoolId}/${fileName}`
+            
+            // Determine file type
+            let fileType: 'document' | 'image' | 'video' | 'other' = 'other'
+            const ext = fileName.split('.').pop()?.toLowerCase()
+            
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) {
+              fileType = 'image'
+            } else if (['mp4', 'mov', 'avi', 'webm'].includes(ext || '')) {
+              fileType = 'video'
+            } else if (['pdf', 'doc', 'docx', 'txt'].includes(ext || '')) {
+              fileType = 'document'
+            }
+            
+            // Format file size
+            const formatFileSize = (bytes: number) => {
+              if (bytes < 1024) return bytes + ' B'
+              if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+              return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+            }
+            
+            evidenceFiles.push({
+              id: fileName,
+              fileName: fileName.split('_').slice(2).join('_'), // Remove teacher ID and timestamp
+              fileType,
+              fileSize: formatFileSize(fileStats.size),
+              filePath: publicPath,
+              uploadDate: fileStats.mtime.toISOString(),
+              description: '',
+              linkedCompetencies: [],
+              linkedAssessments: [],
+              uploadedBy: `${teacher.firstName} ${teacher.lastName}`,
+            })
+          }
+        }
+        
+        // Sort by upload date (newest first)
+        evidenceFiles.sort((a, b) => 
+          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+        )
+      } catch (err) {
+        console.error('Error reading evidence files:', err)
+      }
+    }
 
     const evidenceData = {
       evidenceFiles,

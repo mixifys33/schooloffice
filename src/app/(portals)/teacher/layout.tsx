@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { AIHelpToggle } from '@/components/ui/ai-help-toggle';
 import { TeacherContextBar } from '@/components/dashboard/teacher-context-bar';
 
 interface TeacherLayoutProps {
@@ -28,6 +29,8 @@ const navItems = [
   { href: '/teacher/classes', label: 'My Classes', icon: <GraduationCap className="h-5 w-5" /> },
   { href: '/teacher/timetable', label: 'Timetable', icon: <Calendar className="h-5 w-5" /> },
   { href: '/teacher/assessments', label: 'Assessments / Results', icon: <BookOpen className="h-5 w-5" /> },
+  { href: '/teacher/assessments/ca-entry', label: 'CA Entry', icon: <FileText className="h-5 w-5" /> },
+  { href: '/teacher/marks?examType=EXAM', label: 'Exam Entry', icon: <TrendingUp className="h-5 w-5" /> },
   { href: '/teacher/evidence', label: 'Learning Evidence', icon: <FolderOpen className="h-5 w-5" /> },
   { href: '/teacher/reports', label: 'Reports', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/teacher/profile', label: 'Profile & Workload', icon: <User className="h-5 w-5" /> },
@@ -49,6 +52,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         useBottomNav={true}
         headerContent={
           <div className="flex items-center gap-4">
+            <AIHelpToggle />
             <ThemeToggle />
           </div>
         }

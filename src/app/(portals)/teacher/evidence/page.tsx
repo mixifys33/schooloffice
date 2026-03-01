@@ -1,18 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
 import {
   FolderOpen,
   Upload,
   FileText,
-  Image,
+  Image as ImageIcon,
   Video,
   File,
   Download,
   Eye,
   Trash2,
-  Plus,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -28,9 +26,7 @@ import {
   cardStyles,
   typography,
   spacing,
-  teacherColors,
-  transitions,
-  errorMessages
+  teacherColors
 } from '@/lib/teacher-ui-standards'
 
 /**
@@ -44,6 +40,7 @@ import {
 interface EvidenceFile {
   id: string
   fileName: string
+  filePath: string
   fileType: 'document' | 'image' | 'video' | 'other'
   fileSize: string
   uploadDate: string
@@ -81,6 +78,12 @@ export default function LearningEvidencePage() {
   const [fileDescription, setFileDescription] = useState('')
   const [linkedCompetencies, setLinkedCompetencies] = useState<string[]>([])
 
+  // Loading states
+  const [uploading, setUploading] = useState(false)
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null)
+  const [viewingFileId, setViewingFileId] = useState<string | null>(null)
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null)
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -114,6 +117,9 @@ export default function LearningEvidencePage() {
       setError('Please select files and class/subject')
       return
     }
+
+    setUploading(true)
+    setError(null)
 
     const formData = new FormData()
     for (let i = 0; i < selectedFiles.length; i++) {
@@ -154,6 +160,8 @@ export default function LearningEvidencePage() {
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload files')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -162,6 +170,9 @@ export default function LearningEvidencePage() {
     if (!window.confirm('Are you sure you want to delete this evidence file? This action cannot be undone.')) {
       return
     }
+
+    setDeletingFileId(fileId)
+    setError(null)
 
     try {
       const response = await fetch(`/api/teacher/evidence/${fileId}`, {
@@ -184,14 +195,40 @@ export default function LearningEvidencePage() {
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete file')
+    } finally {
+      setDeletingFileId(null)
     }
+  }
+
+  // Handle file view
+  const handleView = (fileId: string, filePath: string) => {
+    setViewingFileId(fileId)
+    // Open file in new tab
+    window.open(filePath, '_blank')
+    // Reset viewing state after a short delay
+    setTimeout(() => setViewingFileId(null), 1000)
+  }
+
+  // Handle file download
+  const handleDownload = (fileId: string, filePath: string, fileName: string) => {
+    setDownloadingFileId(fileId)
+    // Create a temporary link and trigger download
+    const link = document.createElement('a')
+    link.href = filePath
+    link.download = fileName
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    // Reset downloading state after a short delay
+    setTimeout(() => setDownloadingFileId(null), 1000)
   }
 
   // Get file icon based on type
   const getFileIcon = (fileType: string) => {
     switch (fileType.toLowerCase()) {
       case 'image':
-        return <Image className="h-5 w-5" />
+        return <ImageIcon className="h-5 w-5" />
       case 'video':
         return <Video className="h-5 w-5" />
       case 'document':
@@ -460,19 +497,36 @@ export default function LearningEvidencePage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDownload(file.id, file.filePath, file.fileName)}
+                              disabled={downloadingFileId === file.id}
+                              title="Download file"
+                            >
                               <Download className="h-4 w-4" />
+                              {downloadingFileId === file.id && <span className="ml-1">...</span>}
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleView(file.id, file.filePath)}
+                              disabled={viewingFileId === file.id}
+                              title="View file"
+                            >
                               <Eye className="h-4 w-4" />
+                              {viewingFileId === file.id && <span className="ml-1">...</span>}
                             </Button>
                             <Button 
                               size="sm" 
                               variant="outline" 
                               onClick={() => handleDelete(file.id)}
+                              disabled={deletingFileId === file.id}
                               className="text-[var(--chart-red)] dark:text-[var(--danger)] hover:text-[var(--chart-red)] dark:hover:text-[var(--danger)]"
+                              title="Delete file"
                             >
                               <Trash2 className="h-4 w-4" />
+                              {deletingFileId === file.id && <span className="ml-1">...</span>}
                             </Button>
                           </div>
                         </div>
@@ -487,7 +541,7 @@ export default function LearningEvidencePage() {
                     No Evidence Uploaded
                   </h3>
                   <p className={cn(typography.body, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] max-w-md mx-auto')}>
-                    You haven't uploaded any learning evidence yet. Click the button above to upload assignments, projects, or other evidence of learning.
+                    You haven&apos;t uploaded any learning evidence yet. Click the button above to upload assignments, projects, or other evidence of learning.
                   </p>
                 </div>
               )}
@@ -634,8 +688,11 @@ export default function LearningEvidencePage() {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleUpload} disabled={!selectedFiles || !selectedClass || !selectedSubject}>
-                    Upload Files
+                  <Button 
+                    onClick={handleUpload} 
+                    disabled={uploading || !selectedFiles || !selectedClass || !selectedSubject}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload Files'}
                   </Button>
                 </div>
               </div>

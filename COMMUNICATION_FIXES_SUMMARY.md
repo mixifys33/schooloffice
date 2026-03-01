@@ -1,26 +1,26 @@
-# Communication System Fixes Summary
+# Communication System User Guide
 
-## Issues Fixed
+## 📱 Overview
 
-### 1. Prisma Validation Error - Invalid senderRole "BURSAR"
-
-**Error Message:**
-```
-Invalid value for argument `senderRole`. Expected Role.
-```
-
-**Root Cause:**
-The `communicationLog` table's `senderRole` field expects a value from the `Role` enum, but the code was passing `StaffRole.BURSAR` which is not valid.
-
-**Solution:**
-Added role mapping: `BURSAR` → `ACCOUNTANT`
-
-**Files Modified:**
-- `src/app/api/bursar/communications/send-reminders/route.ts`
-- `src/app/api/bursar/communications/send-notifications/route.ts`
+This guide helps you understand and use the school's communication system for sending messages to parents and guardians. The system is designed to be simple, reliable, and secure.
 
 ---
 
+## 🎯 What You Can Do
+
+The communication system allows authorized staff to:
+
+- Send payment reminders to parents/guardians
+- Send important notifications about students
+- Track message delivery status
+- View communication history
+- Manage message templates
+
+---
+
+## 🔐 Who Can Use This System
+
+Access is restricted based on your role:
 ### 2. Prisma Validation Error - Missing channel field
 
 **Error Message:**

@@ -88,12 +88,15 @@ export default function ProfileWorkloadPage() {
       try {
         const response = await fetch('/api/teacher/profile')
         if (!response.ok) {
-          throw new Error('Failed to fetch profile data')
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch profile data')
         }
         const profileData = await response.json()
         setData(profileData)
+        setError(null)
       } catch (err) {
-        setError('Unable to load profile data')
+        const errorMessage = err instanceof Error ? err.message : 'Unable to load profile data'
+        setError(errorMessage)
         console.error('Error fetching profile data:', err)
       } finally {
         setLoading(false)
@@ -315,9 +318,10 @@ export default function ProfileWorkloadPage() {
                       </div>
                       
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge variant="secondary">Term 1</Badge>
-                        <Badge variant="secondary">Mathematics Dept</Badge>
-                        <Badge variant="outline">Updated recently</Badge>
+                        <Badge variant="secondary">{item.subjectName}</Badge>
+                        {item.isClassTeacher && (
+                          <Badge variant="default">Class Teacher</Badge>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -336,63 +340,29 @@ export default function ProfileWorkloadPage() {
             </CardContent>
           </Card>
           
-          {/* Professional Development */}
+          {/* Quick Actions */}
           <Card className={cn(cardStyles.base, cardStyles.normal, 'mt-6')}>
             <CardHeader>
-              <CardTitle className={cn(typography.sectionTitle)}>Professional Development</CardTitle>
+              <CardTitle className={cn(typography.sectionTitle)}>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('p-2 rounded-lg', teacherColors.success.bg)}>
-                      <Award className={cn('h-5 w-5', teacherColors.success.text)} />
-                    </div>
-                    <div>
-                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                        New Curriculum Training
-                      </h3>
-                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                        Completed on Jan 15, 2024
-                      </p>
-                    </div>
-                    <Badge variant="default">Completed</Badge>
-                  </div>
-                </div>
-                
-                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('p-2 rounded-lg', teacherColors.warning.bg)}>
-                      <Clock className={cn('h-5 w-5', teacherColors.warning.text)} />
-                    </div>
-                    <div>
-                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                        ICT Skills Workshop
-                      </h3>
-                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                        Scheduled for Feb 20, 2024
-                      </p>
-                    </div>
-                    <Badge variant="outline">Pending</Badge>
-                  </div>
-                </div>
-                
-                <div className="p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('p-2 rounded-lg', teacherColors.info.bg)}>
-                      <BookOpen className={cn('h-5 w-5', teacherColors.info.text)} />
-                    </div>
-                    <div>
-                      <h3 className={cn(typography.h3, 'text-[var(--text-primary)] dark:text-[var(--white-pure)]')}>
-                        Assessment Methods Seminar
-                      </h3>
-                      <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                        Next available: Mar 5, 2024
-                      </p>
-                    </div>
-                    <Badge variant="outline">Available</Badge>
-                  </div>
-                </div>
+              <div className="space-y-3">
+                <Button variant="outline" className="w-full justify-start gap-2">
+                  <Calendar className="h-4 w-4" />
+                  View My Timetable
+                </Button>
+                <Button variant="outline" className="w-full justify-start gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  My Classes & Students
+                </Button>
+                <Button variant="outline" className="w-full justify-start gap-2">
+                  <Award className="h-4 w-4" />
+                  Enter Marks & Grades
+                </Button>
+                <Button variant="outline" className="w-full justify-start gap-2">
+                  <Users className="h-4 w-4" />
+                  Take Attendance
+                </Button>
               </div>
             </CardContent>
           </Card>

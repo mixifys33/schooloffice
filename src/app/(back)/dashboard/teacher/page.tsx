@@ -272,32 +272,89 @@ export default function TeacherDashboard() {
         setLoading(true)
         setError(null)
         
-        // Fetch data from both APIs to combine them
-        const [portalResponse, dashboardResponse] = await Promise.all([
-          fetch('/api/teacher/dashboard'),
-          fetch('/api/dashboard/teacher')
-        ])
+        // Fetch data from teacher dashboard API
+        const response = await fetch('/api/teacher/dashboard')
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data')
+        }
 
-        const portalData = await portalResponse.json()
-        const dashboardData = await dashboardResponse.json()
+        const apiData = await response.json()
 
-        // Combine the data from both sources
+        // Get unique classes with their subjects from teacher assignments
+        const classSubjectMap = new Map<string, Set<string>>();
+        
+        // Build a map of classes to their subjects
+        if (apiData.assignedClasses && apiData.assignedSubjects) {
+          apiData.assignedClasses.forEach((cls: any) => {
+            if (!classSubjectMap.has(cls.id)) {
+              classSubjectMap.set(cls.id, new Set());
+            }
+          });
+        }
+
+        // Transform the API data to match the expected format
+        const transformedClasses: TeacherClass[] = (apiData.assignedClasses || []).map((cls: any, index: number) => {
+          // Find subjects for this class
+          const subjects = apiData.assignedSubjects || [];
+          const subjectName = subjects.length > 0 ? subjects[0].name : 'No Subject';
+          
+          return {
+            id: cls.id || `class-${index}`,
+            name: cls.name || 'Unknown Class',
+            streamName: cls.streams?.[0]?.name || null,
+            subjectName: subjectName,
+            studentCount: cls.studentCount || 0, // Use real count from API
+            averageAttendance: 0, // Don't show mock data
+            averagePerformance: 0, // Don't show mock data
+            isClassTeacher: false,
+          };
+        })
+
+        const transformedTimetable: TimetableEntry[] = (apiData.upcomingClasses || []).map((entry: any, index: number) => ({
+          period: entry.period || index + 1,
+          time: `Period ${entry.period || index + 1}`,
+          className: entry.className || 'Unknown',
+          subjectName: entry.subjectName || 'Unknown',
+          isCurrent: false,
+          isToday: entry.dayOfWeek === (new Date().getDay() || 7),
+          classId: entry.classId || `class-${index}`,
+          subjectId: entry.subjectId || `subject-${index}`,
+        }))
+
+        // Combine the data
         const combinedData: UnifiedTeacherDashboardData = {
-          context: portalData.context || {
-            teacherId: '',
-            teacherName: 'Teacher',
+          context: {
+            teacherId: apiData.teacher?.id || '',
+            teacherName: `${apiData.teacher?.firstName || ''} ${apiData.teacher?.lastName || ''}`.trim(),
             roleName: 'Teacher',
-            currentTerm: null,
-            academicYear: null,
+            currentTerm: null, // Will be fetched from context API if needed
+            academicYear: null, // Will be fetched from context API if needed
             contextError: null
           },
-          classes: portalData.classes || [],
-          timetable: portalData.timetable || [],
-          alerts: portalData.alerts || {
+          classes: transformedClasses,
+          timetable: transformedTimetable,
+          alerts: {
             pendingAttendance: [],
             marksDeadlines: []
           },
-          dashboardData: dashboardData.dashboard || undefined
+          dashboardData: {
+            classes: transformedClasses.map((cls, index) => ({
+              classId: cls.id || `class-${index}`,
+              className: cls.name,
+              subject: cls.subjectName,
+              term: 'Current Term',
+              studentCount: cls.studentCount,
+              attendanceDone: false,
+              marksDone: false,
+            })),
+            alerts: {
+              pendingAttendance: [],
+              marksDeadlines: [],
+              unsubmittedReports: []
+            },
+            tasks: []
+          }
         }
 
         setData(combinedData)
@@ -598,7 +655,8 @@ export default function TeacherDashboard() {
                             {cls.name} {cls.streamName && `(${cls.streamName})`}
                           </h3>
                           <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
-                            {cls.subjectName} • {cls.studentCount} students
+                            {cls.subjectName}
+                            {cls.studentCount > 0 && ` • ${cls.studentCount} students`}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -613,47 +671,54 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div>
-                          <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1')}>Attendance</p>
-                          <div className="flex items-center gap-2">
-                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                              <div
-                                className={cn(
-                                  'h-2 rounded-full',
-                                  cls.averageAttendance >= 90 ? 'bg-green-500' :
-                                  cls.averageAttendance >= 75 ? 'bg-blue-500' :
-                                  cls.averageAttendance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                )}
-                                style={{ width: `${cls.averageAttendance}%` }}
-                              ></div>
+                      {/* Only show metrics if they have real data */}
+                      {(cls.averageAttendance > 0 || cls.averagePerformance > 0) && (
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          {cls.averageAttendance > 0 && (
+                            <div>
+                              <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1')}>Attendance</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                  <div
+                                    className={cn(
+                                      'h-2 rounded-full',
+                                      cls.averageAttendance >= 90 ? 'bg-green-500' :
+                                      cls.averageAttendance >= 75 ? 'bg-blue-500' :
+                                      cls.averageAttendance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                    )}
+                                    style={{ width: `${cls.averageAttendance}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                                  {cls.averageAttendance}%
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-                              {cls.averageAttendance}%
-                            </span>
-                          </div>
-                        </div>
+                          )}
 
-                        <div>
-                          <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1')}>Performance</p>
-                          <div className="flex items-center gap-2">
-                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                              <div
-                                className={cn(
-                                  'h-2 rounded-full',
-                                  cls.averagePerformance >= 90 ? 'bg-green-500' :
-                                  cls.averagePerformance >= 75 ? 'bg-blue-500' :
-                                  cls.averagePerformance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                )}
-                                style={{ width: `${cls.averagePerformance}%` }}
-                              ></div>
+                          {cls.averagePerformance > 0 && (
+                            <div>
+                              <p className={cn(typography.caption, 'text-[var(--text-secondary)] dark:text-[var(--text-muted)] mb-1')}>Performance</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                  <div
+                                    className={cn(
+                                      'h-2 rounded-full',
+                                      cls.averagePerformance >= 90 ? 'bg-green-500' :
+                                      cls.averagePerformance >= 75 ? 'bg-blue-500' :
+                                      cls.averagePerformance >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                    )}
+                                    style={{ width: `${cls.averagePerformance}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
+                                  {cls.averagePerformance}%
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-sm font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-                              {cls.averagePerformance}%
-                            </span>
-                          </div>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>

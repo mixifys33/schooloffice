@@ -53,57 +53,94 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get upcoming classes/periods (if timetable exists)
+    // Get upcoming classes/periods (based on current day of week)
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const currentDayOfWeek = today.getDay() || 7; // Convert Sunday (0) to 7
     
     const upcomingClasses = await prisma.timetableEntry.findMany({
       where: {
         staffId: teacher.id,
-        date: {
-          gte: today,
+        dayOfWeek: {
+          gte: currentDayOfWeek,
         },
       },
       include: {
         class: true,
         subject: true,
       },
-      orderBy: {
-        date: 'asc',
-      },
+      orderBy: [
+        { dayOfWeek: 'asc' },
+        { period: 'asc' },
+      ],
       take: 5,
     });
 
-    // Get recent marks entries (if marks table has teacherId field)
-    // Note: Check your schema - marks might not have teacherId
-    let recentMarks: any[] = [];
+    // Get recent CA and Exam entries
+    let recentCAEntries: any[] = [];
+    let recentExamEntries: any[] = [];
+    
     try {
-      recentMarks = await prisma.mark.findMany({
+      // First, find the staff record linked to this teacher
+      const staff = await prisma.staff.findFirst({
         where: {
-          teacherId: teacher.id,
+          userId: userId,
+          schoolId: schoolId,
         },
-        include: {
-          student: {
-            select: {
-              firstName: true,
-              lastName: true,
-            },
-          },
-          subject: {
-            select: {
-              name: true,
-              code: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 10,
       });
+
+      if (staff) {
+        // Get recent CA entries
+        recentCAEntries = await prisma.cAEntry.findMany({
+          where: {
+            teacherId: staff.id,
+          },
+          include: {
+            student: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+            subject: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 5,
+        });
+
+        // Get recent Exam entries
+        recentExamEntries = await prisma.examEntry.findMany({
+          where: {
+            teacherId: staff.id,
+          },
+          include: {
+            student: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+            subject: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 5,
+        });
+      }
     } catch (error) {
-      // If marks don't have teacherId, just skip this section
-      console.log('Marks query skipped - field may not exist');
+      console.log('CA/Exam entries query error:', error);
     }
 
     // Build dashboard response
@@ -118,6 +155,18 @@ export async function GET(request: NextRequest) {
         uniqueSubjects.set(ta.subjectId, ta.subject);
       }
     });
+
+    // Get student count for each class
+    const classStudentCounts = new Map<string, number>();
+    for (const classId of uniqueClasses.keys()) {
+      const count = await prisma.student.count({
+        where: {
+          classId: classId,
+          status: 'ACTIVE',
+        },
+      });
+      classStudentCounts.set(classId, count);
+    }
 
     const dashboardData = {
       teacher: {
@@ -140,6 +189,7 @@ export async function GET(request: NextRequest) {
         name: cls.name,
         level: cls.level,
         levelType: cls.levelType,
+        studentCount: classStudentCounts.get(cls.id) || 0,
         streams: cls.streams.map(s => ({
           id: s.id,
           name: s.name,
@@ -153,19 +203,31 @@ export async function GET(request: NextRequest) {
       })),
       upcomingClasses: upcomingClasses.map(entry => ({
         id: entry.id,
-        date: entry.date,
-        startTime: entry.startTime,
-        endTime: entry.endTime,
+        dayOfWeek: entry.dayOfWeek,
+        period: entry.period,
+        room: entry.room,
         className: entry.class.name,
         subjectName: entry.subject.name,
       })),
-      recentMarks: recentMarks.map(mark => ({
-        id: mark.id,
-        studentName: `${mark.student.firstName} ${mark.student.lastName}`,
-        subjectName: mark.subject.name,
-        score: mark.score,
-        maxScore: mark.maxScore,
-        createdAt: mark.createdAt,
+      recentCAEntries: recentCAEntries.map(ca => ({
+        id: ca.id,
+        studentName: `${ca.student.firstName} ${ca.student.lastName}`,
+        subjectName: ca.subject.name,
+        name: ca.name,
+        type: ca.type,
+        rawScore: ca.rawScore,
+        maxScore: ca.maxScore,
+        status: ca.status,
+        createdAt: ca.createdAt,
+      })),
+      recentExamEntries: recentExamEntries.map(exam => ({
+        id: exam.id,
+        studentName: `${exam.student.firstName} ${exam.student.lastName}`,
+        subjectName: exam.subject.name,
+        examScore: exam.examScore,
+        maxScore: exam.maxScore,
+        status: exam.status,
+        createdAt: exam.createdAt,
       })),
     };
 

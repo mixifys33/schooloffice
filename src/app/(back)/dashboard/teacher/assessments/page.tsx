@@ -251,7 +251,7 @@ export default function AssessmentsPage() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/teacher/assessments/ca?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
+                          <Link href={`/teacher/assessments/ca-entry?classId=${cls.classId}&subjectId=${cls.subjectId}`}>
                             <Button size="sm" variant="outline">
                               <FileText className="h-4 w-4 mr-1" />
                               CA
@@ -447,7 +447,7 @@ export default function AssessmentsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/teacher/assessments/ca/new">
+            <Link href="/teacher/assessments/ca-entry">
               <Card className={cn(
                 cardStyles.base,
                 'hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all cursor-pointer',

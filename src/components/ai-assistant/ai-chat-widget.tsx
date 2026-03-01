@@ -7,8 +7,16 @@ import { Message } from '@/lib/ai-assistant/openrouter-client'
 import { chatStorage, ChatSession } from '@/lib/ai-assistant/chat-storage'
 import ReactMarkdown from 'react-markdown'
 
-export function AIChatWidget() {
-  const [isOpen, setIsOpen] = useState(false)
+export function AIChatWidget({ 
+  isOpen: externalIsOpen, 
+  onClose, 
+  hideFloatingButton = false 
+}: { 
+  isOpen?: boolean
+  onClose?: () => void
+  hideFloatingButton?: boolean
+} = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -17,6 +25,17 @@ export function AIChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatWidgetRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+
+  // Use external control if provided, otherwise use internal state
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
+  const handleClose = () => {
+    if (onClose) {
+      onClose()
+    } else {
+      setInternalIsOpen(false)
+    }
+  }
+  const handleOpen = () => externalIsOpen === undefined && setInternalIsOpen(true)
 
   // Initialize session
   useEffect(() => {
@@ -44,7 +63,11 @@ export function AIChatWidget() {
         chatWidgetRef.current &&
         !chatWidgetRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false)
+        if (onClose) {
+          onClose()
+        } else {
+          setInternalIsOpen(false)
+        }
       }
     }
 
@@ -55,7 +78,7 @@ export function AIChatWidget() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen])
+  }, [isOpen, onClose])
 
   // Save session when messages change
   useEffect(() => {
@@ -147,10 +170,10 @@ export function AIChatWidget() {
 
   return (
     <>
-      {/* Floating Button */}
-      {!isOpen && (
+      {/* Floating Button - Only show if not hidden */}
+      {!hideFloatingButton && !isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 group"
           aria-label="Open AI Assistant"
         >
@@ -163,7 +186,7 @@ export function AIChatWidget() {
       {isOpen && (
         <>
           {/* Mobile Overlay */}
-          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={handleClose} />
           
           {/* Chat Container */}
           <div 
@@ -195,7 +218,7 @@ export function AIChatWidget() {
                 <RotateCcw className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors"
                 aria-label="Close chat"
               >

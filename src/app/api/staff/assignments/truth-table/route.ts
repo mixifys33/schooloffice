@@ -57,18 +57,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get all staff subject assignments
-    const staffSubjects = await prisma.staffSubject.findMany({
+    // Get all teacher assignments
+    const teacherAssignmentsRaw = await prisma.teacherAssignment.findMany({
       where: {
-        staff: { schoolId },
+        schoolId,
       },
       include: {
-        staff: {
+        teacher: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
-            employeeNumber: true,
+            nationalId: true,
+          },
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
           },
         },
         subject: {
@@ -147,7 +154,7 @@ export async function GET(request: NextRequest) {
       }>
     }>()
 
-    // Initialize class map
+    // Initialize class map from ClassSubject records
     for (const cs of classSubjects) {
       if (!classMap.has(cs.classId)) {
         classMap.set(cs.classId, {
@@ -170,62 +177,83 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Process staff subject assignments
-    for (const ss of staffSubjects) {
-      const teacherName = `${ss.staff.firstName} ${ss.staff.lastName}`
+    // Also add any class-subject combinations from TeacherAssignments that don't have ClassSubject records
+    for (const ta of teacherAssignmentsRaw) {
+      if (!classMap.has(ta.classId)) {
+        classMap.set(ta.classId, {
+          classId: ta.classId,
+          className: ta.class.name,
+          level: ta.class.level,
+          subjects: new Map(),
+        })
+      }
+      
+      const classData = classMap.get(ta.classId)!
+      if (!classData.subjects.has(ta.subjectId)) {
+        classData.subjects.set(ta.subjectId, {
+          subjectId: ta.subjectId,
+          subjectName: ta.subject.name,
+          subjectCode: ta.subject.code,
+          primaryTeacher: null,
+          isActive: true,
+          hasConflict: false,
+          teacherCount: 0,
+        })
+      }
+    }
+
+    // Process teacher assignments
+    for (const ta of teacherAssignmentsRaw) {
+      const teacherName = `${ta.teacher.firstName} ${ta.teacher.lastName}`
       
       // Update teacher map
-      if (!teacherMap.has(ss.staffId)) {
-        teacherMap.set(ss.staffId, {
-          teacherId: ss.staffId,
+      if (!teacherMap.has(ta.teacherId)) {
+        teacherMap.set(ta.teacherId, {
+          teacherId: ta.teacherId,
           teacherName,
-          employeeNumber: ss.staff.employeeNumber,
+          employeeNumber: ta.teacher.nationalId,
           assignments: new Map(),
         })
       }
       
-      const teacher = teacherMap.get(ss.staffId)!
+      const teacher = teacherMap.get(ta.teacherId)!
       
-      // Find all classes that have this subject
-      const classesWithSubject = classSubjects.filter(cs => cs.subjectId === ss.subjectId)
-      
-      for (const cs of classesWithSubject) {
-        if (!teacher.assignments.has(cs.classId)) {
-          teacher.assignments.set(cs.classId, {
-            classId: cs.classId,
-            className: cs.class.name,
-            subjects: [],
-          })
-        }
-        
-        teacher.assignments.get(cs.classId)!.subjects.push({
-          subjectId: ss.subjectId,
-          subjectName: ss.subject.name,
-          subjectCode: ss.subject.code,
-          isPrimary: true, // All StaffSubject assignments are primary
-          isActive: true,
+      // Add assignment to teacher
+      if (!teacher.assignments.has(ta.classId)) {
+        teacher.assignments.set(ta.classId, {
+          classId: ta.classId,
+          className: ta.class.name,
+          subjects: [],
         })
+      }
+      
+      teacher.assignments.get(ta.classId)!.subjects.push({
+        subjectId: ta.subjectId,
+        subjectName: ta.subject.name,
+        subjectCode: ta.subject.code,
+        isPrimary: true,
+        isActive: true,
+      })
+      
+      // Update class map with teacher assignment
+      const classData = classMap.get(ta.classId)
+      if (classData && classData.subjects.has(ta.subjectId)) {
+        const subjectData = classData.subjects.get(ta.subjectId)!
+        subjectData.teacherCount++
         
-        // Update class map with teacher assignment
-        const classData = classMap.get(cs.classId)
-        if (classData && classData.subjects.has(ss.subjectId)) {
-          const subjectData = classData.subjects.get(ss.subjectId)!
-          subjectData.teacherCount++
-          
-          if (!subjectData.primaryTeacher) {
-            subjectData.primaryTeacher = {
-              id: ss.staffId,
-              name: teacherName,
-              employeeNumber: ss.staff.employeeNumber,
-            }
-          } else {
-            // Conflict detected - multiple teachers for same subject
-            subjectData.hasConflict = true
-            subjectData.coTeacher = {
-              id: ss.staffId,
-              name: teacherName,
-              employeeNumber: ss.staff.employeeNumber,
-            }
+        if (!subjectData.primaryTeacher) {
+          subjectData.primaryTeacher = {
+            id: ta.teacherId,
+            name: teacherName,
+            employeeNumber: ta.teacher.nationalId,
+          }
+        } else {
+          // Conflict detected - multiple teachers for same subject
+          subjectData.hasConflict = true
+          subjectData.coTeacher = {
+            id: ta.teacherId,
+            name: teacherName,
+            employeeNumber: ta.teacher.nationalId,
           }
         }
       }

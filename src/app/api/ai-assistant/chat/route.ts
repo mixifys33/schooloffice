@@ -59,26 +59,46 @@ In the meantime, here are some quick links:
     }
 
     console.log('🟢 [AI API] Building context...')
+    const startContext = Date.now()
+    
     // Build enhanced context with real documentation
     const systemContext = contextBuilder.getSystemContext()
     const pageContext = pathname ? contextBuilder.getPageContext(pathname) : ''
     const errorContext = error ? contextBuilder.getErrorContext(error) : ''
     
+    console.log(`⏱️ [AI API] Context building took ${Date.now() - startContext}ms`)
+    
     // Get relevant documentation from actual files
     const lastUserMessage = messages[messages.length - 1]?.content || ''
     console.log('🟢 [AI API] Last user message:', lastUserMessage.substring(0, 100))
     
-    // Get full documentation context for better answers
-    const docsContext = getRelevantDocsFromFiles(lastUserMessage).substring(0, 5000)
+    // Get documentation context (SMART - only read when needed)
+    const startDocs = Date.now()
+    let docsContext = ''
+    
+    // Only read docs for specific questions that need detailed info
+    const needsDocs = lastUserMessage.toLowerCase().match(
+      /how (do|to|can)|what is|explain|guide|tutorial|step|process|workflow|setup|configure|install|error|problem|issue|fix|troubleshoot/i
+    )
+    
+    if (needsDocs) {
+      console.log('📚 [AI API] User needs detailed docs, reading files...')
+      docsContext = getRelevantDocsFromFiles(lastUserMessage).substring(0, 800)
+    } else {
+      console.log('💬 [AI API] Simple question, skipping docs')
+    }
+    
+    console.log(`⏱️ [AI API] Docs reading took ${Date.now() - startDocs}ms`)
     console.log('🟢 [AI API] Docs context length:', docsContext.length)
 
     const contextMessage: Message = {
       role: 'system',
-      content: `${systemContext}\n\nCURRENT PAGE: ${pageContext}\n${errorContext}\n\nRELEVANT DOCUMENTATION:\n${docsContext}`,
+      content: `${systemContext}\n\nPAGE: ${pageContext}${errorContext ? `\nERROR: ${errorContext}` : ''}${docsContext ? `\n\nDOCS:\n${docsContext}` : ''}`,
     }
 
-    // Prepare messages with context
-    const apiMessages = [contextMessage, ...messages]
+    // Prepare messages with context (limit to last 3 messages for speed) - REDUCED
+    const recentMessages = messages.slice(-3)
+    const apiMessages = [contextMessage, ...recentMessages]
     console.log('🟢 [AI API] Total messages to send:', apiMessages.length)
 
     try {

@@ -1,259 +1,192 @@
-# Schema Updates Summary
+# Database Schema Documentation
 
-## Changes Made to Support Subject Combinations and Teacher Assignments
+## Overview
 
-### 1. New Enum Added
+This document outlines the database schema structure for managing educational institutions, including support for different academic levels, subject combinations, and teacher assignments.
 
-```prisma
-enum LevelType {
-  O_LEVEL
-  A_LEVEL
-}
-```
+## Academic Level System
 
-This enum distinguishes between O-Level (Ordinary Level) and A-Level (Advanced Level) education.
+### Level Types
 
----
+The system supports two main academic levels:
 
-### 2. Class Model Updates
+- **O-Level (Ordinary Level)**: Typically covers grades S1-S4
+- **A-Level (Advanced Level)**: Typically covers grades S5-S6
 
-**Added Fields:**
+Each level has distinct requirements for subject selection and academic progression.
 
-- `levelType LevelType?` - Optional field to specify if class is O_LEVEL or A_LEVEL
+## Core Models
 
-**Added Relations:**
+### Class Management
 
-- `teacherAssignments TeacherAssignment[]` - Links to teacher assignments
+Classes can be designated for specific academic levels and support flexible subject assignments.
 
----
+**Key Features:**
 
-### 3. Subject Model Updates
+- Level type specification (O-Level or A-Level)
+  - Teacher assignment tracking
+- Subject requirement management
 
-**Added Fields:**
+### Subject Organization
 
-- `levelType LevelType?` - Optional field to specify if subject is for O_LEVEL or A_LEVEL
+Subjects are organized by academic level and can be configured for different requirements.
 
-**Added Relations:**
+**Configuration Options:**
 
-- `teacherAssignments TeacherAssignment[]` - Links to teacher assignments
-- `studentSubjects StudentSubject[]` - Links to student subject selections
-- `combinationSubjects CombinationSubject[]` - Links to subject combinations
+- Level-specific subject availability
+- Compulsory vs. elective designation
+- Minimum selection requirements for elective subjects
 
----
+### Student Enrollment
 
-### 4. ClassSubject Model Updates
+Students are linked to their academic level and subject selections.
 
-**Added Fields:**
+**Tracking Capabilities:**
 
-- `isCompulsory Boolean @default(true)` - Whether subject is compulsory for all students
-- `minRequired Int?` - Minimum number required (for O-Level S3/S4 electives)
+- Individual subject enrollment
+- Subject combination selection (A-Level)
+- Academic progression monitoring
 
----
+## Subject Selection System
 
-### 5. Student Model Updates
+### O-Level Structure (S1-S4)
 
-**Added Fields:**
+**S1-S2 (Foundation Years):**
 
-- `combinationId String? @db.ObjectId` - Links to subject combination (for A-Level students)
+- All subjects are typically compulsory
+- Standardized curriculum across all students
 
-**Added Relations:**
+**S3-S4 (Specialization Years):**
 
-- `combination Combination?` - The subject combination chosen by student
-- `studentSubjects StudentSubject[]` - Individual subject selections
+- Core compulsory subjects continue
+- Students select from available elective subjects
+- Minimum elective requirements can be configured
 
-**Added Index:**
+### A-Level Structure (S5-S6)
 
-- `@@index([combinationId])`
+**Subject Combinations:**
+Students choose from predefined subject combinations such as:
 
----
+- **PCM**: Physics, Chemistry, Mathematics
+- **BCM**: Biology, Chemistry, Mathematics
+- **MEG**: Mathematics, Economics, Geography
+- **HEG**: History, Economics, Geography
 
-### 6. Teacher Model Updates
+**Flexibility:**
 
-**Added Relations:**
+- Additional subject selections beyond core combination
+- Individual subject tracking for comprehensive records
 
-- `teacherAssignments TeacherAssignment[]` - Subject-Class assignments
+## Teacher Assignment System
 
----
+### Assignment Tracking
 
-### 7. School Model Updates
+The system maintains detailed records of teaching assignments:
 
-**Added Relations:**
+**Assignment Components:**
 
-- `combinations Combination[]`
-- `studentSubjects StudentSubject[]`
-- `combinationSubjects CombinationSubject[]`
-- `teacherAssignments TeacherAssignment[]`
+- Teacher-to-subject relationships
+- Class-specific assignments
+- Subject expertise mapping
 
----
+**Benefits:**
 
-## New Models Added
+- Clear accountability for subject delivery
+- Efficient resource allocation
+- Academic quality assurance
 
-### 1. Combination Model
+## Data Relationships
 
-Represents subject combinations for A-Level students (e.g., PCM, BCM, MEG).
+### Student-Subject Connections
 
-```prisma
-model Combination {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId  String   @db.ObjectId
-  name      String   // e.g., "PCM", "BCM", "MEG"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  school              School
-  combinationSubjects CombinationSubject[]
-  students            Student[]
-
-  @@unique([schoolId, name])
-  @@index([schoolId])
-}
-```
+**Individual Tracking:**
+Each student's subject enrollment is individually recorded, enabling:
 
-**Purpose:** Define standard subject combinations that A-Level students can choose from.
-
----
+- Personalized academic planning
+- Progress monitoring
+- Graduation requirement verification
 
-### 2. CombinationSubject Model
+### Combination Management
 
-Junction table linking combinations to subjects.
+**Structured Approach:**
+Subject combinations are managed through:
 
-```prisma
-model CombinationSubject {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId      String   @db.ObjectId
-  combinationId String   @db.ObjectId
-  subjectId     String   @db.ObjectId
-  createdAt     DateTime @default(now())
+- Predefined combination templates
+- Flexible subject groupings
+- Institution-specific customization
 
-  // Relations
-  school      School
-  combination Combination
-  subject     Subject
+## Implementation Guidelines
 
-  @@unique([combinationId, subjectId])
-  @@index([combinationId])
-  @@index([subjectId])
-  @@index([schoolId])
-}
-```
+### Setting Up Academic Levels
 
-**Purpose:** Define which subjects belong to each combination.
+1. **Configure Level Types**: Define whether your institution uses O-Level, A-Level, or both systems
+2. **Subject Classification**: Assign appropriate level types to each subject
+3. **Class Organization**: Set up classes with corresponding level designations
 
----
+### Managing Subject Requirements
 
-### 3. StudentSubject Model
+1. **Compulsory Subjects**: Mark essential subjects that all students must take
+2. **Elective Configuration**: Set minimum requirements for elective subject selection
+3. **Combination Setup**: Create subject combinations for A-Level students
 
-Tracks individual subject selections for students.
+### Teacher Assignment Process
 
-```prisma
-model StudentSubject {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId  String   @db.ObjectId
-  studentId String   @db.ObjectId
-  subjectId String   @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+1. **Subject Expertise**: Assign teachers to subjects based on their qualifications
+2. **Class Allocation**: Link teachers to specific classes for each subject
+3. **Workload Management**: Monitor and balance teaching assignments
 
-  // Relations
-  school  School
-  student Student
-  subject Subject
+## Best Practices
 
-  @@unique([studentId, subjectId])
-  @@index([studentId])
-  @@index([subjectId])
-  @@index([schoolId])
-}
-```
+### Data Integrity
 
-**Purpose:** Track which subjects each student is taking (especially important for elective subjects).
+- Maintain consistent level type assignments across related records
+- Ensure subject combinations contain appropriate subjects for the academic level
+- Validate minimum requirements are met for elective selections
 
----
+### Academic Planning
 
-### 4. TeacherAssignment Model
+- Review and update subject combinations annually
+- Monitor student enrollment patterns for resource planning
+- Maintain clear documentation of academic requirements
 
-Tracks which teacher teaches which subject in which class.
+### System Maintenance
 
-```prisma
-model TeacherAssignment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  schoolId  String   @db.ObjectId
-  teacherId String   @db.ObjectId
-  classId   String   @db.ObjectId
-  subjectId String   @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+- Regular validation of teacher-subject-class assignments
+- Periodic review of subject availability and requirements
+- Backup and recovery procedures for academic data
 
-  // Relations
-  school  School
-  teacher Teacher
-  class   Class
-  subject Subject
+## Security Considerations
 
-  @@unique([teacherId, classId, subjectId])
-  @@index([teacherId])
-  @@index([classId])
-  @@index([subjectId])
-  @@index([schoolId])
-}
-```
+### Data Protection
 
-**Purpose:** Explicitly track teacher-subject-class assignments with proper relational structure.
+- Student academic records are confidential and access-controlled
+- Teacher assignment information requires appropriate authorization
+- Institutional data follows privacy compliance requirements
 
----
+### Access Management
 
-## Use Cases
+- Role-based permissions for different user types
+- Audit trails for academic record modifications
+- Secure authentication for system access
 
-### O-Level (S1-S4)
+## Support and Maintenance
 
-- **S1-S2**: All subjects are compulsory
-- **S3-S4**: Students choose elective subjects
-  - Use `ClassSubject.isCompulsory = false` for electives
-  - Use `ClassSubject.minRequired` to specify minimum electives needed
-  - Use `StudentSubject` to track which electives each student chose
+### Regular Updates
 
-### A-Level (S5-S6)
+The schema supports evolutionary changes to accommodate:
 
-- Students choose a subject combination (PCM, BCM, MEG, etc.)
-- Use `Combination` model to define available combinations
-- Use `CombinationSubject` to define subjects in each combination
-- Link students to combinations via `Student.combinationId`
-- Use `StudentSubject` for additional subject selections
+- New academic programs
+- Changing curriculum requirements
+- Institutional policy updates
 
-### Teacher Assignments
+### Backward Compatibility
 
-- Use `TeacherAssignment` to explicitly track:
-  - Which teacher teaches which subject
-  - In which class
-  - Replaces the array-based `Teacher.assignedSubjectIds` and `Teacher.assignedClassIds` with proper relational structure
+All schema updates maintain compatibility with existing data, ensuring:
 
----
+- Seamless system upgrades
+- Preserved historical records
+- Minimal disruption to ongoing operations
 
-## Migration Steps
+## Conclusion
 
-After updating the schema, run:
-
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-Or if you want to create a migration:
-
-```bash
-npx prisma migrate dev --name add_subject_combinations_and_teacher_assignments
-```
-
----
-
-## Notes
-
-1. All new fields are **optional** (nullable) to maintain backward compatibility
-2. Existing data will not be affected
-3. The new models provide more flexibility for:
-   - Subject selection (O-Level electives, A-Level combinations)
-   - Teacher assignment tracking
-   - Student-subject relationships
-4. All models include `schoolId` for multi-tenancy support
-5. Proper indexes are added for query performance
+This schema provides a comprehensive foundation for managing educational institutions with multiple academic levels, flexible subject selection, and detailed teacher assignments. The design prioritizes data integrity, academic flexibility, and operational efficiency while maintaining security and privacy standards.

@@ -99,9 +99,9 @@ export function NotificationCenter({ onNotificationClick, compact = false }: Not
 
   useEffect(() => { fetchNotifications() }, [fetchNotifications])
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications every 5 minutes (optimized for performance)
   useEffect(() => {
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotifications, 300000)
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
@@ -354,7 +354,7 @@ export function NotificationBell({ onClick }: { onClick?: () => void }) {
     }
 
     fetchCount()
-    const interval = setInterval(fetchCount, 30000)
+    const interval = setInterval(fetchCount, 300000) // Poll every 5 minutes
     return () => clearInterval(interval)
   }, [])
 

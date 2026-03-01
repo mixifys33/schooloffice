@@ -13,20 +13,35 @@ export interface DocumentFile {
   category: string
 }
 
+// Cache documentation files in memory
+let documentationCache: DocumentFile[] | null = null
+let lastCacheTime = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 /**
- * Read all documentation files from the documentations/ folder
+ * Read all documentation files from the documentations/ folder (with caching)
  */
 export function readDocumentationFiles(): DocumentFile[] {
+  const now = Date.now()
+  
+  // Return cached version if still valid
+  if (documentationCache && (now - lastCacheTime) < CACHE_DURATION) {
+    console.log('📦 [Docs] Using cached documentation')
+    return documentationCache
+  }
+  
+  console.log('📖 [Docs] Reading documentation files from disk...')
   const docs: DocumentFile[] = []
   const docsPath = path.join(process.cwd(), 'documentations')
 
   try {
     if (!fs.existsSync(docsPath)) {
-      console.warn('Documentation folder not found')
+      console.warn('⚠️ [Docs] Documentation folder not found')
       return []
     }
 
     const files = fs.readdirSync(docsPath)
+    console.log(`📖 [Docs] Found ${files.length} files`)
     
     for (const file of files) {
       // Only read markdown files
@@ -44,15 +59,20 @@ export function readDocumentationFiles(): DocumentFile[] {
         
         docs.push({
           name: file,
-          content: content.slice(0, 5000), // Limit to first 5000 chars
+          content: content.slice(0, 1500), // Reduced from 3000 to 1500 chars
           category,
         })
       } catch (err) {
-        console.error(`Error reading ${file}:`, err)
+        console.error(`❌ [Docs] Error reading ${file}:`, err)
       }
     }
+    
+    // Update cache
+    documentationCache = docs
+    lastCacheTime = now
+    console.log(`✅ [Docs] Cached ${docs.length} documentation files`)
   } catch (error) {
-    console.error('Error reading documentation folder:', error)
+    console.error('❌ [Docs] Error reading documentation folder:', error)
   }
 
   return docs
@@ -121,11 +141,11 @@ export function searchDocumentation(query: string, docs: DocumentFile[]): string
     return { doc, score }
   })
   
-  // Get top 3 most relevant docs
+  // Get top 1 most relevant doc (reduced from 3 to 1)
   const topDocs = scored
     .filter(s => s.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
+    .slice(0, 1)
     .map(s => s.doc)
   
   if (topDocs.length === 0) return ''
@@ -176,9 +196,9 @@ export function getRelevantDocsFromFiles(context: string): string {
     return searchDocumentation(lowerContext, docs)
   }
   
-  // Return top 2 docs from category
+  // Return top 1 doc from category (reduced from 2 to 1)
   return relevantDocs
-    .slice(0, 2)
+    .slice(0, 1)
     .map(doc => `\n--- ${doc.name} ---\n${doc.content}`)
     .join('\n\n')
 }
