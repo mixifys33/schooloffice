@@ -791,7 +791,7 @@ model User {
   passwordHash       String?
   role               Role // Primary role (kept for backward compatibility)
   roles              Role[] // Support multiple roles
-  activeRole         Role? // Currently active role in session
+  activeRole         String? // Currently active role in session (can be Role or StaffRole)
   isActive           Boolean       @default(true)
   lastLogin          DateTime?
   failedAttempts     Int           @default(0) // For rate limiting

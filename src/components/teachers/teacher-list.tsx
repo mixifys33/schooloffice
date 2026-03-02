@@ -33,6 +33,10 @@ export interface TeacherListProps {
   onSelect?: (teacher: TeacherListItem) => void
   /** Callback when edit is clicked */
   onEdit?: (teacher: TeacherListItem) => void
+  /** Callback when delete is clicked */
+  onDelete?: (teacher: TeacherListItem) => void
+  /** ID of teacher being deleted (for loading state) */
+  deletingTeacherId?: string
   /** Callback when filters change */
   onFilterChange?: (filters: TeacherFilters) => void
   /** Current filters */
@@ -100,6 +104,8 @@ export function TeacherList({
   departments = DEFAULT_DEPARTMENTS,
   onSelect,
   onEdit,
+  onDelete,
+  deletingTeacherId,
   onFilterChange,
   filters = {},
 }: TeacherListProps) {
@@ -324,16 +330,45 @@ export function TeacherList({
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onEdit?.(teacher)
-                          }}
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          {onEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingTeacherId === teacher.id}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEdit(teacher)
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingTeacherId === teacher.id}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950 disabled:opacity-50"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDelete(teacher)
+                              }}
+                            >
+                              {deletingTeacherId === teacher.id ? (
+                                <span className="flex items-center gap-2">
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Deleting...
+                                </span>
+                              ) : (
+                                'Delete'
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

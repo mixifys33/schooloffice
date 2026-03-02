@@ -133,11 +133,14 @@ export class AttendanceService {
     // Validate class exists
     const classRecord = await prisma.class.findUnique({
       where: { id: classId },
+      select: { id: true, schoolId: true },
     })
 
     if (!classRecord) {
       throw new Error(`Class with id ${classId} not found`)
     }
+    
+    const schoolId = classRecord.schoolId
 
     // Check if recordedBy is a teacher and validate assignment
     // Requirement 3.7: Prevent attendance marking without class assignment
@@ -209,6 +212,7 @@ export class AttendanceService {
         create: {
           studentId: record.studentId,
           classId: classId,
+          schoolId: schoolId,
           date: normalizedDate,
           period: period,
           status: record.status,

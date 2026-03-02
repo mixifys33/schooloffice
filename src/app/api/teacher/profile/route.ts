@@ -333,7 +333,7 @@ export async function PATCH(request: NextRequest) {
     await auditService.log({
       schoolId,
       userId: session.user.id,
-      action: AuditAction.STAFF_PROFILE_UPDATED,
+      action: AuditAction.UPDATE,
       resource: AuditResource.STAFF,
       resourceId: teacher.id,
       previousValue,

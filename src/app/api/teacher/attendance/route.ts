@@ -63,18 +63,39 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Get today's date (normalized to start of day)
-    const today = new Date()
+    // Get today's date in East Africa Time (EAT - UTC+3)
+    const now = new Date()
+    
+    // Convert to EAT timezone
+    const eatOffset = 3 * 60 // EAT is UTC+3 (180 minutes)
+    const localOffset = now.getTimezoneOffset() // Get server's offset from UTC in minutes
+    const eatTime = new Date(now.getTime() + (eatOffset + localOffset) * 60 * 1000)
+    
+    // Get today's date normalized to start of day in EAT
+    const today = new Date(eatTime)
     today.setHours(0, 0, 0, 0)
 
-    // Check if attendance is locked (after cutoff time, e.g., 5 PM)
-    const now = new Date()
+    // Check if attendance is locked (after cutoff time, e.g., 5 PM EAT)
     const cutoffHour = 17 // 5 PM
     const cutoffTime = new Date(today)
     cutoffTime.setHours(cutoffHour, 0, 0, 0)
     
-    const isLocked = now > cutoffTime
+    const isLocked = eatTime > cutoffTime
     const canEdit = !isLocked
+    
+    // Format cutoff time for display
+    const cutoffTimeDisplay = `${cutoffHour}:00 EAT`
+    
+    // Debug logging
+    console.log('Attendance Lock Check:', {
+      serverTime: now.toISOString(),
+      serverHour: now.getHours(),
+      eatTime: eatTime.toISOString(),
+      eatHour: eatTime.getHours(),
+      cutoffTime: cutoffTime.toISOString(),
+      isLocked,
+      canEdit
+    })
 
     // Build class list with attendance status
     const classes = await Promise.all(
@@ -106,7 +127,7 @@ export async function GET(request: NextRequest) {
           studentCount,
           attendanceStatus,
           isLocked,
-          lockMessage: isLocked ? `Attendance entry closed at ${cutoffHour}:00. Contact admin to reopen.` : undefined,
+          lockMessage: isLocked ? `Attendance entry closed at ${cutoffTimeDisplay}. Contact admin to reopen.` : undefined,
         }
       })
     )
@@ -115,10 +136,17 @@ export async function GET(request: NextRequest) {
       classes,
       lockState: {
         isLocked,
-        cutoffTime: cutoffTime.toISOString(),
+        cutoffTime: cutoffTimeDisplay,
         canEdit,
-        message: isLocked ? `Attendance entry is locked after ${cutoffHour}:00. Contact your administrator to reopen.` : undefined,
+        message: isLocked ? `Attendance entry is locked after ${cutoffTimeDisplay}. Contact your administrator to reopen.` : undefined,
       },
+      debug: {
+        serverTime: now.toISOString(),
+        eatTime: eatTime.toISOString(),
+        cutoffTime: cutoffTime.toISOString(),
+        isLocked,
+        currentHour: eatTime.getHours(),
+      }
     })
   } catch (error) {
     console.error('Error fetching teacher attendance:', error)

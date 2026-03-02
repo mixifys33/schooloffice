@@ -9,7 +9,13 @@ import {
   Lock,
   CheckCircle2,
   Clock,
-  User
+  User,
+  Search,
+  Filter,
+  Download,
+  Printer,
+  ArrowUpDown,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
@@ -71,6 +77,12 @@ export default function AttendanceRecordingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  
+  // Search, Sort, Filter states
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'name' | 'number'>('name')
+  const [filterStatus, setFilterStatus] = useState<AttendanceStatus | 'ALL'>('ALL')
+  const [showFilters, setShowFilters] = useState(false)
 
   const fetchAttendanceData = useCallback(async () => {
     try {
@@ -154,8 +166,14 @@ export default function AttendanceRecordingPage() {
       const result = await response.json()
       setSuccessMessage(result.message || 'Attendance saved successfully')
       
-      // Refresh data to get updated lock state
-      await fetchAttendanceData()
+      // Don't reset attendance - keep the selections visible
+      // Just refresh data to get updated lock state without changing attendance
+      const refreshResponse = await fetch(`/api/teacher/attendance/${classId}`)
+      if (refreshResponse.ok) {
+        const refreshedData: ClassAttendanceData = await refreshResponse.json()
+        setData(refreshedData)
+        // Keep current attendance selections
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save attendance')
     } finally {
@@ -175,6 +193,165 @@ export default function AttendanceRecordingPage() {
     setSuccessMessage(null)
   }
 
+  // Filter, Sort, and Search logic
+  const getFilteredAndSortedStudents = () => {
+    if (!data) return []
+    
+    let filtered = [...data.students]
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(student => 
+        student.firstName.toLowerCase().includes(query) ||
+        student.lastName.toLowerCase().includes(query) ||
+        student.admissionNumber.toLowerCase().includes(query)
+      )
+    }
+    
+    // Apply status filter
+    if (filterStatus !== 'ALL') {
+      filtered = filtered.filter(student => attendance[student.id] === filterStatus)
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        const nameA = `${a.lastName} ${a.firstName}`.toLowerCase()
+        const nameB = `${b.lastName} ${b.firstName}`.toLowerCase()
+        return nameA.localeCompare(nameB)
+      } else {
+        return a.admissionNumber.localeCompare(b.admissionNumber)
+      }
+    })
+    
+    return filtered
+  }
+
+  // Print functionality
+  const handlePrint = () => {
+    if (!data) return
+    
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    
+    const filteredStudents = getFilteredAndSortedStudents()
+    const printDate = new Date(data.date).toLocaleDateString('en-UG', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Attendance - ${data.className}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #333; margin-bottom: 5px; }
+            .meta { color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .present { background-color: #d4edda; }
+            .absent { background-color: #f8d7da; }
+            .late { background-color: #fff3cd; }
+            .stats { margin-top: 20px; display: flex; gap: 20px; }
+            .stat-box { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${data.className}${data.streamName ? ` (${data.streamName})` : ''}</h1>
+          <div class="meta">
+            <p><strong>Date:</strong> ${printDate}</p>
+            <p><strong>Total Students:</strong> ${filteredStudents.length}</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-box present">
+              <strong>Present:</strong> ${stats.present}
+            </div>
+            <div class="stat-box absent">
+              <strong>Absent:</strong> ${stats.absent}
+            </div>
+            <div class="stat-box late">
+              <strong>Late:</strong> ${stats.late}
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Admission Number</th>
+                <th>Student Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredStudents.map((student, index) => {
+                const status = attendance[student.id] || 'PRESENT'
+                const statusClass = status.toLowerCase()
+                return `
+                  <tr class="${statusClass}">
+                    <td>${index + 1}</td>
+                    <td>${student.admissionNumber}</td>
+                    <td>${student.firstName} ${student.lastName}</td>
+                    <td><strong>${status}</strong></td>
+                  </tr>
+                `
+              }).join('')}
+            </tbody>
+          </table>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `
+    
+    printWindow.document.write(printContent)
+    printWindow.document.close()
+  }
+
+  // Download as CSV
+  const handleDownloadCSV = () => {
+    if (!data) return
+    
+    const filteredStudents = getFilteredAndSortedStudents()
+    const csvRows = [
+      ['#', 'Admission Number', 'First Name', 'Last Name', 'Status'],
+      ...filteredStudents.map((student, index) => [
+        index + 1,
+        student.admissionNumber,
+        student.firstName,
+        student.lastName,
+        attendance[student.id] || 'PRESENT'
+      ])
+    ]
+    
+    const csvContent = csvRows.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendance_${data.className}_${new Date(data.date).toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  const filteredStudents = getFilteredAndSortedStudents()
+
   if (loading) {
     return (
       <div className="space-y-6 p-4 sm:p-6">
@@ -189,7 +366,7 @@ export default function AttendanceRecordingPage() {
       <div className="p-4 sm:p-6">
         <div className="mb-4">
           <Link 
-            href="/portals/teacher/attendance"
+            href="/teacher/attendance"
             className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)]"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -230,7 +407,7 @@ export default function AttendanceRecordingPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link 
-            href="/portals/teacher/attendance"
+            href="/teacher/attendance"
             className="inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -287,86 +464,274 @@ export default function AttendanceRecordingPage() {
         </div>
       )}
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 text-center">
-          <div className="text-2xl font-semibold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{stats.total}</div>
-          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">Total</div>
+      {/* Stats Summary - Mobile Optimized with Progress Indicator */}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border-2 border-[var(--border-default)] dark:border-[var(--border-strong)] p-3 sm:p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] dark:text-[var(--white-pure)]">{stats.total}</div>
+            <div className="text-xs sm:text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] mt-1">Total</div>
+          </div>
+          <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 rounded-lg border-2 border-[var(--chart-green)] dark:border-[var(--success-dark)] p-3 sm:p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-[var(--chart-green)] dark:text-[var(--success)]">{stats.present}</div>
+            <div className="text-xs sm:text-sm text-[var(--chart-green)] dark:text-[var(--success)] mt-1 font-medium">Present</div>
+          </div>
+          <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 rounded-lg border-2 border-[var(--chart-red)] dark:border-[var(--danger-dark)] p-3 sm:p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-[var(--chart-red)] dark:text-[var(--danger)]">{stats.absent}</div>
+            <div className="text-xs sm:text-sm text-[var(--chart-red)] dark:text-[var(--danger)] mt-1 font-medium">Absent</div>
+          </div>
+          <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 rounded-lg border-2 border-[var(--chart-yellow)] dark:border-amber-800 p-3 sm:p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-bold text-[var(--warning-dark)] dark:text-[var(--warning)]">{stats.late}</div>
+            <div className="text-xs sm:text-sm text-[var(--chart-yellow)] dark:text-[var(--warning)] mt-1 font-medium">Late</div>
+          </div>
         </div>
-        <div className="bg-[var(--success-light)] dark:bg-[var(--success-dark)]/30 rounded-lg border border-[var(--success-light)] dark:border-[var(--success-dark)] p-3 text-center">
-          <div className="text-2xl font-semibold text-[var(--chart-green)] dark:text-[var(--success)]">{stats.present}</div>
-          <div className="text-xs text-[var(--chart-green)] dark:text-[var(--success)]">Present</div>
-        </div>
-        <div className="bg-[var(--danger-light)] dark:bg-[var(--danger-dark)]/30 rounded-lg border border-[var(--danger-light)] dark:border-[var(--danger-dark)] p-3 text-center">
-          <div className="text-2xl font-semibold text-[var(--chart-red)] dark:text-[var(--danger)]">{stats.absent}</div>
-          <div className="text-xs text-[var(--chart-red)] dark:text-[var(--danger)]">Absent</div>
-        </div>
-        <div className="bg-[var(--warning-light)] dark:bg-[var(--warning-dark)]/30 rounded-lg border border-amber-200 dark:border-amber-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-[var(--warning-dark)] dark:text-[var(--warning)]">{stats.late}</div>
-          <div className="text-xs text-[var(--chart-yellow)] dark:text-[var(--warning)]">Late</div>
+        
+        {/* Progress Bar */}
+        <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+          <div className="h-full flex">
+            <div 
+              className="bg-[var(--chart-green)] transition-all duration-300"
+              style={{ width: `${(stats.present / stats.total) * 100}%` }}
+            />
+            <div 
+              className="bg-[var(--chart-red)] transition-all duration-300"
+              style={{ width: `${(stats.absent / stats.total) * 100}%` }}
+            />
+            <div 
+              className="bg-[var(--chart-yellow)] transition-all duration-300"
+              style={{ width: `${(stats.late / stats.total) * 100}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Mobile Optimized */}
       {!isLocked && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => handleMarkAll('PRESENT')}
-            className="text-[var(--chart-green)] dark:text-[var(--success)] border-[var(--success)] dark:border-[var(--chart-green)]"
+            className="flex-1 sm:flex-none text-[var(--chart-green)] dark:text-[var(--success)] border-[var(--success)] dark:border-[var(--chart-green)] hover:bg-[var(--success-light)] dark:hover:bg-[var(--success-dark)]/30"
           >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
             Mark All Present
           </Button>
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => handleMarkAll('ABSENT')}
-            className="text-[var(--chart-red)] dark:text-[var(--danger)] border-[var(--danger)] dark:border-[var(--chart-red)]"
+            className="flex-1 sm:flex-none text-[var(--chart-red)] dark:text-[var(--danger)] border-[var(--danger)] dark:border-[var(--chart-red)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)]/30"
           >
+            <AlertCircle className="h-4 w-4 mr-2" />
             Mark All Absent
           </Button>
         </div>
       )}
 
-      {/* Student List */}
-      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] overflow-hidden">
-        <div className="divide-y divide-gray-200 dark:divide-gray-800">
-          {data.students.map((student, index) => (
-            <StudentAttendanceRow
-              key={student.id}
-              student={student}
-              index={index + 1}
-              status={attendance[student.id] || 'PRESENT'}
-              onStatusChange={(status) => handleStatusChange(student.id, status)}
-              isLocked={isLocked}
-            />
-          ))}
+      {/* Search, Filter, Sort, and Actions Bar */}
+      <div className="space-y-3">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            placeholder="Search by name or admission number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] bg-white dark:bg-[var(--text-primary)] text-[var(--text-primary)] dark:text-[var(--white-pure)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+
+        {/* Filter and Action Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {filterStatus !== 'ALL' && (
+              <span className="ml-1 px-1.5 py-0.5 bg-[var(--primary)] text-white text-xs rounded-full">1</span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortBy(sortBy === 'name' ? 'number' : 'name')}
+            className="gap-2"
+          >
+            <ArrowUpDown className="h-4 w-4" />
+            Sort: {sortBy === 'name' ? 'Name' : 'Number'}
+          </Button>
+
+          <div className="flex-1" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">Print</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadCSV}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">CSV</span>
+          </Button>
+        </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg p-4 border border-[var(--border-default)] dark:border-[var(--border-strong)]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">Filter by Status</h3>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterStatus('ALL')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === 'ALL'
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'bg-white dark:bg-[var(--text-primary)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-surface)]'
+                }`}
+              >
+                All ({data?.students.length || 0})
+              </button>
+              <button
+                onClick={() => setFilterStatus('PRESENT')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === 'PRESENT'
+                    ? 'bg-[var(--chart-green)] text-white'
+                    : 'bg-white dark:bg-[var(--text-primary)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--success-light)]'
+                }`}
+              >
+                Present ({stats.present})
+              </button>
+              <button
+                onClick={() => setFilterStatus('ABSENT')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === 'ABSENT'
+                    ? 'bg-[var(--chart-red)] text-white'
+                    : 'bg-white dark:bg-[var(--text-primary)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--danger-light)]'
+                }`}
+              >
+                Absent ({stats.absent})
+              </button>
+              <button
+                onClick={() => setFilterStatus('LATE')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === 'LATE'
+                    ? 'bg-[var(--chart-yellow)] text-white'
+                    : 'bg-white dark:bg-[var(--text-primary)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--warning-light)]'
+                }`}
+              >
+                Late ({stats.late})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Results Count */}
+        {(searchQuery || filterStatus !== 'ALL') && (
+          <div className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+            Showing {filteredStudents.length} of {data?.students.length || 0} students
+            {searchQuery && ` matching "${searchQuery}"`}
+            {filterStatus !== 'ALL' && ` with status: ${filterStatus}`}
+          </div>
+        )}
       </div>
 
-      {/* Save Button */}
-      <div className="sticky bottom-4 flex justify-end">
+      {/* Student List */}
+      <div className="bg-[var(--bg-main)] dark:bg-[var(--text-primary)] rounded-lg border border-[var(--border-default)] dark:border-[var(--border-strong)] overflow-hidden">
+        {filteredStudents.length > 0 ? (
+          <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            {filteredStudents.map((student, index) => (
+              <StudentAttendanceRow
+                key={student.id}
+                student={student}
+                index={index + 1}
+                status={attendance[student.id] || 'PRESENT'}
+                onStatusChange={(status) => handleStatusChange(student.id, status)}
+                isLocked={isLocked}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-12 text-center">
+            <Search className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] mb-2">
+              No students found
+            </h3>
+            <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+              {searchQuery 
+                ? `No students match "${searchQuery}"`
+                : filterStatus !== 'ALL'
+                  ? `No students with status: ${filterStatus}`
+                  : 'No students in this class'}
+            </p>
+            {(searchQuery || filterStatus !== 'ALL') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilterStatus('ALL')
+                }}
+                className="mt-4"
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Save Button - Mobile Optimized with Fixed Position */}
+      <div className="sticky bottom-0 left-0 right-0 p-4 bg-[var(--bg-main)] dark:bg-[var(--text-primary)] border-t border-[var(--border-default)] dark:border-[var(--border-strong)] -mx-4 sm:-mx-6 mt-6">
         <Button
           onClick={handleSave}
           disabled={saving || isLocked}
           size="lg"
-          className="shadow-lg"
+          className="w-full shadow-lg"
         >
           {saving ? (
             <>
-              <Clock className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
+              <Clock className="h-5 w-5 mr-2 animate-spin" />
+              Saving Attendance...
             </>
           ) : isLocked ? (
             <>
-              <Lock className="h-4 w-4 mr-2" />
-              Locked
+              <Lock className="h-5 w-5 mr-2" />
+              Attendance Locked
             </>
           ) : (
             <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Attendance
+              <Save className="h-5 w-5 mr-2" />
+              Save Attendance ({stats.total} students)
             </>
           )}
         </Button>
@@ -390,69 +755,87 @@ function StudentAttendanceRow({
   onStatusChange, 
   isLocked 
 }: StudentAttendanceRowProps) {
-  return (
-    <div className="flex items-center justify-between p-4 hover:bg-[var(--bg-surface)] dark:hover:bg-[var(--border-strong)]/50">
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] w-6">{index}.</span>
-        <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center">
-          {student.photo ? (
-            <img 
-              src={student.photo} 
-              alt={`${student.firstName} ${student.lastName}`}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <User className="h-4 w-4 text-[var(--text-muted)] dark:text-[var(--text-muted)]" />
-          )}
-        </div>
-        <div>
-          <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)]">
-            {student.firstName} {student.lastName}
-          </div>
-          <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-            {student.admissionNumber}
-          </div>
-        </div>
-      </div>
+  // Determine row background color based on status
+  const getRowBackgroundClass = () => {
+    switch (status) {
+      case 'PRESENT':
+        return 'bg-[var(--success-light)]/30 dark:bg-[var(--success-dark)]/20 border-l-4 border-l-[var(--chart-green)]'
+      case 'ABSENT':
+        return 'bg-[var(--danger-light)]/30 dark:bg-[var(--danger-dark)]/20 border-l-4 border-l-[var(--chart-red)]'
+      case 'LATE':
+        return 'bg-[var(--warning-light)]/30 dark:bg-[var(--warning-dark)]/20 border-l-4 border-l-[var(--chart-yellow)]'
+      default:
+        return 'bg-transparent'
+    }
+  }
 
-      {/* Status Buttons */}
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => onStatusChange('PRESENT')}
-          disabled={isLocked}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            status === 'PRESENT'
-              ? 'bg-[var(--chart-green)] text-[var(--white-pure)]'
-              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--success-light)] dark:hover:bg-[var(--success-dark)]/30'
-          } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          Present
-        </button>
-        <button
-          type="button"
-          onClick={() => onStatusChange('ABSENT')}
-          disabled={isLocked}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            status === 'ABSENT'
-              ? 'bg-[var(--chart-red)] text-[var(--white-pure)]'
-              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)]/30'
-          } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          Absent
-        </button>
-        <button
-          type="button"
-          onClick={() => onStatusChange('LATE')}
-          disabled={isLocked}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            status === 'LATE'
-              ? 'bg-[var(--chart-yellow)] text-[var(--white-pure)]'
-              : 'bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--warning-light)] dark:hover:bg-[var(--warning-dark)]/30'
-          } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          Late
-        </button>
+  return (
+    <div className={`p-3 sm:p-4 transition-all duration-200 ${getRowBackgroundClass()} hover:opacity-90`}>
+      {/* Mobile Layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Student Info */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] w-6 flex-shrink-0 font-medium">{index}.</span>
+          <div className="w-10 h-10 rounded-full bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-white dark:ring-gray-800">
+            {student.photo ? (
+              <img 
+                src={student.photo} 
+                alt={`${student.firstName} ${student.lastName}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="h-5 w-5 text-[var(--text-muted)] dark:text-[var(--text-muted)]" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-[var(--text-primary)] dark:text-[var(--white-pure)] truncate">
+              {student.firstName} {student.lastName}
+            </div>
+            <div className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+              {student.admissionNumber}
+            </div>
+          </div>
+        </div>
+
+        {/* Status Buttons - Mobile Optimized */}
+        <div className="flex gap-2 sm:gap-1.5">
+          <button
+            type="button"
+            onClick={() => onStatusChange('PRESENT')}
+            disabled={isLocked}
+            className={`flex-1 sm:flex-none px-4 sm:px-3 py-2 sm:py-1.5 text-sm sm:text-xs font-medium rounded-lg sm:rounded-md transition-all ${
+              status === 'PRESENT'
+                ? 'bg-[var(--chart-green)] text-white shadow-md scale-105 ring-2 ring-[var(--chart-green)]/50'
+                : 'bg-white dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--success-light)] dark:hover:bg-[var(--success-dark)]/30 active:scale-95'
+            } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            ✓ Present
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatusChange('ABSENT')}
+            disabled={isLocked}
+            className={`flex-1 sm:flex-none px-4 sm:px-3 py-2 sm:py-1.5 text-sm sm:text-xs font-medium rounded-lg sm:rounded-md transition-all ${
+              status === 'ABSENT'
+                ? 'bg-[var(--chart-red)] text-white shadow-md scale-105 ring-2 ring-[var(--chart-red)]/50'
+                : 'bg-white dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--danger-light)] dark:hover:bg-[var(--danger-dark)]/30 active:scale-95'
+            } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            ✗ Absent
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatusChange('LATE')}
+            disabled={isLocked}
+            className={`flex-1 sm:flex-none px-4 sm:px-3 py-2 sm:py-1.5 text-sm sm:text-xs font-medium rounded-lg sm:rounded-md transition-all ${
+              status === 'LATE'
+                ? 'bg-[var(--chart-yellow)] text-white shadow-md scale-105 ring-2 ring-[var(--chart-yellow)]/50'
+                : 'bg-white dark:bg-[var(--border-strong)] text-[var(--text-secondary)] dark:text-[var(--text-muted)] hover:bg-[var(--warning-light)] dark:hover:bg-[var(--warning-dark)]/30 active:scale-95'
+            } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            ⏰ Late
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -7,7 +7,6 @@ import {
   BookOpen,
   BarChart3,
   FileText,
-  MessageSquare,
   Settings,
   User,
   FolderOpen 
@@ -31,7 +30,6 @@ const navItems = [
   { href: '/class-teacher/reports', label: 'Reports', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/class-teacher/attendance', label: 'Attendance', icon: <ClipboardList className="h-5 w-5" /> },
   { href: '/class-teacher/profile', label: 'Profile & Workload', icon: <User className="h-5 w-5" /> },
-  { href: '/class-teacher/messages', label: 'Messages', icon: <MessageSquare className="h-5 w-5" /> },
   { href: '/class-teacher/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
 

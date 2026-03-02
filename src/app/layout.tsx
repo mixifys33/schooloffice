@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: 'SchoolOffice.academy',
   description: 'A comprehensive school management system',
   manifest: '/manifest.json',
+  verification: {
+    google: "VMGlVQ3ZFf0j0_g1hFF4rHuLU1jjuIPX-WoGcUkQKWM",
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },

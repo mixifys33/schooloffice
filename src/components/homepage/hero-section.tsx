@@ -41,9 +41,9 @@ export function HeroSection() {
               {/* Dashboard Header */}
               <div className="flex items-center justify-between px-4 py-3 bg-slate-800 dark:bg-slate-950 text-[var(--white-pure)]">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-[var(--bg-main)]/10 flex items-center justify-center text-xs font-bold">G</div>
-                  <span className="text-sm font-medium">Greenhill Academy</span>
-                  <span className="text-xs text-[var(--text-muted)] ml-1">| Term 2 - 2024</span>
+                  <div className="w-6 h-6 rounded bg-[var(--bg-main)]/10 flex items-center justify-center text-xs font-bold">KSS</div>
+                  <span className="text-sm font-medium">KASESE SECONDARY SCHOOL</span>
+                  <span className="text-xs text-[var(--text-muted)] ml-1">| Term 2 - 2025</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">

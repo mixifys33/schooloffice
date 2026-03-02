@@ -4,11 +4,12 @@ import React, { useState } from 'react'
 import { 
   User, 
   Palette,
-  Bell,
-  Shield
+  Bell
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AppearanceSettings } from '@/components/settings/appearance-settings'
+import { NotificationSettings } from '@/components/settings/notification-settings'
+import { ProfileSettings } from '@/components/settings/profile-settings'
 
 /**
  * Teacher Settings Page
@@ -19,7 +20,6 @@ const teacherSettingsTabs = [
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'privacy', label: 'Privacy', icon: Shield },
 ]
 
 export default function TeacherSettingsPage() {
@@ -65,54 +65,11 @@ export default function TeacherSettingsPage() {
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6">
-          <div 
-            className="p-6 rounded-lg border"
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderColor: 'var(--border-default)',
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Notification Preferences
-            </h3>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Notification settings will be available in a future update.
-            </p>
-          </div>
+          <NotificationSettings />
         </TabsContent>
 
         <TabsContent value="profile" className="mt-6">
-          <div 
-            className="p-6 rounded-lg border"
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderColor: 'var(--border-default)',
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Profile Settings
-            </h3>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Profile management will be available in a future update.
-            </p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="privacy" className="mt-6">
-          <div 
-            className="p-6 rounded-lg border"
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderColor: 'var(--border-default)',
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Privacy Settings
-            </h3>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              Privacy controls will be available in a future update.
-            </p>
-          </div>
+          <ProfileSettings />
         </TabsContent>
       </Tabs>
     </div>

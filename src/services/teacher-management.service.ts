@@ -1484,10 +1484,17 @@ export class TeacherManagementService {
     const { hashPassword } = await import('@/lib/auth')
     const { Role } = await import('@/types/enums')
 
-    // Determine the role based on access level
+    // Determine the role based on access level and class teacher status
+    // If teacher is assigned as class teacher for any classes, set activeRole to CLASS_TEACHER
+    const isClassTeacher = existingTeacher.classTeacherForIds && existingTeacher.classTeacherForIds.length > 0
+    
+    // User role is always TEACHER (from Role enum)
     const userRole = accessData.accessLevel === TeacherAccessLevel.TEACHER_ADMIN
       ? Role.TEACHER // Still TEACHER role, but with admin flag in teacher record
       : Role.TEACHER
+    
+    // ActiveRole can be CLASS_TEACHER (from StaffRole enum) if they're a class teacher
+    const activeRole = isClassTeacher ? 'CLASS_TEACHER' : null
 
     // Create user account and update teacher in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -1508,6 +1515,7 @@ export class TeacherManagementService {
           passwordHash,
           role: userRole,
           roles: [userRole],
+          activeRole: activeRole, // Set to CLASS_TEACHER if they're a class teacher
           isActive: true,
           forcePasswordReset: false, // No forced password reset on initial grant
         },

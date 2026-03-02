@@ -325,14 +325,16 @@ export function TeacherFormSteps({
       </Card>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between mt-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
+        {/* Left side buttons */}
+        <div className="flex flex-wrap gap-2">
           {formState.currentStep > TeacherFormStep.IDENTITY && (
             <Button
               type="button"
               variant="outline"
               onClick={goToPreviousStep}
               disabled={loading}
+              className="flex-1 sm:flex-none"
             >
               Previous
             </Button>
@@ -343,19 +345,22 @@ export function TeacherFormSteps({
               variant="ghost"
               onClick={onCancel}
               disabled={loading}
+              className="flex-1 sm:flex-none"
             >
               Cancel
             </Button>
           )}
         </div>
 
-        <div className="flex gap-2">
+        {/* Right side buttons */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {/* Save Draft button - available on all steps */}
           <Button
             type="button"
             variant="outline"
             onClick={() => handleSubmit('save_draft')}
             disabled={loading}
+            className="w-full sm:w-auto"
           >
             Save Draft
           </Button>
@@ -365,6 +370,7 @@ export function TeacherFormSteps({
               type="button"
               onClick={goToNextStep}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Next
             </Button>
@@ -376,17 +382,28 @@ export function TeacherFormSteps({
                     type="button"
                     onClick={() => handleSubmit('create_invite')}
                     disabled={loading}
-                    className="bg-[var(--chart-blue)] hover:bg-[var(--chart-blue)]/90"
+                    className="w-full sm:w-auto bg-[var(--chart-blue)] hover:bg-[var(--chart-blue)]/90"
                   >
-                    {loading ? 'Creating...' : 'Create Teacher & Send Login Invite'}
+                    {loading ? 'Creating...' : (
+                      <>
+                        <span className="hidden sm:inline">Create Teacher & Send Login Invite</span>
+                        <span className="sm:hidden">Create & Send Invite</span>
+                      </>
+                    )}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => handleSubmit('create')}
                     disabled={loading}
+                    className="w-full sm:w-auto"
                   >
-                    {loading ? 'Creating...' : 'Create Teacher Only'}
+                    {loading ? 'Creating...' : (
+                      <>
+                        <span className="hidden sm:inline">Create Teacher Only</span>
+                        <span className="sm:hidden">Create Only</span>
+                      </>
+                    )}
                   </Button>
                 </>
               ) : (
@@ -394,8 +411,14 @@ export function TeacherFormSteps({
                   type="button"
                   onClick={() => handleSubmit('create')}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
-                  {loading ? 'Creating...' : 'Create Teacher (Record Only)'}
+                  {loading ? 'Creating...' : (
+                    <>
+                      <span className="hidden sm:inline">Create Teacher (Record Only)</span>
+                      <span className="sm:hidden">Create Teacher</span>
+                    </>
+                  )}
                 </Button>
               )}
             </>

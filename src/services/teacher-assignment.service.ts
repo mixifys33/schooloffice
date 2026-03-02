@@ -426,6 +426,21 @@ export class TeacherAssignmentService {
       data: { classTeacherForIds: newClassTeacherForIds },
     })
 
+    // Update user activeRole if teacher has a linked user account
+    // If they have class teacher assignments, set activeRole to CLASS_TEACHER (StaffRole)
+    // If they have no class teacher assignments, clear activeRole (falls back to role: TEACHER)
+    if (teacher.userId) {
+      const shouldBeClassTeacher = newClassTeacherForIds.length > 0
+      const newActiveRole = shouldBeClassTeacher ? 'CLASS_TEACHER' : null
+      
+      await prisma.user.update({
+        where: { id: teacher.userId },
+        data: {
+          activeRole: newActiveRole, // CLASS_TEACHER is a StaffRole, not a Role
+        },
+      })
+    }
+
     // Log history entry
     await this.logAssignmentHistory(
       teacherId,
@@ -721,6 +736,44 @@ export class TeacherAssignmentService {
       }
 
       results.classTeacher = newClassTeacherFor
+    }
+
+    // Create TeacherAssignment records for each subject-class combination
+    // This is critical for the system to know which subjects a teacher teaches in which classes
+    if (assignments.subjectIds !== undefined && assignments.classIds !== undefined) {
+      const subjectIds = assignments.subjectIds
+      const classIds = assignments.classIds
+
+      // First, delete all existing TeacherAssignment records for this teacher
+      await prisma.teacherAssignment.deleteMany({
+        where: {
+          teacherId,
+          schoolId,
+        },
+      })
+
+      // Then create new records for each subject-class combination
+      if (subjectIds.length > 0 && classIds.length > 0) {
+        for (const subjectId of subjectIds) {
+          for (const classId of classIds) {
+            try {
+              await prisma.teacherAssignment.create({
+                data: {
+                  schoolId,
+                  teacherId,
+                  subjectId,
+                  classId,
+                },
+              })
+            } catch (error) {
+              // Ignore duplicate errors (unique constraint violation)
+              if ((error as any).code !== 'P2002') {
+                console.error(`Failed to create TeacherAssignment for subject ${subjectId} and class ${classId}:`, error)
+              }
+            }
+          }
+        }
+      }
     }
 
     return results

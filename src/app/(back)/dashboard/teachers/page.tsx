@@ -10,6 +10,8 @@ import { AlertBanner } from '@/components/ui/alert-banner'
 import { TeacherList } from '@/components/teachers/teacher-list'
 import { TeacherListItem, TeacherFilters } from '@/types/teacher'
 import { canManageTeachers } from '@/lib/rbac'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Role } from '@/types/enums'
 
 /**
  * Teachers Management Page
@@ -30,6 +32,10 @@ export default function TeachersPage() {
   const [error, setError] = useState<string | null>(null)
   const [departments, setDepartments] = useState<string[]>([])
   const [filters, setFilters] = useState<TeacherFilters>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [teacherToDelete, setTeacherToDelete] = useState<TeacherListItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Check if user can manage teachers (Requirements 10.4-10.6)
   const userRole = session?.user?.activeRole ?? session?.user?.role
@@ -101,6 +107,49 @@ export default function TeachersPage() {
     }
   }
 
+  const handleDeleteClick = useCallback((teacher: TeacherListItem) => {
+    setTeacherToDelete(teacher)
+    setDeleteDialogOpen(true)
+  }, [])
+
+  const handleDeleteConfirm = async () => {
+    if (!teacherToDelete) return
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/teachers/${teacherToDelete.id}/delete`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete teacher')
+      }
+
+      setSuccessMessage(data.message || 'Teacher deleted successfully')
+      setDeleteDialogOpen(false)
+      setTeacherToDelete(null)
+      
+      // Refresh the teacher list
+      await fetchTeachers()
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err) {
+      console.error('Error deleting teacher:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete teacher')
+      setDeleteDialogOpen(false)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Check if user can delete (only admins)
+  const canDelete = userRole === Role.SCHOOL_ADMIN || userRole === Role.SUPER_ADMIN
+
 
   if (loading && teachers.length === 0) {
     return (
@@ -145,6 +194,15 @@ export default function TeachersPage() {
         />
       )}
 
+      {/* Success Banner */}
+      {successMessage && (
+        <AlertBanner
+          type="success"
+          message={successMessage}
+          onDismiss={() => setSuccessMessage(null)}
+        />
+      )}
+
       {/* Teacher List with Filters */}
       <TeacherList
         teachers={filteredTeachers}
@@ -154,6 +212,25 @@ export default function TeachersPage() {
         onFilterChange={handleFilterChange}
         onSelect={handleSelectTeacher}
         onEdit={canEdit ? handleEditTeacher : undefined}
+        onDelete={canDelete ? handleDeleteClick : undefined}
+        deletingTeacherId={deleting ? teacherToDelete?.id : undefined}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Teacher"
+        description={
+          teacherToDelete
+            ? `Are you sure you want to permanently delete ${teacherToDelete.firstName} ${teacherToDelete.lastName}? This will remove all their data including assignments, documents, and history. This action cannot be undone.`
+            : ''
+        }
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        onConfirm={handleDeleteConfirm}
+        variant="destructive"
+        loading={deleting}
       />
     </div>
   )

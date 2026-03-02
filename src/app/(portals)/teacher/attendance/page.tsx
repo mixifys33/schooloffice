@@ -130,6 +130,17 @@ export default function TeacherAttendancePage() {
         />
       )}
 
+      {/* Debug Info - Remove after testing */}
+      {lockState && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+          <p className="text-sm text-blue-900 dark:text-blue-100">
+            <strong>Debug Info:</strong> Current Time: {new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })} | 
+            Cutoff: {lockState.cutoffTime} | 
+            Locked: {lockState.isLocked ? 'Yes' : 'No'}
+          </p>
+        </div>
+      )}
+
       {/* Cutoff Time Info - Requirement 12.4: Clear information */}
       {lockState && !lockState.isLocked && (
         <div className={cn(
@@ -172,7 +183,7 @@ export default function TeacherAttendancePage() {
       {/* Link to History */}
       <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
         <Link 
-          href="/portals/teacher/attendance/history"
+          href="/teacher/attendance/history"
           className={cn(
             'flex items-center gap-1',
             typography.caption,
@@ -251,7 +262,7 @@ function AttendanceClassCard({ classData, isGloballyLocked }: AttendanceClassCar
       <ActionButton
         label={isDone ? 'View Attendance' : isLocked ? 'Locked - Admin Approval Required' : 'Take Attendance'}
         icon={isLocked && !isDone ? <Lock className="h-4 w-4" /> : undefined}
-        href={`/portals/teacher/attendance/${classData.classId}`}
+        href={`/teacher/attendance/${classData.classId}`}
         isPermitted={!isLocked || isDone}
         hideWhenNotPermitted={false}
         variant={isDone ? 'secondary' : 'primary'}

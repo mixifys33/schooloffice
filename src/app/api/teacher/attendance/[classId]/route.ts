@@ -24,13 +24,21 @@ interface AttendanceRecordInput {
 /**
  * Check if current time is past the attendance cutoff time
  * Requirements: 4.3, 4.4 - Time-based locking
+ * Uses East Africa Time (EAT - UTC+3)
  */
 function isAfterCutoffTime(cutoffTime: string): boolean {
   const now = new Date()
+  
+  // Convert to EAT timezone
+  const eatOffset = 3 * 60 // EAT is UTC+3 (180 minutes)
+  const localOffset = now.getTimezoneOffset() // Get server's offset from UTC in minutes
+  const eatTime = new Date(now.getTime() + (eatOffset + localOffset) * 60 * 1000)
+  
   const [hours, minutes] = cutoffTime.split(':').map(Number)
-  const cutoff = new Date()
+  const cutoff = new Date(eatTime)
   cutoff.setHours(hours, minutes, 0, 0)
-  return now > cutoff
+  
+  return eatTime > cutoff
 }
 
 /**
@@ -59,20 +67,66 @@ export async function GET(
       return NextResponse.json({ error: 'No school context' }, { status: 400 })
     }
 
-    const staff = await prisma.staff.findFirst({
+    // Try to find teacher record first, then staff
+    let teacherId: string | null = null
+    let isTeacher = false
+    
+    const teacher = await prisma.teacher.findFirst({
       where: { userId: session.user.id, schoolId },
-      select: { id: true },
+      select: { id: true, canTakeAttendance: true },
     })
 
-    if (!staff) {
-      return NextResponse.json({ error: 'No staff profile' }, { status: 404 })
+    if (teacher) {
+      teacherId = teacher.id
+      isTeacher = true
+      
+      if (!teacher.canTakeAttendance && userRole === Role.TEACHER) {
+        return NextResponse.json({ error: 'You do not have permission to take attendance' }, { status: 403 })
+      }
+    } else {
+      // Fallback to staff record
+      const staff = await prisma.staff.findFirst({
+        where: { userId: session.user.id, schoolId },
+        select: { id: true },
+      })
+
+      if (!staff) {
+        return NextResponse.json({ error: 'No staff profile' }, { status: 404 })
+      }
+      
+      teacherId = staff.id
     }
 
-    const staffClass = await prisma.staffClass.findFirst({
-      where: { staffId: staff.id, classId },
-    })
-
-    const isAssigned = !!staffClass || userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY
+    // Check if teacher is assigned to this class
+    let isAssigned = false
+    
+    if (isTeacher) {
+      // Check teacher assignments
+      const teacherAssignment = await prisma.teacherAssignment.findFirst({
+        where: { teacherId, classId },
+      })
+      isAssigned = !!teacherAssignment
+      
+      // Also check if they're a class teacher
+      if (!isAssigned) {
+        const teacherRecord = await prisma.teacher.findUnique({
+          where: { id: teacherId },
+          select: { classTeacherForIds: true },
+        })
+        isAssigned = teacherRecord?.classTeacherForIds.includes(classId) || false
+      }
+    } else {
+      // Check staff assignments
+      const staffClass = await prisma.staffClass.findFirst({
+        where: { staffId: teacherId, classId },
+      })
+      isAssigned = !!staffClass
+    }
+    
+    // Admins and deputies can access any class
+    if (userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY) {
+      isAssigned = true
+    }
 
     if (!isAssigned) {
       return NextResponse.json({
@@ -154,21 +208,66 @@ export async function POST(
       return NextResponse.json({ error: 'No school context' }, { status: 400 })
     }
 
-    const staff = await prisma.staff.findFirst({
+    // Try to find teacher record first, then staff
+    let teacherId: string | null = null
+    let isTeacher = false
+    
+    const teacher = await prisma.teacher.findFirst({
       where: { userId: session.user.id, schoolId },
-      select: { id: true },
+      select: { id: true, canTakeAttendance: true },
     })
 
-    if (!staff) {
-      return NextResponse.json({ error: 'No staff profile' }, { status: 404 })
+    if (teacher) {
+      teacherId = teacher.id
+      isTeacher = true
+      
+      if (!teacher.canTakeAttendance && userRole === Role.TEACHER) {
+        return NextResponse.json({ error: 'You do not have permission to take attendance' }, { status: 403 })
+      }
+    } else {
+      // Fallback to staff record
+      const staff = await prisma.staff.findFirst({
+        where: { userId: session.user.id, schoolId },
+        select: { id: true },
+      })
+
+      if (!staff) {
+        return NextResponse.json({ error: 'No staff profile' }, { status: 404 })
+      }
+      
+      teacherId = staff.id
     }
 
-    // Validate teacher assignment
-    const staffClass = await prisma.staffClass.findFirst({
-      where: { staffId: staff.id, classId },
-    })
-
-    const isAssigned = !!staffClass || userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY
+    // Check if teacher is assigned to this class
+    let isAssigned = false
+    
+    if (isTeacher) {
+      // Check teacher assignments
+      const teacherAssignment = await prisma.teacherAssignment.findFirst({
+        where: { teacherId, classId },
+      })
+      isAssigned = !!teacherAssignment
+      
+      // Also check if they're a class teacher
+      if (!isAssigned) {
+        const teacherRecord = await prisma.teacher.findUnique({
+          where: { id: teacherId },
+          select: { classTeacherForIds: true },
+        })
+        isAssigned = teacherRecord?.classTeacherForIds.includes(classId) || false
+      }
+    } else {
+      // Check staff assignments
+      const staffClass = await prisma.staffClass.findFirst({
+        where: { staffId: teacherId, classId },
+      })
+      isAssigned = !!staffClass
+    }
+    
+    // Admins and deputies can access any class
+    if (userRole === Role.SCHOOL_ADMIN || userRole === Role.DEPUTY) {
+      isAssigned = true
+    }
 
     if (!isAssigned) {
       return NextResponse.json({ error: 'Not assigned to this class' }, { status: 403 })
@@ -217,7 +316,7 @@ export async function POST(
     const attendanceRecords = await attendanceService.recordAttendance(
       classId, requestDate, 1,
       records.map(r => ({ studentId: r.studentId, status: r.status, remarks: r.remarks })),
-      staff.id
+      teacherId
     )
 
     // Audit log

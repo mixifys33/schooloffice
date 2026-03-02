@@ -217,66 +217,30 @@ export async function POST(request: NextRequest) {
     // Create teacher using the service (Requirements 1.1-1.6)
     const teacher = await teacherManagementService.createTeacher(schoolId, teacherData, userId)
 
-    // Create TeacherAssignment records for subject-class assignments
-    // We need to create an assignment for each combination of subject and class
-    if (assignedSubjects && Array.isArray(assignedSubjects) && assignedSubjects.length > 0 &&
-        assignedClasses && Array.isArray(assignedClasses) && assignedClasses.length > 0) {
-      const { prisma } = await import('@/lib/db')
-      
-      // Create assignments for each subject-class combination
-      for (const subjectId of assignedSubjects) {
-        for (const classId of assignedClasses) {
-          try {
-            await prisma.teacherAssignment.create({
-              data: {
-                schoolId,
-                teacherId: teacher.id,
-                subjectId: typeof subjectId === 'string' ? subjectId : subjectId.subjectId || subjectId,
-                classId: typeof classId === 'string' ? classId : classId.classId || classId,
-              },
-            })
-          } catch (err) {
-            // Ignore duplicate errors (unique constraint violation)
-            if ((err as any).code !== 'P2002') {
-              console.error(`Failed to create TeacherAssignment for subject ${subjectId} and class ${classId}:`, err)
-            }
-          }
-        }
-      }
-    }
-
-    // Update teacher's assigned arrays (for backward compatibility and quick lookups)
+    // Handle academic assignments using the assignment service
     if ((assignedSubjects && assignedSubjects.length > 0) || 
         (assignedClasses && assignedClasses.length > 0) || 
         (assignedStreams && assignedStreams.length > 0) ||
         (classTeacherFor && classTeacherFor.length > 0)) {
-      const { prisma } = await import('@/lib/db')
       
-      const updateData: any = {}
-      
-      if (assignedSubjects && Array.isArray(assignedSubjects)) {
-        updateData.assignedSubjectIds = assignedSubjects.map((a: any) => 
-          typeof a === 'string' ? a : a.subjectId
-        ).filter((id: string) => id)
-      }
-      
-      if (assignedClasses && Array.isArray(assignedClasses)) {
-        updateData.assignedClassIds = assignedClasses
-      }
-      
-      if (assignedStreams && Array.isArray(assignedStreams)) {
-        updateData.assignedStreamIds = assignedStreams
-      }
-      
-      if (classTeacherFor && Array.isArray(classTeacherFor)) {
-        updateData.classTeacherForIds = classTeacherFor
-      }
-      
-      if (Object.keys(updateData).length > 0) {
-        await prisma.teacher.update({
-          where: { id: teacher.id },
-          data: updateData,
-        })
+      try {
+        const { teacherAssignmentService } = await import('@/services/teacher-assignment.service')
+        
+        // Update all assignments at once using the assignment service
+        await teacherAssignmentService.updateAllAssignments(
+          teacher.id,
+          schoolId,
+          {
+            subjectIds: assignedSubjects || [],
+            classIds: assignedClasses || [],
+            streamIds: assignedStreams || [],
+            classTeacherForIds: classTeacherFor || [],
+          },
+          userId
+        )
+      } catch (assignmentError) {
+        console.error('Failed to create teacher assignments:', assignmentError)
+        // Teacher was created but assignments failed - log warning but continue
       }
     }
 

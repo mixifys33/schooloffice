@@ -9,7 +9,6 @@ import {
   BookOpen,
   BarChart3,
   FileText,
-  MessageSquare,
   Settings,
   User,
   FolderOpen
