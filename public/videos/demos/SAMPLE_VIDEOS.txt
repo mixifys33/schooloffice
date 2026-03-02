@@ -1,0 +1,83 @@
+# Sample Video Names for Testing
+
+Once you have videos ready, rename them using these formats:
+
+## Platform Overview Videos
+- overview-schooloffice-introduction.mp4
+- overview-complete-platform-tour.mp4
+- overview-key-features-highlight.mp4
+
+## Feature Demonstrations
+- features-student-enrollment-process.mp4
+- features-attendance-tracking-system.mp4
+- features-grade-management-tools.mp4
+- features-bulk-sms-sending.mp4
+- features-report-card-generation.mp4
+
+## Getting Started Tutorials
+- tutorial-first-time-setup.mp4
+- tutorial-adding-teachers-staff.mp4
+- tutorial-importing-student-data.mp4
+- tutorial-configuring-academic-year.mp4
+
+## Attendance Features
+- attendance-daily-marking-process.mp4
+- attendance-reports-and-analytics.mp4
+- attendance-parent-notifications.mp4
+
+## Grade Management
+- grades-entering-exam-marks.mp4
+- grades-automated-calculations.mp4
+- grades-report-card-creation.mp4
+- grades-publishing-results.mp4
+
+## Fee Management
+- fees-setting-fee-structure.mp4
+- fees-recording-payments.mp4
+- fees-mobile-money-integration.mp4
+- fees-payment-tracking-reports.mp4
+- fees-defaulter-management.mp4
+
+## Communication Features
+- communication-sending-sms-alerts.mp4
+- communication-whatsapp-messaging.mp4
+- communication-email-notifications.mp4
+- communication-bulk-messaging.mp4
+
+## Reports & Analytics
+- reports-financial-summary.mp4
+- reports-academic-performance.mp4
+- reports-attendance-statistics.mp4
+- reports-export-to-excel-pdf.mp4
+
+## Role-Specific Demos
+- admin-dashboard-overview.mp4
+- admin-user-management.mp4
+- admin-school-settings.mp4
+- teacher-daily-workflow.mp4
+- teacher-grade-entry-process.mp4
+- teacher-class-management.mp4
+- parent-portal-walkthrough.mp4
+- parent-checking-child-results.mp4
+- parent-fee-payment-process.mp4
+- student-viewing-timetable.mp4
+- student-checking-grades.mp4
+- student-accessing-assignments.mp4
+
+## Quick Tips
+1. Keep videos under 3 minutes for better engagement
+2. Use 1080p or 720p resolution
+3. Compress videos to reduce file size
+4. Use MP4 format for best compatibility
+5. Add clear audio narration
+6. Show real-world use cases
+7. Include captions for accessibility
+
+## Video Production Tips
+- Use screen recording software (OBS, Camtasia, ScreenFlow)
+- Record in a quiet environment
+- Use a good microphone for narration
+- Edit out mistakes and long pauses
+- Add intro/outro with branding
+- Include call-to-action at the end
+- Test on different devices before uploading

@@ -75,6 +75,13 @@ interface ClassDetailsData {
     examContribution: number
     isClassTeacher: boolean
   }
+  availableClasses?: Array<{
+    id: string
+    streamId: string | null
+    name: string
+    streamName: string | null
+    displayName: string
+  }>
   students: Array<{
     id: string
     name: string
@@ -120,6 +127,7 @@ export default function ClassTeacherClassDetailsPage() {
   const [data, setData] = useState<ClassDetailsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
   
   // Modal states
   const [viewStudentId, setViewStudentId] = useState<string | null>(null)
@@ -130,7 +138,10 @@ export default function ClassTeacherClassDetailsPage() {
   useEffect(() => {
     async function fetchClassDetails() {
       try {
-        const response = await fetch('/api/class-teacher/class-details')
+        const url = selectedClassId 
+          ? `/api/class-teacher/class-details?classId=${selectedClassId}`
+          : '/api/class-teacher/class-details'
+        const response = await fetch(url)
         if (!response.ok) {
           throw new Error('Failed to fetch class details')
         }
@@ -145,7 +156,13 @@ export default function ClassTeacherClassDetailsPage() {
     }
 
     fetchClassDetails()
-  }, [])
+  }, [selectedClassId])
+
+  // Handle class selection change
+  const handleClassChange = (classId: string) => {
+    setSelectedClassId(classId)
+    setLoading(true)
+  }
 
   // Get student by ID
   const getStudent = (id: string) => {
@@ -517,6 +534,27 @@ export default function ClassTeacherClassDetailsPage() {
               Manage your class as a class teacher
             </p>
           </div>
+          
+          {/* Class Selector - Show if multiple classes available */}
+          {data.availableClasses && data.availableClasses.length > 1 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="class-selector" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] whitespace-nowrap">
+                Switch Class:
+              </label>
+              <select
+                id="class-selector"
+                value={selectedClassId || classData.id}
+                onChange={(e) => handleClassChange(e.target.value)}
+                className="px-3 py-2 border border-[var(--border-primary)] dark:border-[var(--border-dark)] rounded-lg bg-white dark:bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                {data.availableClasses.map((cls) => (
+                  <option key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} value={cls.id}>
+                    {cls.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

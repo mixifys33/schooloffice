@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [API] /api/class-teacher/class-details - Staff profile found:', staff.id)
 
-    // Enhanced class finding logic - check multiple sources consistently with dashboard
-    let classId: string | null = null
+    // Enhanced class finding logic - get ALL classes the teacher is assigned to
+    let allClassIds: string[] = []
     let classSource = 'none'
 
     // Step 1: Check StaffResponsibility for CLASS_TEACHER_DUTY
@@ -109,22 +109,24 @@ export async function GET(request: NextRequest) {
     console.log('🔍 [API] /api/class-teacher/class-details - Found responsibilities:', staffResponsibilities.length)
     
     if (staffResponsibilities.length > 0) {
-      // Extract class ID from responsibility details
-      const responsibility = staffResponsibilities[0]
-      if (responsibility.details && typeof responsibility.details === 'object') {
-        const details = responsibility.details as any
-        classId = details.classId || null
-        if (classId) {
-          classSource = 'StaffResponsibility'
-          console.log('✅ [API] /api/class-teacher/class-details - Found class via StaffResponsibility:', classId)
+      for (const responsibility of staffResponsibilities) {
+        if (responsibility.details && typeof responsibility.details === 'object') {
+          const details = responsibility.details as any
+          if (details.classId) {
+            allClassIds.push(details.classId)
+          }
         }
+      }
+      if (allClassIds.length > 0) {
+        classSource = 'StaffResponsibility'
+        console.log('✅ [API] /api/class-teacher/class-details - Found classes via StaffResponsibility:', allClassIds.length)
       }
     }
 
     // Step 2: Fallback to StaffClass assignments
-    if (!classId) {
+    if (allClassIds.length === 0) {
       console.log('🔍 [API] /api/class-teacher/class-details - Step 2: Checking StaffClass...')
-      const staffClass = await prisma.staffClass.findFirst({
+      const staffClasses = await prisma.staffClass.findMany({
         where: {
           staffId: staff.id,
         },
@@ -132,15 +134,15 @@ export async function GET(request: NextRequest) {
           classId: true,
         },
       })
-      if (staffClass) {
-        classId = staffClass.classId
+      if (staffClasses.length > 0) {
+        allClassIds = staffClasses.map(sc => sc.classId)
         classSource = 'StaffClass'
-        console.log('✅ [API] /api/class-teacher/class-details - Found class via StaffClass:', classId)
+        console.log('✅ [API] /api/class-teacher/class-details - Found classes via StaffClass:', allClassIds.length)
       }
     }
 
-    // Step 3: Enhanced Teacher model fallback (same as dashboard)
-    if (!classId) {
+    // Step 3: Enhanced Teacher model fallback
+    if (allClassIds.length === 0) {
       console.log('🔍 [API] /api/class-teacher/class-details - Step 3: Checking Teacher model...')
       const teacher = await prisma.teacher.findFirst({
         where: { 
@@ -164,13 +166,13 @@ export async function GET(request: NextRequest) {
         
         // Prefer class teacher assignment over regular assignment
         if (teacher.classTeacherForIds.length > 0) {
-          classId = teacher.classTeacherForIds[0]
+          allClassIds = teacher.classTeacherForIds
           classSource = 'Teacher.classTeacherForIds'
-          console.log('✅ [API] /api/class-teacher/class-details - Found class via Teacher.classTeacherForIds:', classId)
+          console.log('✅ [API] /api/class-teacher/class-details - Found classes via Teacher.classTeacherForIds:', allClassIds.length)
         } else if (teacher.assignedClassIds.length > 0) {
-          classId = teacher.assignedClassIds[0]
+          allClassIds = teacher.assignedClassIds
           classSource = 'Teacher.assignedClassIds'
-          console.log('✅ [API] /api/class-teacher/class-details - Found class via Teacher.assignedClassIds:', classId)
+          console.log('✅ [API] /api/class-teacher/class-details - Found classes via Teacher.assignedClassIds:', allClassIds.length)
         }
       } else {
         console.log('❌ [API] /api/class-teacher/class-details - No Teacher record found')
@@ -178,20 +180,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 4: Check StaffSubject assignments as final fallback
-    if (!classId) {
+    if (allClassIds.length === 0) {
       console.log('🔍 [API] /api/class-teacher/class-details - Step 4: Checking StaffSubject assignments...')
-      const staffSubject = await prisma.staffSubject.findFirst({
+      const staffSubjects = await prisma.staffSubject.findMany({
         where: { staffId: staff.id },
         select: { classId: true },
+        distinct: ['classId'],
       })
-      if (staffSubject) {
-        classId = staffSubject.classId
+      if (staffSubjects.length > 0) {
+        allClassIds = staffSubjects.map(ss => ss.classId)
         classSource = 'StaffSubject'
-        console.log('✅ [API] /api/class-teacher/class-details - Found class via StaffSubject:', classId)
+        console.log('✅ [API] /api/class-teacher/class-details - Found classes via StaffSubject:', allClassIds.length)
       }
     }
 
-    if (!classId) {
+    if (allClassIds.length === 0) {
       console.log('❌ [API] /api/class-teacher/class-details - No class assignment found for staff:', staff.id)
       return NextResponse.json(
         { 
@@ -218,9 +221,21 @@ If you believe this is an error, please provide your staff details to the admini
       )
     }
 
-    console.log(`✅ [API] /api/class-teacher/class-details - Using class: ${classId} (source: ${classSource})`)
+    // Check if a specific class is requested via query parameter
+    const { searchParams } = new URL(request.url)
+    const requestedClassId = searchParams.get('classId')
+    
+    let classId: string
+    if (requestedClassId && allClassIds.includes(requestedClassId)) {
+      classId = requestedClassId
+      console.log('✅ [API] /api/class-teacher/class-details - Using requested class:', classId)
+    } else {
+      classId = allClassIds[0]
+      console.log('✅ [API] /api/class-teacher/class-details - Using first class:', classId)
+    }
 
-    console.log('✅ [API] /api/class-teacher/class-details - Found class assignment:', classId)
+    console.log(`✅ [API] /api/class-teacher/class-details - Using class: ${classId} (source: ${classSource})`)
+    console.log(`✅ [API] /api/class-teacher/class-details - Total classes available: ${allClassIds.length}`)
 
     // Get class details
     const classData = await prisma.class.findFirst({
@@ -614,6 +629,43 @@ If you believe this is an error, please provide your staff details to the admini
         examContribution: 70, // Standard exam contribution
         isClassTeacher: true,
       },
+      availableClasses: await Promise.all(allClassIds.map(async (id) => {
+        const cls = await prisma.class.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            name: true,
+            streams: {
+              select: { 
+                id: true,
+                name: true 
+              }
+            }
+          }
+        })
+        
+        if (!cls) return []
+        
+        // If class has streams, return one option per stream
+        if (cls.streams.length > 0) {
+          return cls.streams.map(stream => ({
+            id: cls.id,
+            streamId: stream.id,
+            name: cls.name,
+            streamName: stream.name,
+            displayName: `${cls.name} - ${stream.name}`
+          }))
+        }
+        
+        // If no streams, return just the class
+        return [{
+          id: cls.id,
+          streamId: null,
+          name: cls.name,
+          streamName: null,
+          displayName: cls.name
+        }]
+      })).then(results => results.flat()),
       students: formattedStudents,
       curriculumTopics: formattedCurriculumTopics,
       classTasks: formattedClassTasks,

@@ -7,7 +7,7 @@ Allow: /login
 Allow: /register
 Allow: /about
 Allow: /contact
-Allow: /pricing
+Allow: /dashboard/
 
 # Disallow admin and dashboard areas
 Disallow: /dashboard/

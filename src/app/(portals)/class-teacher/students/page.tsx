@@ -69,6 +69,13 @@ interface ClassTeacherStudentsData {
     streamName: string | null
     studentCount: number
   } | null
+  availableClasses?: Array<{
+    id: string
+    streamId: string | null
+    name: string
+    streamName: string | null
+    displayName: string
+  }>
   students: Student[]
 }
 
@@ -76,11 +83,19 @@ export default function ClassTeacherStudentsPage() {
   const [data, setData] = useState<ClassTeacherStudentsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchStudentsData() {
       try {
-        const response = await fetch('/api/class-teacher/students')
+        let url = '/api/class-teacher/students'
+        const params = new URLSearchParams()
+        if (selectedClassId) params.append('classId', selectedClassId)
+        if (selectedStreamId) params.append('streamId', selectedStreamId)
+        if (params.toString()) url += `?${params.toString()}`
+        
+        const response = await fetch(url)
         if (!response.ok) {
           throw new Error('Failed to fetch students data')
         }
@@ -95,7 +110,19 @@ export default function ClassTeacherStudentsPage() {
     }
 
     fetchStudentsData()
-  }, [])
+  }, [selectedClassId, selectedStreamId])
+
+  // Handle class/stream selection change
+  const handleSelectionChange = (value: string) => {
+    const selected = data?.availableClasses?.find(
+      cls => (cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id) === value
+    )
+    if (selected) {
+      setSelectedClassId(selected.id)
+      setSelectedStreamId(selected.streamId)
+      setLoading(true)
+    }
+  }
 
   if (loading) {
     return (
@@ -138,7 +165,7 @@ export default function ClassTeacherStudentsPage() {
           <div className={cn('p-3 bg-[var(--info-light)] dark:bg-[var(--info-dark)] rounded-lg', teacherColors.info.bg)}>
             <Users className={cn('h-6 w-6', teacherColors.info.text)} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className={typography.pageTitle}>
               {classData ? `${classData.name} ${classData.streamName ? `(${classData.streamName})` : ''}` : 'My Students'}
             </h1>
@@ -151,6 +178,27 @@ export default function ClassTeacherStudentsPage() {
               )}
             </p>
           </div>
+          
+          {/* Class/Stream Selector */}
+          {data.availableClasses && data.availableClasses.length > 1 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="class-stream-selector" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] whitespace-nowrap">
+                Switch Class:
+              </label>
+              <select
+                id="class-stream-selector"
+                value={selectedStreamId ? `${selectedClassId}-${selectedStreamId}` : selectedClassId || classData?.id}
+                onChange={(e) => handleSelectionChange(e.target.value)}
+                className="px-3 py-2 border border-[var(--border-primary)] dark:border-[var(--border-dark)] rounded-lg bg-white dark:bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                {data.availableClasses.map((cls) => (
+                  <option key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} value={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id}>
+                    {cls.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

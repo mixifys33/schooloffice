@@ -61,8 +61,12 @@ In the meantime, here are some quick links:
     console.log('🟢 [AI API] Building context...')
     const startContext = Date.now()
     
+    // Get base URL from request
+    const baseUrl = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/') || 'http://localhost:3000'
+    console.log('🟢 [AI API] Base URL:', baseUrl)
+    
     // Build enhanced context with real documentation
-    const systemContext = contextBuilder.getSystemContext()
+    const systemContext = contextBuilder.getSystemContext(baseUrl)
     const pageContext = pathname ? contextBuilder.getPageContext(pathname) : ''
     const errorContext = error ? contextBuilder.getErrorContext(error) : ''
     

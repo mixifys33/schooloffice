@@ -58,7 +58,7 @@ class OpenRouterClient {
           model: this.model,
           messages,
           temperature: 0.7, // Slightly lower for faster, more focused responses
-          max_tokens: 600, // Reduced from 1200 to 600 for faster responses
+          max_tokens: 2600, // Reduced from 1200 to 600 for faster responses
           stream: false,
         }
         
