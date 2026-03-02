@@ -1,0 +1,22 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Allow specific pages
+Allow: /login
+Allow: /register
+Allow: /about
+Allow: /contact
+Allow: /pricing
+
+# Disallow admin and dashboard areas
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /teacher/
+Disallow: /class-teacher/
+Disallow: /dos/
+Disallow: /super-admin/
+
+# Sitemap location
+Sitemap: https://schooloffice.vercel.app/sitemap.xml

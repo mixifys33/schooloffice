@@ -13,11 +13,46 @@ const inter = Rethink_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'SchoolOffice.academy',
-  description: 'A comprehensive school management system',
+  title: 'SchoolOffice.academy - Complete School Management System',
+  description: 'A comprehensive school management system for modern educational institutions. Manage students, teachers, attendance, grades, fees, and more.',
+  keywords: ['school management system', 'education software', 'student management', 'teacher portal', 'school administration', 'attendance tracking', 'grade management'],
+  authors: [{ name: 'SchoolOffice' }],
   manifest: '/manifest.json',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   verification: {
     google: "VMGlVQ3ZFf0j0_g1hFF4rHuLU1jjuIPX-WoGcUkQKWM",
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://schooloffice.academy',
+    siteName: 'SchoolOffice.academy',
+    title: 'SchoolOffice.academy - Complete School Management System',
+    description: 'A comprehensive school management system for modern educational institutions. Manage students, teachers, attendance, grades, fees, and more.',
+    images: [
+      {
+        url: '/images/schooloffice.png',
+        width: 1200,
+        height: 630,
+        alt: 'SchoolOffice.academy',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SchoolOffice.academy - Complete School Management System',
+    description: 'A comprehensive school management system for modern educational institutions.',
+    images: ['/images/schooloffice.png'],
   },
   icons: {
     icon: [
