@@ -46,6 +46,7 @@ export async function GET(_request: NextRequest) {
         id: true,
         firstName: true,
         lastName: true,
+        email: true,
       },
     })
 
@@ -133,6 +134,110 @@ export async function GET(_request: NextRequest) {
     const teacherId = staff.id
     const teacherName = `${staff.firstName} ${staff.lastName}`
 
+    // Get all classes the teacher is assigned to
+    let allClassIds: string[] = []
+
+    // Check StaffResponsibility for CLASS_TEACHER_DUTY
+    const staffResponsibilities = await prisma.staffResponsibility.findMany({
+      where: {
+        staffId: staff.id,
+        type: 'CLASS_TEACHER_DUTY',
+      },
+      select: {
+        details: true,
+      },
+    })
+
+    if (staffResponsibilities.length > 0) {
+      for (const responsibility of staffResponsibilities) {
+        if (responsibility.details && typeof responsibility.details === 'object') {
+          const details = responsibility.details as any
+          if (details.classId) {
+            allClassIds.push(details.classId)
+          }
+        }
+      }
+    }
+
+    // Fallback to StaffClass assignments
+    if (allClassIds.length === 0) {
+      const staffClasses = await prisma.staffClass.findMany({
+        where: {
+          staffId: staff.id,
+        },
+        select: {
+          classId: true,
+        },
+      })
+      if (staffClasses.length > 0) {
+        allClassIds = staffClasses.map(sc => sc.classId)
+      }
+    }
+
+    // Fallback to Teacher model
+    if (allClassIds.length === 0) {
+      const teacher = await prisma.teacher.findFirst({
+        where: { 
+          schoolId,
+          OR: [
+            ...(staff.email ? [{ email: staff.email }] : []),
+            { firstName: staff.firstName, lastName: staff.lastName }
+          ]
+        },
+        select: { 
+          classTeacherForIds: true,
+          assignedClassIds: true 
+        }
+      })
+
+      if (teacher) {
+        if (teacher.classTeacherForIds.length > 0) {
+          allClassIds = teacher.classTeacherForIds
+        } else if (teacher.assignedClassIds.length > 0) {
+          allClassIds = teacher.assignedClassIds
+        }
+      }
+    }
+
+    // Build availableClasses array with streams
+    const availableClasses = await Promise.all(allClassIds.map(async (id) => {
+      const cls = await prisma.class.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          streams: {
+            select: { 
+              id: true,
+              name: true 
+            }
+          }
+        }
+      })
+      
+      if (!cls) return []
+      
+      // If class has streams, return one option per stream
+      if (cls.streams.length > 0) {
+        return cls.streams.map(stream => ({
+          id: cls.id,
+          streamId: stream.id,
+          name: cls.name,
+          streamName: stream.name,
+          displayName: `${cls.name} - ${stream.name}`
+        }))
+      }
+      
+      // If no streams, return just the class
+      return [{
+        id: cls.id,
+        streamId: null,
+        name: cls.name,
+        streamName: null,
+        displayName: cls.name
+      }]
+    })).then(results => results.flat())
+
     // Get current term
     console.log('🔍 [API] /api/class-teacher/context - Fetching current term...')
     const currentTerm = await prisma.term.findFirst({
@@ -174,7 +279,8 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      context: contextData
+      context: contextData,
+      availableClasses
     })
 
   } catch (error) {

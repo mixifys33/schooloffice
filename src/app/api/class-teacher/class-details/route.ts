@@ -224,11 +224,15 @@ If you believe this is an error, please provide your staff details to the admini
     // Check if a specific class is requested via query parameter
     const { searchParams } = new URL(request.url)
     const requestedClassId = searchParams.get('classId')
+    const requestedStreamId = searchParams.get('streamId')
     
     let classId: string
     if (requestedClassId && allClassIds.includes(requestedClassId)) {
       classId = requestedClassId
       console.log('✅ [API] /api/class-teacher/class-details - Using requested class:', classId)
+      if (requestedStreamId) {
+        console.log('✅ [API] /api/class-teacher/class-details - Using requested stream:', requestedStreamId)
+      }
     } else {
       classId = allClassIds[0]
       console.log('✅ [API] /api/class-teacher/class-details - Using first class:', classId)
@@ -278,10 +282,11 @@ If you believe this is an error, please provide your staff details to the admini
       )
     }
 
-    // Get students in the class
+    // Get students in the class - filter by stream if provided
     const students = await prisma.student.findMany({
       where: {
         classId,
+        ...(requestedStreamId ? { streamId: requestedStreamId } : {}),
         status: StudentStatus.ACTIVE,
       },
       select: {
@@ -616,11 +621,20 @@ If you believe this is an error, please provide your staff details to the admini
       author: 'System', // No createdByStaff relation available
     }))
 
+    // Get the correct stream name if a specific stream was requested
+    let streamName = null
+    if (requestedStreamId) {
+      const stream = classData.streams.find(s => s.id === requestedStreamId)
+      streamName = stream?.name || null
+    } else {
+      streamName = classData.streams[0]?.name || null
+    }
+
     const response = {
       class: {
         id: classData.id,
         name: classData.name,
-        streamName: classData.streams[0]?.name || null,
+        streamName,
         teacherName: `${staff.firstName} ${staff.lastName}`,
         studentCount,
         averageAttendance,

@@ -128,6 +128,7 @@ export default function ClassTeacherClassDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null)
   
   // Modal states
   const [viewStudentId, setViewStudentId] = useState<string | null>(null)
@@ -138,9 +139,12 @@ export default function ClassTeacherClassDetailsPage() {
   useEffect(() => {
     async function fetchClassDetails() {
       try {
-        const url = selectedClassId 
-          ? `/api/class-teacher/class-details?classId=${selectedClassId}`
-          : '/api/class-teacher/class-details'
+        let url = '/api/class-teacher/class-details'
+        const params = new URLSearchParams()
+        if (selectedClassId) params.append('classId', selectedClassId)
+        if (selectedStreamId) params.append('streamId', selectedStreamId)
+        if (params.toString()) url += `?${params.toString()}`
+        
         const response = await fetch(url)
         if (!response.ok) {
           throw new Error('Failed to fetch class details')
@@ -156,12 +160,18 @@ export default function ClassTeacherClassDetailsPage() {
     }
 
     fetchClassDetails()
-  }, [selectedClassId])
+  }, [selectedClassId, selectedStreamId])
 
   // Handle class selection change
-  const handleClassChange = (classId: string) => {
-    setSelectedClassId(classId)
-    setLoading(true)
+  const handleClassChange = (value: string) => {
+    const selected = data?.availableClasses?.find(
+      cls => (cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id) === value
+    )
+    if (selected) {
+      setSelectedClassId(selected.id)
+      setSelectedStreamId(selected.streamId)
+      setLoading(true)
+    }
   }
 
   // Get student by ID
@@ -543,12 +553,12 @@ export default function ClassTeacherClassDetailsPage() {
               </label>
               <select
                 id="class-selector"
-                value={selectedClassId || classData.id}
+                value={selectedStreamId ? `${selectedClassId}-${selectedStreamId}` : selectedClassId || classData.id}
                 onChange={(e) => handleClassChange(e.target.value)}
                 className="px-3 py-2 border border-[var(--border-primary)] dark:border-[var(--border-dark)] rounded-lg bg-white dark:bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 {data.availableClasses.map((cls) => (
-                  <option key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} value={cls.id}>
+                  <option key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} value={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id}>
                     {cls.displayName}
                   </option>
                 ))}

@@ -6,6 +6,7 @@ import { User, Calendar, BookOpen, LogOut, AlertCircle, Menu } from 'lucide-reac
 import { cn } from '@/lib/utils'
 import { teacherColors, typography, transitions } from '@/lib/teacher-ui-standards'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { AIChatToggle } from '@/components/ai-assistant/ai-chat-toggle'
 
 /**
  * Class Teacher Context Bar Component
@@ -217,6 +218,9 @@ export function ClassTeacherContextBar({ className, onToggleSidebar }: ClassTeac
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+          {/* AI Assistant Toggle */}
+          <AIChatToggle />
+
           {/* Theme Toggle */}
           <ThemeToggle />
 

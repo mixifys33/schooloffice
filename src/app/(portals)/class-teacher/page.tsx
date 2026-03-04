@@ -85,6 +85,13 @@ interface ClassTeacherDashboardData {
     examContribution: number
     isClassTeacher: boolean
   } | null
+  availableClasses?: Array<{
+    id: string
+    streamId: string | null
+    name: string
+    streamName: string | null
+    displayName: string
+  }>
   students: Array<{
     id: string
     name: string
@@ -132,11 +139,19 @@ export default function ClassTeacherDashboardPage() {
   const [data, setData] = useState<ClassTeacherDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchDashboardData() {
       try {
-        const response = await fetch('/api/class-teacher/dashboard')
+        let url = '/api/class-teacher/dashboard'
+        const params = new URLSearchParams()
+        if (selectedClassId) params.append('classId', selectedClassId)
+        if (selectedStreamId) params.append('streamId', selectedStreamId)
+        if (params.toString()) url += `?${params.toString()}`
+        
+        const response = await fetch(url)
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard data')
         }
@@ -151,7 +166,19 @@ export default function ClassTeacherDashboardPage() {
     }
 
     fetchDashboardData()
-  }, [])
+  }, [selectedClassId, selectedStreamId])
+
+  // Handle class selection change
+  const handleClassChange = (value: string) => {
+    const selected = data?.availableClasses?.find(
+      cls => (cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id) === value
+    )
+    if (selected) {
+      setSelectedClassId(selected.id)
+      setSelectedStreamId(selected.streamId)
+      setLoading(true)
+    }
+  }
 
   if (loading) {
     return (
@@ -324,12 +351,34 @@ export default function ClassTeacherDashboardPage() {
         <div className={cn(cardStyles.base, cardStyles.normal)}>
           <div className="flex items-center justify-between mb-4">
             <h2 className={typography.sectionTitle}>My Class</h2>
-            <Link
-              href="/class-teacher/class-details"
-              className={cn(typography.caption, 'hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors')}
-            >
-              View details →
-            </Link>
+            <div className="flex items-center gap-4">
+              {/* Class Selector */}
+              {data.availableClasses && data.availableClasses.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="dashboard-class-selector" className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)] whitespace-nowrap">
+                    Switch Class:
+                  </label>
+                  <select
+                    id="dashboard-class-selector"
+                    value={selectedStreamId ? `${selectedClassId}-${selectedStreamId}` : selectedClassId || classData.id}
+                    onChange={(e) => handleClassChange(e.target.value)}
+                    className="px-3 py-2 border border-[var(--border-primary)] dark:border-[var(--border-dark)] rounded-lg bg-white dark:bg-[var(--bg-secondary)] text-[var(--text-primary)] dark:text-[var(--white-pure)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  >
+                    {data.availableClasses.map((cls) => (
+                      <option key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} value={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id}>
+                        {cls.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <Link
+                href="/class-teacher/class-details"
+                className={cn(typography.caption, 'hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors')}
+              >
+                View details →
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

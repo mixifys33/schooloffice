@@ -29,6 +29,16 @@ interface CAFormData {
   maxScore: string
   type: string
   description: string
+  classId: string
+  streamId: string | null
+}
+
+interface ClassOption {
+  id: string
+  streamId: string | null
+  name: string
+  streamName: string | null
+  displayName: string
 }
 
 export default function CreateClassTeacherCAEntryPage() {
@@ -36,11 +46,43 @@ export default function CreateClassTeacherCAEntryPage() {
     name: '',
     maxScore: '10',
     type: 'assignment',
-    description: ''
+    description: '',
+    classId: '',
+    streamId: null
   })
+  const [availableClasses, setAvailableClasses] = useState<ClassOption[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingClasses, setLoadingClasses] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // Fetch available classes
+  useEffect(() => {
+    async function fetchClasses() {
+      try {
+        const response = await fetch('/api/class-teacher/context')
+        if (!response.ok) throw new Error('Failed to fetch classes')
+        const data = await response.json()
+        
+        if (data.availableClasses && data.availableClasses.length > 0) {
+          setAvailableClasses(data.availableClasses)
+          // Set first class as default
+          const firstClass = data.availableClasses[0]
+          setFormData(prev => ({
+            ...prev,
+            classId: firstClass.id,
+            streamId: firstClass.streamId
+          }))
+        }
+      } catch (err) {
+        console.error('Error fetching classes:', err)
+        setError('Failed to load classes')
+      } finally {
+        setLoadingClasses(false)
+      }
+    }
+    fetchClasses()
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -50,11 +92,29 @@ export default function CreateClassTeacherCAEntryPage() {
     }))
   }
 
+  const handleClassChange = (value: string) => {
+    const selected = availableClasses.find(
+      cls => (cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id) === value
+    )
+    if (selected) {
+      setFormData(prev => ({
+        ...prev,
+        classId: selected.id,
+        streamId: selected.streamId
+      }))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.name.trim()) {
       setError('CA name is required')
+      return
+    }
+
+    if (!formData.classId) {
+      setError('Please select a class')
       return
     }
     
@@ -79,19 +139,42 @@ export default function CreateClassTeacherCAEntryPage() {
       //     name: formData.name,
       //     maxScore: maxScoreNum,
       //     type: formData.type,
-      //     description: formData.description
+      //     description: formData.description,
+      //     classId: formData.classId,
+      //     streamId: formData.streamId
       //   })
       // })
       
       setSuccess('CA entry created successfully!')
+      
+      // Reset form to allow creating another entry
       setTimeout(() => {
-        window.history.back()
-      }, 1500)
+        setFormData({
+          name: '',
+          maxScore: '10',
+          type: 'assignment',
+          description: '',
+          classId: formData.classId, // Keep the same class selected
+          streamId: formData.streamId
+        })
+        setSuccess(null)
+      }, 2000)
     } catch (err) {
       setError('Failed to create CA entry')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loadingClasses) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -149,6 +232,38 @@ export default function CreateClassTeacherCAEntryPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Class Selection - Always show */}
+            {availableClasses.length > 0 && (
+              <div>
+                <Label htmlFor="class-select">Select Class/Stream *</Label>
+                <select
+                  id="class-select"
+                  value={formData.streamId ? `${formData.classId}-${formData.streamId}` : formData.classId}
+                  onChange={(e) => handleClassChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-[var(--border-default)] dark:border-[var(--border-strong)] rounded-lg bg-[var(--bg-main)] dark:bg-[var(--border-strong)] text-[var(--text-primary)] dark:text-[var(--white-pure)] focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+                >
+                  {availableClasses.map((cls) => (
+                    <option 
+                      key={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id} 
+                      value={cls.streamId ? `${cls.id}-${cls.streamId}` : cls.id}
+                    >
+                      {cls.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {/* Show message if no classes available */}
+            {availableClasses.length === 0 && !loadingClasses && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <AlertCircle className="h-5 w-5" />
+                  <span>No classes available. Please contact your administrator.</span>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="name">CA Name *</Label>
               <Input

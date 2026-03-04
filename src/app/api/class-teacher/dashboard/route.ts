@@ -7,7 +7,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Role, StaffRole } from '@/types/enums'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   console.log('🔍 [API] /api/class-teacher/dashboard - Route handler called')
   try {
     const session = await auth()
@@ -187,8 +187,8 @@ export async function GET(_request: NextRequest) {
       contextError = 'No active term found. Please contact administration.'
     }
 
-    // Enhanced class finding logic - same as class-details
-    let classId: string | null = null
+    // Enhanced class finding logic - get ALL classes the teacher is assigned to
+    let allClassIds: string[] = []
     let classSource = 'none'
 
     // Step 1: Check StaffResponsibility for CLASS_TEACHER_DUTY
@@ -203,19 +203,22 @@ export async function GET(_request: NextRequest) {
     })
     
     if (staffResponsibilities.length > 0) {
-      const responsibility = staffResponsibilities[0]
-      if (responsibility.details && typeof responsibility.details === 'object') {
-        const details = responsibility.details as any
-        classId = details.classId || null
-        if (classId) {
-          classSource = 'StaffResponsibility'
+      for (const responsibility of staffResponsibilities) {
+        if (responsibility.details && typeof responsibility.details === 'object') {
+          const details = responsibility.details as any
+          if (details.classId) {
+            allClassIds.push(details.classId)
+          }
         }
+      }
+      if (allClassIds.length > 0) {
+        classSource = 'StaffResponsibility'
       }
     }
 
     // Step 2: Fallback to StaffClass assignments
-    if (!classId) {
-      const staffClass = await prisma.staffClass.findFirst({
+    if (allClassIds.length === 0) {
+      const staffClasses = await prisma.staffClass.findMany({
         where: {
           staffId: staff.id,
         },
@@ -223,14 +226,14 @@ export async function GET(_request: NextRequest) {
           classId: true,
         },
       })
-      if (staffClass) {
-        classId = staffClass.classId
+      if (staffClasses.length > 0) {
+        allClassIds = staffClasses.map(sc => sc.classId)
         classSource = 'StaffClass'
       }
     }
 
     // Step 3: Check Teacher model
-    if (!classId) {
+    if (allClassIds.length === 0) {
       const teacher = await prisma.teacher.findFirst({
         where: { 
           schoolId,
@@ -247,26 +250,76 @@ export async function GET(_request: NextRequest) {
 
       if (teacher) {
         if (teacher.classTeacherForIds.length > 0) {
-          classId = teacher.classTeacherForIds[0]
+          allClassIds = teacher.classTeacherForIds
           classSource = 'Teacher.classTeacherForIds'
         } else if (teacher.assignedClassIds.length > 0) {
-          classId = teacher.assignedClassIds[0]
+          allClassIds = teacher.assignedClassIds
           classSource = 'Teacher.assignedClassIds'
         }
       }
     }
 
     // Step 4: Check StaffSubject assignments as final fallback
-    if (!classId) {
-      const staffSubject = await prisma.staffSubject.findFirst({
+    if (allClassIds.length === 0) {
+      const staffSubjects = await prisma.staffSubject.findMany({
         where: { staffId: staff.id },
         select: { classId: true },
+        distinct: ['classId'],
       })
-      if (staffSubject) {
-        classId = staffSubject.classId
+      if (staffSubjects.length > 0) {
+        allClassIds = staffSubjects.map(ss => ss.classId)
         classSource = 'StaffSubject'
       }
     }
+
+    // Check if a specific class is requested via query parameter
+    const { searchParams } = new URL(request.url)
+    const requestedClassId = searchParams.get('classId')
+    const requestedStreamId = searchParams.get('streamId')
+    
+    let classId: string | null = null
+    if (requestedClassId && allClassIds.includes(requestedClassId)) {
+      classId = requestedClassId
+    } else if (allClassIds.length > 0) {
+      classId = allClassIds[0]
+    }
+
+    // Build available classes list (all class+stream combinations)
+    const availableClasses = await Promise.all(allClassIds.map(async (id) => {
+      const cls = await prisma.class.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          streams: {
+            select: { 
+              id: true,
+              name: true 
+            }
+          }
+        }
+      })
+      
+      if (!cls) return []
+      
+      if (cls.streams.length > 0) {
+        return cls.streams.map(stream => ({
+          id: cls.id,
+          streamId: stream.id,
+          name: cls.name,
+          streamName: stream.name,
+          displayName: `${cls.name} - ${stream.name}`
+        }))
+      }
+      
+      return [{
+        id: cls.id,
+        streamId: null,
+        name: cls.name,
+        streamName: null,
+        displayName: cls.name
+      }]
+    })).then(results => results.flat())
 
     // Get primary class
     const primaryClass = classId ? await prisma.class.findFirst({
@@ -280,12 +333,18 @@ export async function GET(_request: NextRequest) {
       },
     }) : null
 
-    // Get students for primary class
+    // Get students for primary class, optionally filtered by stream
+    const studentFilter: any = {
+      classId: primaryClass.id,
+      status: 'ACTIVE'
+    }
+    
+    if (requestedStreamId) {
+      studentFilter.streamId = requestedStreamId
+    }
+    
     const students = primaryClass ? await prisma.student.findMany({
-      where: {
-        classId: primaryClass.id,
-        status: 'ACTIVE'
-      },
+      where: studentFilter,
       select: {
         id: true,
         firstName: true,
@@ -549,7 +608,9 @@ export async function GET(_request: NextRequest) {
       class: primaryClass ? {
         id: primaryClass.id,
         name: primaryClass.name,
-        streamName: primaryClass.streams[0]?.name || null,
+        streamName: requestedStreamId 
+          ? primaryClass.streams.find(s => s.id === requestedStreamId)?.name || primaryClass.streams[0]?.name || null
+          : primaryClass.streams[0]?.name || null,
         studentCount: students.length,
         averageAttendance,
         averagePerformance,
@@ -557,6 +618,7 @@ export async function GET(_request: NextRequest) {
         examContribution: 80,
         isClassTeacher: true
       } : null,
+      availableClasses,
       students: formattedStudents,
       performance: [],
       curriculumTopics: [],
