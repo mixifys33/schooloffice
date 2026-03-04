@@ -1,0 +1,129 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - SMS Messages Not Sent Through Gateway
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases - valid student IDs where Message records are created but no SMS is sent
+  - Test that calling `/api/bursar/send-reminders` with valid student IDs results in SMS being sent through Africa's Talking gateway
+  - The test assertions should verify:
+    - `smsSendingService.sendFeesReminders()` is called with correct parameters (schoolId, userId, role, studentIds)
+    - Response contains actual sent/failed counts from the service
+    - NO Message records are created in the database
+    - Audit log is created by the service
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - Message records created with status='QUEUED' but SMS gateway never invoked
+    - Response indicates success but no actual SMS transmission
+    - Database fills with QUEUED messages that never get processed
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3_
+
+- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Validation and Filtering Logic
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for validation and error handling:
+    - Invalid student IDs return 404 error
+    - Empty student IDs array returns 400 error
+    - Missing authentication returns 401 error
+    - Students without guardian phone numbers are skipped
+    - Students with zero or negative balances are skipped
+    - Financial summary component displays unpaid students correctly
+    - `/api/sms/send-fee-reminders` endpoint continues to work independently
+  - Write property-based tests capturing observed behavior patterns:
+    - For all invalid student IDs, endpoint returns 404
+    - For all empty arrays, endpoint returns 400
+    - For all unauthenticated requests, endpoint returns 401
+    - For all students without guardian phones, they are skipped with error logged
+    - For all students with balance <= 0, they are skipped
+    - For all requests to `/api/sms/send-fee-reminders`, behavior is unchanged
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
+
+- [x] 3. Fix for SMS reminder button not sending actual SMS messages
+  - [x] 3.1 Import SMS sending service
+    - Add import statement at the top of `src/app/api/bursar/send-reminders/route.ts`
+    - Import: `import { smsSendingService } from "@/services/sms-sending.service";`
+    - _Bug_Condition: isBugCondition(input) where input.studentIds is valid array and endpoint is '/api/bursar/send-reminders'_
+    - _Expected_Behavior: SMS messages sent through Africa's Talking gateway via smsSendingService.sendFeesReminders()_
+    - _Preservation: Validation logic, student filtering, and other endpoints remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.2 Remove manual Message creation loop
+    - Delete the entire `for (const student of students)` loop (lines ~120-175)
+    - Remove balance calculation inside the loop
+    - Remove `prisma.message.create()` calls
+    - Remove manual error tracking with `errors` array
+    - Remove `sentCount` variable tracking
+    - _Bug_Condition: isBugCondition(input) where manual Message records are created instead of calling SMS service_
+    - _Expected_Behavior: No Message records created in database, SMS sent directly through service_
+    - _Preservation: Student validation and filtering logic preserved_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.3 Remove unnecessary code sections
+    - Delete academic year and term fetching (service handles this internally)
+    - Delete fee structure fetching (service handles this internally)
+    - Delete individual student balance calculation (service handles this internally)
+    - Keep only: session validation, student ID extraction, and service call
+    - _Bug_Condition: isBugCondition(input) where duplicate logic exists in endpoint_
+    - _Expected_Behavior: Service handles all SMS logic, endpoint only orchestrates_
+    - _Preservation: Validation logic preserved, other endpoints unaffected_
+    - _Requirements: 2.1, 2.2, 2.3, 3.3_
+
+  - [x] 3.4 Call SMS sending service
+    - Replace removed loop with single call to `smsSendingService.sendFeesReminders()`
+    - Pass parameters: `session.user.schoolId`, `session.user.id`, `session.user.role as string`, `{ studentIds }`
+    - Store result in `sendResult` variable
+    - _Bug_Condition: isBugCondition(input) where SMS service is not called_
+    - _Expected_Behavior: smsSendingService.sendFeesReminders() called with correct parameters, SMS sent through Africa's Talking_
+    - _Preservation: Service's internal logic (template rendering, cost calculation, audit logging) unchanged_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.5 Return service results
+    - Update response to use service's return values: `sendResult.success`, `sendResult.sentCount`, `sendResult.failedCount`, `sendResult.totalRecipients`, `sendResult.errors`
+    - Update success message to reflect actual sent count
+    - _Bug_Condition: isBugCondition(input) where response shows false success_
+    - _Expected_Behavior: Response contains accurate delivery results from Africa's Talking_
+    - _Preservation: Response format compatible with frontend expectations_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.6 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - SMS Messages Sent Through Gateway
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify `smsSendingService.sendFeesReminders()` is called
+    - Verify response contains accurate sent/failed counts
+    - Verify NO Message records created in database
+    - Verify audit log created by service
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Validation and Filtering Logic
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all validation logic preserved:
+      - Invalid student IDs still return 404
+      - Empty arrays still return 400
+      - Unauthenticated requests still return 401
+      - Students without phones still skipped
+      - Students with zero balance still skipped
+      - `/api/sms/send-fee-reminders` still works independently
+      - Financial summary display still correct
+    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Run all tests (exploration + preservation)
+  - Verify bug condition test passes (SMS sent through gateway)
+  - Verify preservation tests pass (no regressions)
+  - Verify integration: Click "Send Reminders" button → SMS sent → Accurate results displayed
+  - Ask user if any questions arise or if manual testing reveals issues

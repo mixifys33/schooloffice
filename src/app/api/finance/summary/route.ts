@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
         totalOutstanding: 0,
         collectionRate: 0,
         unpaidStudents: [],
-        currentTerm: null
+        currentTerm: null,
+        lastReminderSent: null
       });
     }
 
@@ -76,7 +77,8 @@ export async function GET(request: NextRequest) {
         totalOutstanding: 0,
         collectionRate: 0,
         unpaidStudents: [],
-        currentTerm: null
+        currentTerm: null,
+        lastReminderSent: null
       })
     }
 
@@ -126,7 +128,8 @@ export async function GET(request: NextRequest) {
         totalOutstanding: 0,
         collectionRate: 0,
         unpaidStudents: [],
-        currentTerm: null
+        currentTerm: null,
+        lastReminderSent: null
       })
     }
 
@@ -221,6 +224,14 @@ export async function GET(request: NextRequest) {
       ? Math.min(100, (totalCollected / totalExpected) * 100) 
       : 0
 
+    // Fetch school record to get lastReminderSent
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { lastReminderSent: true }
+    })
+
+    console.log('[Finance Summary API] School lastReminderSent:', school?.lastReminderSent)
+
     const result = {
       totalExpected,
       totalCollected,
@@ -231,8 +242,11 @@ export async function GET(request: NextRequest) {
         id: currentTerm.id,
         name: currentTerm.name,
         academicYear: currentAcademicYear.name
-      }
+      },
+      lastReminderSent: school?.lastReminderSent?.toISOString() || null
     }
+
+    console.log('[Finance Summary API] Returning lastReminderSent:', result.lastReminderSent)
 
     return NextResponse.json(result)
 
@@ -245,7 +259,8 @@ export async function GET(request: NextRequest) {
       totalOutstanding: 0,
       collectionRate: 0,
       unpaidStudents: [],
-      currentTerm: null
+      currentTerm: null,
+      lastReminderSent: null
     });
   }
 }

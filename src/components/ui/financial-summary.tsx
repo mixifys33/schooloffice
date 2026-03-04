@@ -12,8 +12,10 @@ import {
   Users,
   Eye,
   Send,
-  Loader2
+  Loader2,
+  Clock
 } from 'lucide-react';
+import { calculateCooldownState, getButtonText, UPDATE_INTERVAL_MS, type CooldownState } from '@/lib/cooldown-client-utils';
 
 interface FinancialSummaryData {
   totalExpected: number;
@@ -27,6 +29,7 @@ interface FinancialSummaryData {
     balance: number;
     phone?: string;
   }>;
+  lastReminderSent?: string | null;
 }
 
 interface FinancialSummaryProps {
@@ -48,10 +51,47 @@ export function FinancialSummary({
   const [error, setError] = useState<string | null>(null);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [cooldownState, setCooldownState] = useState<CooldownState>({
+    isActive: false,
+    remainingDays: 0,
+    remainingHours: 0,
+    lastReminderSent: null
+  });
 
   useEffect(() => {
     fetchFinancialSummary();
   }, [schoolId, termId]);
+
+  // Update cooldown state when data changes
+  useEffect(() => {
+    if (data?.lastReminderSent) {
+      console.log('[Cooldown Debug] lastReminderSent from data:', data.lastReminderSent)
+      const newCooldownState = calculateCooldownState(data.lastReminderSent);
+      console.log('[Cooldown Debug] Calculated cooldown state:', newCooldownState)
+      setCooldownState(newCooldownState);
+    } else {
+      console.log('[Cooldown Debug] No lastReminderSent in data')
+    }
+  }, [data?.lastReminderSent]);
+
+  // Set up interval to update countdown every minute
+  useEffect(() => {
+    if (!cooldownState.isActive) return;
+
+    const interval = setInterval(() => {
+      if (data?.lastReminderSent) {
+        const newCooldownState = calculateCooldownState(data.lastReminderSent);
+        setCooldownState(newCooldownState);
+        
+        // If cooldown expired, refresh data
+        if (!newCooldownState.isActive) {
+          fetchFinancialSummary();
+        }
+      }
+    }, UPDATE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [cooldownState.isActive, data?.lastReminderSent]);
 
   const fetchFinancialSummary = async () => {
     try {
@@ -79,14 +119,20 @@ export function FinancialSummary({
       
       const result = await response.json();
       
+      console.log('[Cooldown Debug] API response:', result)
+      console.log('[Cooldown Debug] lastReminderSent from API:', result.lastReminderSent)
+      
       // Ensure we have valid data structure
       const validatedResult = {
         totalExpected: result.totalExpected || 0,
         totalCollected: result.totalCollected || 0,
         totalOutstanding: result.totalOutstanding || 0,
         collectionRate: result.collectionRate || 0,
-        unpaidStudents: result.unpaidStudents || []
+        unpaidStudents: result.unpaidStudents || [],
+        lastReminderSent: result.lastReminderSent || null
       };
+      
+      console.log('[Cooldown Debug] Setting data with lastReminderSent:', validatedResult.lastReminderSent)
       
       setData(validatedResult);
     } catch (err) {
@@ -100,7 +146,8 @@ export function FinancialSummary({
         totalCollected: 0,
         totalOutstanding: 0,
         collectionRate: 0,
-        unpaidStudents: []
+        unpaidStudents: [],
+        lastReminderSent: null
       });
     } finally {
       setLoading(false);
@@ -153,7 +200,20 @@ export function FinancialSummary({
 
       const result = await response.json()
       
+      console.log('[Cooldown Debug] Send result:', result)
+      
       alert(`Successfully sent ${result.sent || 0} payment reminders!`)
+      
+      // Update data with new lastReminderSent timestamp
+      if (result.lastReminderSent && data) {
+        setData({
+          ...data,
+          lastReminderSent: result.lastReminderSent
+        })
+      }
+      
+      // Also refresh data from server to ensure consistency
+      await fetchFinancialSummary()
     } catch (err) {
       console.error('Error sending reminders:', err)
       alert(err instanceof Error ? err.message : 'Failed to send reminders')
@@ -208,7 +268,8 @@ export function FinancialSummary({
     totalCollected: 0,
     totalOutstanding: 0,
     collectionRate: 0,
-    unpaidStudents: []
+    unpaidStudents: [],
+    lastReminderSent: null
   };
 
   return (
@@ -267,12 +328,18 @@ export function FinancialSummary({
               <Button 
                 size="sm"
                 onClick={handleSendReminders}
-                disabled={sendingReminders}
+                disabled={sendingReminders || cooldownState.isActive}
+                title={cooldownState.isActive ? getButtonText(cooldownState) : undefined}
               >
                 {sendingReminders ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Sending...
+                  </>
+                ) : cooldownState.isActive ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    {getButtonText(cooldownState)}
                   </>
                 ) : (
                   <>

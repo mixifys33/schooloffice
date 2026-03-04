@@ -3,7 +3,7 @@
  * Handles SMS sending with proper template rendering, validation, and audit logging
  */
 import { prisma } from '@/lib/db'
-import { smsTemplateService } from './sms-template.service'
+import { smsTemplateService, BUILT_IN_SMS_TEMPLATES } from './sms-template.service'
 import { smsGateway } from './sms-gateway.service'
 import {   
   SMSTemplateKey, 
@@ -70,6 +70,10 @@ export class SMSSendingService {
     // Get effective template content
     const templateContent = customContent || await smsTemplateService.getEffectiveTemplate(schoolId, templateKey)
     
+    console.log('[SMS DEBUG] Template content:', templateContent)
+    console.log('[SMS DEBUG] Template key:', templateKey)
+    console.log('[SMS DEBUG] Custom content provided:', !!customContent)
+    
     if (!templateContent) {
       throw new Error(`No template found for ${templateKey}`)
     }
@@ -81,6 +85,7 @@ export class SMSSendingService {
 
     // Validate template
     const validation = smsTemplateService.validateTemplate(templateKey, templateContent)
+    console.log('[SMS DEBUG] Validation result:', validation)
     if (!validation.valid) {
       throw new Error(`Template validation failed: ${validation.errors.join(', ')}`)
     }
@@ -216,12 +221,15 @@ export class SMSSendingService {
         studentId: student.id,
         guardianId: student.guardian!.id,
         data: {
-          PARENT_NAME: `${student.guardian!.firstName} ${student.guardian!.lastName}`,
+          PARENT_NAME: `${student.guardian!.firstName || 'Parent'} ${student.guardian!.lastName || 'Guardian'}`.trim(),
           STUDENT_NAME: `${student.firstName} ${student.lastName}`,
           BALANCE: student.currentBalance?.toLocaleString() || '0',
           SCHOOL_NAME: school?.name || 'School'
         }
       }))
+
+    // Use the default built-in template directly to ensure all required variables are present
+    const templateContent = BUILT_IN_SMS_TEMPLATES[SMSTemplateKey.FEES_BALANCE].defaultContent
 
     return this.sendWithTemplate({
       schoolId,
@@ -229,7 +237,8 @@ export class SMSSendingService {
       recipients,
       sentBy,
       sentByRole,
-      triggerType: 'manual'
+      triggerType: 'manual',
+      customContent: templateContent
     })
   }
 
@@ -373,20 +382,78 @@ export class SMSSendingService {
     }
   ): Promise<StudentWithGuardian[]> {
     // Get current active term for the school
-    const currentTerm = await prisma.term.findFirst({
+    const today = new Date()
+    const currentYear = new Date().getFullYear()
+    
+    let currentAcademicYear = await prisma.academicYear.findFirst({
       where: {
-        academicYear: {
-          schoolId: schoolId,
-          isActive: true,
-        },
-      },
-      orderBy: {
-        startDate: 'desc', // Get the latest active term
+        schoolId: schoolId,
+        isCurrent: true,
       },
     });
 
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId: schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId: schoolId,
+          isActive: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
+      console.warn(`No academic year found for schoolId: ${schoolId}. Cannot send fee reminders.`);
+      return [];
+    }
+
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
+
     if (!currentTerm) {
-      console.warn(`No active term found for schoolId: ${schoolId}. Cannot send fee reminders.`);
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: { academicYearId: currentAcademicYear.id },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    if (!currentTerm) {
+      console.warn(`No term found for schoolId: ${schoolId}. Cannot send fee reminders.`);
       return [];
     }
 
@@ -410,17 +477,18 @@ export class SMSSendingService {
       where.id = { in: options.studentIds };
     }
 
-    // Fetch students and their associated student accounts for the current term
-    const students = (await prisma.student.findMany({
+    // Fetch students with payments and guardians
+    const students = await prisma.student.findMany({
       where,
       include: {
         class: { select: { name: true } },
-        studentGuardians: {
+        payments: {
           where: {
-            // Only include guardians who are financially responsible and receive finance messages
-            isFinanciallyResponsible: true,
-            receivesFinanceMessages: true,
-          },
+            termId: currentTerm.id,
+            status: 'CONFIRMED'
+          }
+        },
+        studentGuardians: {
           include: {
             guardian: {
               select: {
@@ -432,50 +500,38 @@ export class SMSSendingService {
             },
           },
         },
-        studentAccounts: {
-          where: {
-            termId: currentTerm.id,
-          },
-        },
       },
-    })) as unknown as Array<{
-      id: string
-      firstName: string
-      lastName: string
-      class: { name: string } | null
-      studentGuardians: Array<{
-        isFinanciallyResponsible: boolean
-        guardian: {
-          id: string
-          firstName: string
-          lastName: string
-          phone: string | null
-        }
-      }>
-      studentAccounts: Array<{
-        balance: number
-      }>
-    }>;
+    });
+
+    // Get fee structures for the term
+    const feeStructures = await prisma.feeStructure.findMany({
+      where: {
+        schoolId,
+        termId: currentTerm.id,
+        isActive: true
+      }
+    })
 
     const studentsToRemind: StudentWithGuardian[] = [];
 
     for (const student of students) {
       // Ensure student has at least one guardian to send to
       if (!student.studentGuardians || student.studentGuardians.length === 0) {
-        console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - No financially responsible guardian found.`);
+        console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - No guardian found.`);
         continue;
       }
 
-      // Find the relevant student account for the current term
-      const studentAccount = student.studentAccounts[0]; // Assuming only one account per student per term
+      // Find fee structure for this student's class
+      const feeStructure = feeStructures.find(fs => 
+        fs.classId === student.classId && 
+        fs.studentType === 'DAY'
+      )
 
-      if (!studentAccount) {
-        console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - No student account found for the current term.`);
-        continue;
-      }
+      const expectedFee = feeStructure?.totalAmount || 0
+      const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
+      const currentBalance = expectedFee - paidAmount
 
-      // Check balance from StudentAccount
-      const currentBalance = studentAccount.balance;
+      // Check balance
       const minimumBalance = options.minimumBalance || 0;
 
       if (currentBalance <= minimumBalance) {
@@ -483,11 +539,33 @@ export class SMSSendingService {
         continue;
       }
 
-      // Select the primary financially responsible guardian
-      const primaryGuardian = student.studentGuardians.find((sg) => sg.isFinanciallyResponsible)?.guardian;
+      // Select guardian with priority:
+      // 1. Financially responsible guardian who receives finance messages
+      // 2. Financially responsible guardian (even if not set to receive messages)
+      // 3. Primary guardian
+      // 4. Any guardian with a phone number
+      let selectedGuardian = student.studentGuardians.find(
+        (sg) => sg.isFinanciallyResponsible && sg.receivesFinanceMessages
+      )?.guardian;
 
-      if (!primaryGuardian || !primaryGuardian.phone) {
-        console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - Financially responsible guardian has no phone.`);
+      if (!selectedGuardian) {
+        selectedGuardian = student.studentGuardians.find(
+          (sg) => sg.isFinanciallyResponsible
+        )?.guardian;
+      }
+
+      if (!selectedGuardian) {
+        selectedGuardian = student.studentGuardians.find(
+          (sg) => sg.isPrimary
+        )?.guardian;
+      }
+
+      if (!selectedGuardian) {
+        selectedGuardian = student.studentGuardians[0]?.guardian;
+      }
+
+      if (!selectedGuardian || !selectedGuardian.phone) {
+        console.log(`Skipping SMS for ${student.firstName} ${student.lastName} (ID: ${student.id}) - No guardian with phone number found.`);
         continue;
       }
 
@@ -498,10 +576,10 @@ export class SMSSendingService {
         className: student.class?.name || 'N/A',
         currentBalance: currentBalance,
         guardian: {
-          id: primaryGuardian.id,
-          firstName: primaryGuardian.firstName,
-          lastName: primaryGuardian.lastName,
-          phone: primaryGuardian.phone!,
+          id: selectedGuardian.id,
+          firstName: selectedGuardian.firstName,
+          lastName: selectedGuardian.lastName,
+          phone: selectedGuardian.phone!,
         },
       });
     }

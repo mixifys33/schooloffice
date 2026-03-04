@@ -27,7 +27,7 @@ export const BUILT_IN_SMS_TEMPLATES: Record<SMSTemplateKey, BuiltInSMSTemplate> 
     key: SMSTemplateKey.FEES_BALANCE,
     name: 'Fees Balance Reminder',
     purpose: 'Push payment without sounding like extortion',
-    allowedRoles: ['BURSAR', 'ADMIN', 'HEAD_TEACHER'],
+    allowedRoles: ['BURSAR', 'ADMIN', 'HEAD_TEACHER', 'SCHOOL_ADMIN'],
     triggerType: SMSTriggerType.BOTH,
     variables: [
       { key: 'PARENT_NAME', description: 'Parent/Guardian name', required: true, example: 'Mr. Mukasa' },
@@ -35,7 +35,7 @@ export const BUILT_IN_SMS_TEMPLATES: Record<SMSTemplateKey, BuiltInSMSTemplate> 
       { key: 'BALANCE', description: 'Outstanding balance amount', required: true, example: '350,000' },
       { key: 'SCHOOL_NAME', description: 'School name', required: true, example: 'St. Mary\'s Primary' }
     ],
-    defaultContent: 'URGENT: {STUDENT_NAME} fees overdue. Balance: UGX {BALANCE}. Pay immediately. Contact {SCHOOL_NAME} for details.',
+    defaultContent: 'Dear {PARENT_NAME}, {STUDENT_NAME} has an outstanding fee balance of UGX {BALANCE}. Please make payment at your earliest convenience. Thank you - {SCHOOL_NAME}',
     maxLength: 320,
     editable: true
   },
@@ -44,7 +44,7 @@ export const BUILT_IN_SMS_TEMPLATES: Record<SMSTemplateKey, BuiltInSMSTemplate> 
     key: SMSTemplateKey.FEES_RECEIPT,
     name: 'Fees Payment Confirmation',
     purpose: 'Reassurance. Proof. Calm.',
-    allowedRoles: ['BURSAR', 'ADMIN'],
+    allowedRoles: ['BURSAR', 'ADMIN', 'SCHOOL_ADMIN'],
     triggerType: SMSTriggerType.AUTOMATIC,
     variables: [
       { key: 'STUDENT_NAME', description: 'Student full name', required: true, example: 'Sarah Mukasa' },
@@ -61,7 +61,7 @@ export const BUILT_IN_SMS_TEMPLATES: Record<SMSTemplateKey, BuiltInSMSTemplate> 
     key: SMSTemplateKey.REPORT_READY,
     name: 'Report Card Ready',
     purpose: 'Notify, not explain. Creates anticipation.',
-    allowedRoles: ['ADMIN', 'HEAD_TEACHER', 'CLASS_TEACHER'],
+    allowedRoles: ['ADMIN', 'HEAD_TEACHER', 'CLASS_TEACHER', 'SCHOOL_ADMIN'],
     triggerType: SMSTriggerType.BOTH,
     variables: [
       { key: 'STUDENT_NAME', description: 'Student full name', required: true, example: 'Sarah Mukasa' },
@@ -78,7 +78,7 @@ export const BUILT_IN_SMS_TEMPLATES: Record<SMSTemplateKey, BuiltInSMSTemplate> 
     key: SMSTemplateKey.ANNOUNCEMENT,
     name: 'General School Announcement',
     purpose: 'Broadcast important information only. Controlled to prevent spam.',
-    allowedRoles: ['ADMIN', 'HEAD_TEACHER'],
+    allowedRoles: ['ADMIN', 'HEAD_TEACHER', 'SCHOOL_ADMIN'],
     triggerType: SMSTriggerType.MANUAL,
     variables: [
       { key: 'MESSAGE', description: 'Announcement message', required: true, example: 'School closes early Friday 2PM for staff meeting.' },

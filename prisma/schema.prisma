@@ -331,6 +331,7 @@ model School {
   isActive           Boolean     @default(true)
   termsAcceptedAt    DateTime? // Legal acknowledgment timestamp
   dataAcknowledgedAt DateTime? // Data responsibility acknowledgment timestamp
+  lastReminderSent   DateTime? // Timestamp of last SMS reminder batch sent
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { smsSendingService } from '@/services/sms-sending.service'
+import { isCooldownActive, getRemainingCooldown, validateTimestamp } from '@/lib/cooldown-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +19,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Student IDs are required' },
         { status: 400 }
+      )
+    }
+
+    // Check cooldown status
+    const school = await prisma.school.findUnique({
+      where: { id: session.user.schoolId },
+      select: { lastReminderSent: true }
+    })
+
+    const validatedTimestamp = validateTimestamp(school?.lastReminderSent || null)
+
+    if (isCooldownActive(validatedTimestamp)) {
+      const remaining = getRemainingCooldown(validatedTimestamp!)
+      return NextResponse.json(
+        {
+          error: `Cooldown period active. Next reminders available in ${remaining.days} day${remaining.days !== 1 ? 's' : ''}, ${remaining.hours} hour${remaining.hours !== 1 ? 's' : ''}`,
+          remainingDays: remaining.days,
+          remainingHours: remaining.hours,
+          nextAvailableAt: remaining.nextAvailableAt.toISOString()
+        },
+        { status: 429 }
       )
     }
 
@@ -44,132 +67,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get current term
-    const today = new Date()
-    const currentYear = new Date().getFullYear()
-    
-    let currentAcademicYear = await prisma.academicYear.findFirst({
-      where: {
-        schoolId: session.user.schoolId,
-        isCurrent: true
-      }
-    })
+    // Call SMS sending service to send actual SMS messages
+    const sendResult = await smsSendingService.sendFeesReminders(
+      session.user.schoolId,
+      session.user.id,
+      session.user.role as string,
+      { studentIds }
+    )
 
-    if (!currentAcademicYear) {
-      currentAcademicYear = await prisma.academicYear.findFirst({
-        where: {
-          schoolId: session.user.schoolId,
-          name: { contains: currentYear.toString() }
-        },
-        orderBy: { createdAt: 'desc' }
+    // Update lastReminderSent timestamp only if SMS send was successful
+    if (sendResult.success && sendResult.sentCount > 0) {
+      await prisma.school.update({
+        where: { id: session.user.schoolId },
+        data: { lastReminderSent: new Date() }
       })
     }
 
-    if (!currentAcademicYear) {
-      return NextResponse.json(
-        { error: 'No academic year found' },
-        { status: 400 }
-      )
-    }
-
-    let currentTerm = await prisma.term.findFirst({
-      where: {
-        academicYearId: currentAcademicYear.id,
-        isCurrent: true
-      }
-    })
-
-    if (!currentTerm) {
-      currentTerm = await prisma.term.findFirst({
-        where: {
-          academicYearId: currentAcademicYear.id,
-          startDate: { lte: today },
-          endDate: { gte: today }
-        },
-        orderBy: { startDate: 'desc' }
-      })
-    }
-
-    if (!currentTerm) {
-      return NextResponse.json(
-        { error: 'No current term found' },
-        { status: 400 }
-      )
-    }
-
-    // Get fee structures
-    const feeStructures = await prisma.feeStructure.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        termId: currentTerm.id,
-        isActive: true
-      }
-    })
-
-    let sentCount = 0
-    const errors: string[] = []
-
-    // Send reminders to each student's guardians
-    for (const student of students) {
-      try {
-        // Get primary guardian
-        const primaryGuardian = student.studentGuardians.find(sg => sg.isPrimary)?.guardian
-
-        if (!primaryGuardian?.phone) {
-          errors.push(`${student.firstName} ${student.lastName}: No guardian phone number`)
-          continue
-        }
-
-        // Calculate balance
-        const feeStructure = feeStructures.find(fs => 
-          fs.classId === student.classId && 
-          fs.studentType === 'DAY'
-        )
-
-        const expectedFee = feeStructure?.totalAmount || 0
-        
-        const payments = await prisma.payment.findMany({
-          where: {
-            studentId: student.id,
-            termId: currentTerm.id,
-            status: 'CONFIRMED'
-          }
-        })
-
-        const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0)
-        const balance = expectedFee - paidAmount
-
-        if (balance <= 0) {
-          continue // Skip if already paid
-        }
-
-        // Create message record
-        const message = await prisma.message.create({
-          data: {
-            schoolId: session.user.schoolId,
-            studentId: student.id,
-            guardianId: primaryGuardian.id,
-            templateType: 'PAYMENT_REMINDER',
-            messageType: 'AUTOMATED',
-            channel: 'SMS',
-            content: `Dear ${primaryGuardian.firstName || 'Parent/Guardian'}, this is a reminder that ${student.firstName} ${student.lastName} (${student.class.name}) has an outstanding fee balance of UGX ${balance.toLocaleString()} for ${currentTerm.name}. Please make payment at your earliest convenience. Thank you.`,
-            status: 'QUEUED'
-          }
-        })
-
-        sentCount++
-      } catch (err) {
-        console.error(`Error sending reminder for student ${student.id}:`, err)
-        errors.push(`${student.firstName} ${student.lastName}: ${err instanceof Error ? err.message : 'Unknown error'}`)
-      }
-    }
+    const now = new Date()
 
     return NextResponse.json({
-      success: true,
-      sent: sentCount,
-      total: students.length,
-      errors: errors.length > 0 ? errors : undefined,
-      message: `Successfully queued ${sentCount} payment reminder${sentCount !== 1 ? 's' : ''}`
+      success: sendResult.success,
+      sent: sendResult.sentCount,
+      failed: sendResult.failedCount,
+      total: sendResult.totalRecipients,
+      errors: sendResult.errors.length > 0 ? sendResult.errors : undefined,
+      message: `Successfully sent ${sendResult.sentCount} payment reminder${sendResult.sentCount !== 1 ? 's' : ''}`,
+      lastReminderSent: now.toISOString()
     })
   } catch (error) {
     console.error('Error sending reminders:', error)
