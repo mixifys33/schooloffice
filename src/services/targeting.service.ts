@@ -151,6 +151,7 @@ export class TargetingService implements ITargetingService {
 
   /**
    * Resolves recipients by class - includes students and their guardians
+   * For fee reminders, only includes students with outstanding balances
    * Requirements: 5.1
    */
   async resolveByClass(schoolId: string, classIds: string[]): Promise<Recipient[]> {
