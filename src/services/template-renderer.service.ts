@@ -149,36 +149,84 @@ export class TemplateRendererService {
    */
   private async getFeeData(studentId: string): Promise<Partial<TemplateRenderData>> {
     try {
-      // Get student account to check balance
-      const studentAccount = await prisma.studentAccount.findFirst({
-        where: { studentId },
-        select: {
-          balance: true,
+      // Get student with class and payments
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: {
+          class: true,
+          payments: {
+            where: { status: 'CONFIRMED' },
+            orderBy: { receivedAt: 'desc' }
+          }
         }
       })
 
-      // Get recent payments to find next due date
-      const recentPayments = await prisma.payment.findMany({
-        where: { studentId },
-        orderBy: { receivedAt: 'desc' },
-        take: 1,
-        select: {
-          amount: true,
-          receivedAt: true,
+      if (!student) {
+        return {
+          balance: 'Contact school',
+          amount: 'Contact school',
+          dueDate: 'Contact school'
+        }
+      }
+
+      // Get current active term
+      const currentYear = await prisma.academicYear.findFirst({
+        where: { 
+          schoolId: student.schoolId,
+          isActive: true 
+        },
+        include: { 
+          terms: {
+            where: { isCurrent: true },
+            take: 1
+          }
         }
       })
 
-      const balance = studentAccount?.balance || 0
-      const nextDueDate = recentPayments.length > 0 
-        ? new Date(recentPayments[0].receivedAt.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days after last payment
-        : new Date()
+      if (!currentYear || currentYear.terms.length === 0) {
+        return {
+          balance: 'Contact school',
+          amount: 'Contact school',
+          dueDate: 'Contact school'
+        }
+      }
+
+      const currentTerm = currentYear.terms[0]
+
+      // Get fee structure for this student's class
+      const feeStructure = await prisma.feeStructure.findFirst({
+        where: {
+          classId: student.classId,
+          termId: currentTerm.id,
+          isActive: true
+        }
+      })
+
+      if (!feeStructure) {
+        return {
+          balance: 'Contact school',
+          amount: 'Contact school',
+          dueDate: 'Contact school'
+        }
+      }
+
+      // Calculate balance
+      const totalFees = feeStructure.totalAmount
+      const totalPaid = student.payments
+        .filter(p => p.termId === currentTerm.id)
+        .reduce((sum, payment) => sum + payment.amount, 0)
+      const balance = totalFees - totalPaid
+
+      // Get next due date (use term end date or 30 days from now)
+      const nextDueDate = currentTerm.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
       return {
-        balance: `${Math.abs(balance).toLocaleString()}`,
-        amount: `${Math.abs(balance).toLocaleString()}`,
+        balance: `${Math.max(0, balance).toLocaleString()}`,
+        amount: `${Math.max(0, balance).toLocaleString()}`,
         dueDate: nextDueDate.toLocaleDateString('en-GB')
       }
-    } catch {
+    } catch (error) {
+      console.error('[Template Renderer] Error getting fee data:', error)
       return {
         balance: 'Contact school',
         amount: 'Contact school',

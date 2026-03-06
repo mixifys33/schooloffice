@@ -183,22 +183,22 @@ export default function CommunicationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 md:h-6 md:w-6" />
             Communications
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Reach the right people, at the right time, with proof it happened.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchStats}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loadingStats ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
           {isAdmin && (
             <Button
@@ -207,7 +207,7 @@ export default function CommunicationsPage() {
               onClick={() => setShowEmergencyModal(true)}
             >
               <AlertTriangle className="h-4 w-4 mr-1" />
-              Emergency
+              <span className="hidden sm:inline">Emergency</span>
             </Button>
           )}
         </div>
@@ -294,25 +294,25 @@ export default function CommunicationsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
             {quickActions.map((action) => {
               const Icon = action.icon
               return (
                 <button
                   key={action.id}
                   onClick={action.action}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-colors text-center ${
+                  className={`flex flex-col items-center gap-2 p-3 md:p-4 rounded-lg border transition-colors text-center ${
                     action.variant === 'destructive'
                       ? 'border-[var(--danger-light)] bg-[var(--danger-light)] hover:bg-[var(--danger-light)] dark:border-[var(--danger-dark)] dark:bg-[var(--danger-dark)] dark:hover:bg-[var(--danger-dark)]'
                       : 'border-input bg-background hover:bg-accent'
                   }`}
                 >
-                  <Icon className={`h-6 w-6 ${action.variant === 'destructive' ? 'text-[var(--chart-red)]' : 'text-primary'}`} />
+                  <Icon className={`h-5 w-5 md:h-6 md:w-6 ${action.variant === 'destructive' ? 'text-[var(--chart-red)]' : 'text-primary'}`} />
                   <div>
-                    <p className={`text-sm font-medium ${action.variant === 'destructive' ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : ''}`}>
+                    <p className={`text-xs md:text-sm font-medium ${action.variant === 'destructive' ? 'text-[var(--chart-red)] dark:text-[var(--danger)]' : ''}`}>
                       {action.label}
                     </p>
-                    <p className="text-xs text-muted-foreground">{action.description}</p>
+                    <p className="text-xs text-muted-foreground hidden sm:block">{action.description}</p>
                   </div>
                 </button>
               )
@@ -540,6 +540,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
   const [streams, setStreams] = useState<StreamOption[]>([])
   const [templates, setTemplates] = useState<TemplateOption[]>([])
   const [recipientCount, setRecipientCount] = useState<number | null>(null)
+  const [recipientBreakdown, setRecipientBreakdown] = useState<string | null>(null)
 
   const [loadingOptions, setLoadingOptions] = useState<boolean>(false)
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false)
@@ -580,10 +581,16 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
           // Auto-select template based on preset
           const presetTemplateType = getInitialTemplateType()
           if (presetTemplateType) {
+            console.log('[Template Debug] Looking for template type:', presetTemplateType)
+            console.log('[Template Debug] Available templates:', fetchedTemplates.map((t: TemplateOption) => ({ id: t.id, type: t.type })))
+            
             const matchingTemplate = fetchedTemplates.find((t: TemplateOption) => t.type === presetTemplateType)
             if (matchingTemplate) {
+              console.log('[Template Debug] Found matching template:', matchingTemplate)
               setSelectedTemplate(matchingTemplate.id)
               setCustomContent(matchingTemplate.content)
+            } else {
+              console.warn('[Template Debug] No matching template found for type:', presetTemplateType)
             }
           }
         }
@@ -621,7 +628,8 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
 
         if (response.ok) {
           const data = await response.json()
-          setRecipientCount(data.total || 0)
+          setRecipientCount(data.smsRecipients || 0) // Use SMS recipients count
+          setRecipientBreakdown(data.breakdown?.message || null)
         }
       } catch (err) {
         console.error('Error previewing recipients:', err)
@@ -865,7 +873,9 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
               placeholder="0 = all with any balance"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-            <p className="text-xs text-muted-foreground">Set to 0 to include all students with any outstanding balance</p>
+            <p className="text-xs text-muted-foreground">
+              Set to 0 to include all students with any outstanding balance. Students who have paid all fees will NOT receive reminders.
+            </p>
           </div>
         )}
 
@@ -887,12 +897,17 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
 
         {/* Recipient Preview */}
         {recipientCount !== null && (
-          <div className="p-3 rounded-md bg-muted/50">
-            <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="p-3 rounded-md bg-muted/50 border">
+            <div className="flex items-center gap-2 text-sm font-medium mb-1">
               <Users className="h-4 w-4" />
-              Recipients: {recipientCount}
+              SMS Recipients: {recipientCount}
               {loadingPreview && <span className="text-xs text-muted-foreground">(updating...)</span>}
             </div>
+            {recipientBreakdown && (
+              <p className="text-xs text-muted-foreground ml-6">
+                {recipientBreakdown}
+              </p>
+            )}
           </div>
         )}
 

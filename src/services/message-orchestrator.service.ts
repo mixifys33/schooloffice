@@ -104,22 +104,46 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
       let templateType: any
       if (params.templateId) {
         console.log(`[BULK DEBUG] Getting template with ID: ${params.templateId}`)
-        const template = await messageTemplateService.getTemplateById(params.templateId)
-        if (!template) {
-          console.warn(`[BULK DEBUG] Template not found: ${params.templateId}, using custom content or default`)
-          // Use custom message if provided, otherwise use a default
-          if (params.customMessage) {
-            templateContent = params.customMessage
-            templateType = 'GENERAL'
-          } else {
-            // Use a default fee reminder message
-            templateContent = "Dear Parent/Guardian, this is a reminder about outstanding school fees. Please contact the school office for details. Thank you."
-            templateType = 'FEES_REMINDER'
+        
+        // Check if this is a default template ID (format: default-TEMPLATE_TYPE)
+        if (params.templateId.startsWith('default-')) {
+          const extractedType = params.templateId.replace('default-', '')
+          console.log(`[BULK DEBUG] Using default template for type: ${extractedType}`)
+          
+          // Get the default template content from the SMS templates API defaults
+          const defaultTemplates: Record<string, string> = {
+            'FEES_REMINDER': '{{guardianName}}, {{studentName}} owes UGX {{balance}}. Pay now or child may be sent home. {{schoolName}}',
+            'ATTENDANCE_ALERT': '{{studentName}} absent {{date}}. Please confirm safety. {{schoolName}}',
+            'REPORT_READY': '{{studentName}} {{term}} report ready. Visit school. {{schoolName}}',
+            'TERM_START': 'Welcome back {{guardianName}}! {{studentName}} is in {{className}} for new term. {{schoolName}}',
+            'MID_TERM_PROGRESS': '{{guardianName}}, {{studentName}} average: {{average}}%. Keep it up! {{schoolName}}',
+            'TERM_SUMMARY': '{{guardianName}}, {{studentName}} finished {{position}} with {{average}}%. Excellent! {{schoolName}}',
+            'DISCIPLINE_NOTICE': '{{guardianName}}, regarding {{studentName}}: {{description}}. Let\'s work together. {{schoolName}}',
+            'GENERAL_ANNOUNCEMENT': '{{content}} - {{schoolName}}',
           }
+          
+          templateContent = defaultTemplates[extractedType] || "Dear Parent/Guardian, this is a reminder about outstanding school fees. Please contact the school office for details. Thank you."
+          templateType = extractedType
+          console.log(`[BULK DEBUG] Using default template content: ${templateContent}`)
         } else {
-          templateContent = template.content
-          templateType = template.type
-          console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
+          // Try to get custom template from database
+          const template = await messageTemplateService.getTemplateById(params.templateId)
+          if (!template) {
+            console.warn(`[BULK DEBUG] Template not found: ${params.templateId}, using custom content or default`)
+            // Use custom message if provided, otherwise use a default
+            if (params.customMessage) {
+              templateContent = params.customMessage
+              templateType = 'GENERAL'
+            } else {
+              // Use a default fee reminder message
+              templateContent = "Dear Parent/Guardian, this is a reminder about outstanding school fees. Please contact the school office for details. Thank you."
+              templateType = 'FEES_REMINDER'
+            }
+          } else {
+            templateContent = template.content
+            templateType = template.type
+            console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
+          }
         }
       }
       

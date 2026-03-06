@@ -324,12 +324,18 @@ export class TargetingService implements ITargetingService {
       },
       include: {
         payments: {
-          where: { termId: currentTerm.id }
+          where: { 
+            termId: currentTerm.id,
+            status: 'CONFIRMED' // Only count confirmed payments
+          }
         },
         class: {
           include: {
             feeStructures: {
-              where: { termId: currentTerm.id }
+              where: { 
+                termId: currentTerm.id,
+                isActive: true // Only active fee structures
+              }
             }
           }
         },
@@ -352,7 +358,13 @@ export class TargetingService implements ITargetingService {
       const totalPaid = student.payments.reduce((sum, payment) => sum + payment.amount, 0)
       const balance = totalFees - totalPaid
 
+      console.log(`[Fee Defaulters] Student: ${student.firstName} ${student.lastName}, Total Fees: ${totalFees}, Total Paid: ${totalPaid}, Balance: ${balance}, Threshold: ${threshold}`)
+
+      // Only include students with outstanding balance greater than threshold
+      // This means students who have paid in full (balance <= 0) are excluded
       if (balance > threshold) {
+        console.log(`[Fee Defaulters] Including student ${student.firstName} ${student.lastName} with balance ${balance}`)
+        
         // Add student
         recipients.push({
           id: student.id,
@@ -379,6 +391,8 @@ export class TargetingService implements ITargetingService {
             preferredChannel: guardian.preferredChannel
           })
         }
+      } else {
+        console.log(`[Fee Defaulters] Excluding student ${student.firstName} ${student.lastName} - balance ${balance} is not greater than threshold ${threshold}`)
       }
     }
 

@@ -58,12 +58,19 @@ export async function POST(request: NextRequest) {
     const guardians = recipients.filter(r => r.type === 'GUARDIAN').length
     const staff = recipients.filter(r => r.type === 'STAFF').length
 
+    // For SMS, only guardians and staff receive messages (students don't have phones)
+    const smsRecipients = guardians + staff
+
     return NextResponse.json({
       success: true,
       total: recipients.length,
+      smsRecipients, // Actual SMS recipients (guardians + staff)
       students,
       guardians,
       staff,
+      breakdown: {
+        message: `${guardians} guardian${guardians !== 1 ? 's' : ''} for ${students} student${students !== 1 ? 's' : ''}${staff > 0 ? ` + ${staff} staff` : ''}`
+      }
     })
   } catch (error) {
     console.error('Error previewing recipients:', error)

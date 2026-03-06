@@ -197,7 +197,7 @@ export default function ManageTemplatesPage() {
   }
 
   // Check permissions
-  const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'HEAD_TEACHER', 'TEACHER']
+  const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'HEAD_TEACHER', 'TEACHER']
   
   if (!allowedRoles.includes(userRole)) {
     return (
@@ -251,28 +251,28 @@ export default function ManageTemplatesPage() {
   const totalTemplates = builtInTemplates.length
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="space-y-6">
+    <div className="container mx-auto p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">SMS Template Manager</h2>
-            <p className="text-muted-foreground">
-              Customize and manage SMS templates for your school communications
+            <h2 className="text-xl md:text-2xl font-bold">SMS Template Manager</h2>
+            <p className="text-sm text-muted-foreground">
+              Customize SMS templates for school communications
             </p>
           </div>
           
           {/* Stats */}
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground">Templates</div>
-              <div className="text-lg font-semibold">
+          <div className="flex items-center gap-4 text-sm">
+            <div className="text-left md:text-right">
+              <div className="text-xs text-muted-foreground">Templates</div>
+              <div className="text-base md:text-lg font-semibold">
                 {customTemplateCount} / {totalTemplates} customized
               </div>
             </div>
             {creditProtection && (
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Protection</div>
+              <div className="text-left md:text-right">
+                <div className="text-xs text-muted-foreground">Protection</div>
                 <Badge variant={creditProtection.enableProtection ? 'default' : 'secondary'}>
                   {creditProtection.enableProtection ? 'Active' : 'Inactive'}
                 </Badge>
@@ -282,15 +282,15 @@ export default function ManageTemplatesPage() {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Left Sidebar: Template List */}
           <div className="lg:col-span-1">
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Templates</h3>
+            <Card className="p-3 md:p-4">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="font-semibold text-sm md:text-base">Templates</h3>
                 <Badge variant="outline">{builtInTemplates.length}</Badge>
               </div>
-              <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+              <div className="space-y-2 max-h-[300px] lg:max-h-[calc(100vh-300px)] overflow-y-auto">
                 {builtInTemplates.map((template) => {
                   const hasCustom = customTemplates.has(template.key)
                   const canUse = template.allowedRoles.includes(userRole)
@@ -299,7 +299,7 @@ export default function ManageTemplatesPage() {
                     <button
                       key={template.key}
                       onClick={() => setSelectedTemplate(template.key)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      className={`w-full text-left p-2 md:p-3 rounded-lg border transition-colors ${
                         selectedTemplate === template.key
                           ? 'border-[var(--accent-primary)] bg-[var(--info-light)]'
                           : 'border-[var(--border-default)] hover:bg-[var(--bg-surface)]'
@@ -308,11 +308,11 @@ export default function ManageTemplatesPage() {
                     >
                       <div className="flex items-center gap-2 mb-1">
                         {template.triggerType === 'AUTOMATIC' ? (
-                          <Zap className="h-3 w-3 text-[var(--chart-blue)]" />
+                          <Zap className="h-3 w-3 text-[var(--chart-blue)] flex-shrink-0" />
                         ) : (
-                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                         )}
-                        <span className="font-medium text-sm flex-1">{template.name}</span>
+                        <span className="font-medium text-xs md:text-sm flex-1 line-clamp-1">{template.name}</span>
                         {hasCustom && (
                           <Badge variant="outline" className="text-xs">✓</Badge>
                         )}

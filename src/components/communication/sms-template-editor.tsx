@@ -130,31 +130,31 @@ export function SMSTemplateEditor({
   }
 
   return (
-    <Card className="p-6">
-      <div className="space-y-6">
+    <Card className="p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Template Header */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-semibold">{template.name}</h3>
               <Badge variant={template.triggerType === 'AUTOMATIC' ? 'default' : 'secondary'}>
                 {template.triggerType}
               </Badge>
               {template.requiresConfirmation && (
-                <Badge variant="destructive">REQUIRES CONFIRMATION</Badge>
+                <Badge variant="destructive" className="text-xs">REQUIRES CONFIRMATION</Badge>
               )}
             </div>
             <p className="text-sm text-muted-foreground">{template.purpose}</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Allowed roles: {template.allowedRoles.join(', ')}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-muted-foreground">
+              <span>Roles: {template.allowedRoles.join(', ')}</span>
               {template.maxPerTerm && (
-                <span>• Max {template.maxPerTerm} per term</span>
+                <span className="hidden sm:inline">• Max {template.maxPerTerm}/term</span>
               )}
             </div>
           </div>
           
           {!canEdit && (
-            <Badge variant="outline">Read Only</Badge>
+            <Badge variant="outline" className="self-start">Read Only</Badge>
           )}
         </div>
 
@@ -168,16 +168,16 @@ export function SMSTemplateEditor({
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="editor">Editor</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="variables">Variables</TabsTrigger>
+            <TabsTrigger value="editor" className="text-xs sm:text-sm">Editor</TabsTrigger>
+            <TabsTrigger value="preview" className="text-xs sm:text-sm">Preview</TabsTrigger>
+            <TabsTrigger value="variables" className="text-xs sm:text-sm">Variables</TabsTrigger>
           </TabsList>
 
           <TabsContent value="editor" className="space-y-4">
             {/* Template Editor */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
               {/* Left Panel: Template Controls */}
-              <div className="space-y-4">
+              <div className="space-y-4 order-2 lg:order-1">
                 <div>
                   <Label className="text-sm font-medium">Template Type</Label>
                   <p className="text-sm text-muted-foreground">{template.key}</p>
@@ -194,14 +194,14 @@ export function SMSTemplateEditor({
 
                 {/* Variable Chips */}
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Available Variables</Label>
+                  <Label className="text-sm font-medium mb-2 block">Quick Insert Variables</Label>
                   <div className="flex flex-wrap gap-2">
                     {template.variables.map((variable) => (
                       <button
                         key={variable.key}
                         onClick={() => insertVariable(variable.key)}
                         disabled={!canEdit}
-                        className="inline-flex items-center px-2 py-1 text-xs bg-[var(--info-light)] text-[var(--info-dark)] rounded hover:bg-[var(--info)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center px-2 py-1 text-xs bg-[var(--info-light)] text-[var(--info-dark)] rounded hover:bg-[var(--info)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title={`${variable.description} (${variable.required ? 'Required' : 'Optional'})`}
                       >
                         {variable.key}
@@ -209,11 +209,14 @@ export function SMSTemplateEditor({
                       </button>
                     ))}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Tap to insert into message
+                  </p>
                 </div>
               </div>
 
               {/* Center Panel: Message Editor */}
-              <div className="space-y-4">
+              <div className="space-y-4 order-1 lg:order-2">
                 <div>
                   <Label htmlFor={`content-${template.key}`} className="text-sm font-medium">
                     Message Content
@@ -229,7 +232,7 @@ export function SMSTemplateEditor({
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>
-                      {content.length} / {template.maxLength} characters
+                      {content.length} / {template.maxLength} chars
                     </span>
                     {validation && (
                       <span className={validation.costEstimate.isWithinLimit ? 'text-[var(--chart-green)]' : 'text-[var(--chart-yellow)]'}>
@@ -259,11 +262,11 @@ export function SMSTemplateEditor({
 
                 {/* Actions */}
                 {canEdit && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={handleSave}
                       disabled={!validation?.valid || isLoading}
-                      className="flex-1"
+                      className="flex-1 w-full sm:w-auto"
                     >
                       {isLoading ? 'Saving...' : 'Save Template'}
                     </Button>
@@ -271,6 +274,7 @@ export function SMSTemplateEditor({
                       variant="outline"
                       onClick={handlePreview}
                       disabled={!validation?.valid || isLoading}
+                      className="w-full sm:w-auto"
                     >
                       Preview
                     </Button>
@@ -279,8 +283,9 @@ export function SMSTemplateEditor({
                         variant="outline"
                         onClick={() => setShowResetDialog(true)}
                         disabled={isLoading}
+                        className="w-full sm:w-auto"
                       >
-                        Reset to Default
+                        Reset
                       </Button>
                     )}
                   </div>
@@ -288,17 +293,17 @@ export function SMSTemplateEditor({
               </div>
 
               {/* Right Panel: Live Preview */}
-              <div className="space-y-4">
+              <div className="space-y-4 order-3">
                 <div>
                   <Label className="text-sm font-medium">Live Preview</Label>
                   <div className="border rounded-lg p-4 bg-[var(--bg-surface)] min-h-[200px]">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
-                      <span className="text-xs text-muted-foreground">+256700123456</span>
+                      <span className="text-xs text-muted-foreground">Sample Phone</span>
                     </div>
                     <div className="bg-[var(--bg-main)] rounded-lg p-3 shadow-sm">
                       <p className="text-sm whitespace-pre-wrap">
-                        {preview?.content || 'Click Preview to see sample message...'}
+                        {preview?.content || content || 'Type your message to see preview...'}
                       </p>
                     </div>
                   </div>
@@ -311,14 +316,14 @@ export function SMSTemplateEditor({
                     <div className="text-sm space-y-1">
                       <div className="flex justify-between">
                         <span>Characters:</span>
-                        <span>{validation.characterCount}</span>
+                        <span className="font-medium">{validation.characterCount}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>SMS Units:</span>
-                        <span>{validation.costEstimate.smsUnits}</span>
+                        <span className="font-medium">{validation.costEstimate.smsUnits}</span>
                       </div>
-                      <div className="flex justify-between font-medium">
-                        <span>Estimated Cost:</span>
+                      <div className="flex justify-between font-medium text-[var(--chart-blue)]">
+                        <span>Est. Cost:</span>
                         <span>UGX {validation.costEstimate.estimatedCost}</span>
                       </div>
                     </div>
@@ -331,7 +336,7 @@ export function SMSTemplateEditor({
           <TabsContent value="preview" className="space-y-4">
             {preview ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Message Preview</Label>
                     <div className="border rounded-lg p-4 bg-[var(--bg-surface)]">
@@ -347,18 +352,18 @@ export function SMSTemplateEditor({
 
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Sample Data Used</Label>
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
                       {Object.entries(preview.sampleData).map(([key, value]) => (
-                        <div key={key} className="flex justify-between text-sm">
-                          <span className="font-mono text-[var(--chart-blue)]">{key}:</span>
-                          <span>{value}</span>
+                        <div key={key} className="flex justify-between text-sm gap-2">
+                          <span className="font-mono text-[var(--chart-blue)] text-xs">{key}:</span>
+                          <span className="text-right break-words">{value}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                   <div className="p-3 border rounded-lg">
                     <div className="text-lg font-semibold">{preview.characterCount}</div>
                     <div className="text-xs text-muted-foreground">Characters</div>
@@ -375,7 +380,7 @@ export function SMSTemplateEditor({
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <p>Click "Preview" in the Editor tab to generate a preview</p>
+                <p className="text-sm">Click "Preview" button in the Editor tab to generate a preview with sample data</p>
               </div>
             )}
           </TabsContent>
@@ -385,17 +390,17 @@ export function SMSTemplateEditor({
               <div>
                 <h4 className="font-medium mb-2">Template Variables</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Click on any variable to insert it into your template. Required variables are marked with *.
+                  Click "Insert" to add a variable to your template. Required variables are marked with *.
                 </p>
               </div>
 
-              <div className="grid gap-4">
+              <div className="grid gap-3 md:gap-4">
                 {template.variables.map((variable) => (
-                  <div key={variable.key} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-[var(--bg-surface)] px-2 py-1 rounded">
+                  <div key={variable.key} className="border rounded-lg p-3 md:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <code className="text-xs sm:text-sm bg-[var(--bg-surface)] px-2 py-1 rounded">
                             {`{${variable.key}}`}
                           </code>
                           {variable.required && (
@@ -410,8 +415,12 @@ export function SMSTemplateEditor({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => insertVariable(variable.key)}
+                        onClick={() => {
+                          insertVariable(variable.key)
+                          setActiveTab('editor')
+                        }}
                         disabled={!canEdit}
+                        className="w-full sm:w-auto"
                       >
                         Insert
                       </Button>
