@@ -1,9 +1,10 @@
 /**
- * Email Gateway Service - SendGrid/Mailgun Integration
+ * Email Gateway Service - Nodemailer Integration (Gmail)
  * Handles email sending with attachments and school branding
  * Requirements: 22.2
  */
 
+import nodemailer from 'nodemailer'
 import { MessageStatus } from '@/types/enums'
 
 // ============================================
@@ -11,11 +12,15 @@ import { MessageStatus } from '@/types/enums'
 // ============================================
      
 export interface EmailConfig {
-  apiKey: string
+  host: string
+  port: number
+  secure: boolean
+  auth: {
+    user: string
+    pass: string
+  }
   fromEmail: string
   fromName: string
-  provider: 'sendgrid' | 'mailgun'
-  domain?: string // Required for Mailgun
 }
 
 export interface EmailAttachment {
@@ -225,9 +230,21 @@ export function generatePlainTextEmail(
 
 export class EmailGatewayService {
   private config: EmailConfig
+  private transporter: nodemailer.Transporter
 
   constructor(config: EmailConfig) {
     this.config = config
+    
+    // Create Nodemailer transporter
+    this.transporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.auth.user,
+        pass: config.auth.pass,
+      },
+    })
   }
 
   /**
@@ -260,12 +277,32 @@ export class EmailGatewayService {
     }
 
     try {
-      if (this.config.provider === 'sendgrid') {
-        return await this.sendViaSendGrid(request, recipients)
-      } else {
-        return await this.sendViaMailgun(request, recipients)
+      // Prepare attachments for Nodemailer
+      const attachments = request.attachments?.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType,
+      }))
+
+      // Send email using Nodemailer
+      const info = await this.transporter.sendMail({
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to: recipients.join(', '),
+        subject: request.subject,
+        text: request.text,
+        html: request.html,
+        replyTo: request.replyTo,
+        attachments,
+      })
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        status: MessageStatus.SENT,
+        recipient: recipients[0],
       }
     } catch (error) {
+      console.error('[Email Gateway] Error sending email:', error)
       return {
         success: false,
         status: MessageStatus.FAILED,
@@ -545,14 +582,19 @@ export class EmailGatewayService {
 
 /**
  * Create Email Gateway service from environment variables
+ * Uses Gmail SMTP via Nodemailer
  */
 export function createEmailGateway(): EmailGatewayService {
-  // Use SendGrid as the provider based on your .env configuration
   const config: EmailConfig = {
-    apiKey: process.env.SENDGRID_API_KEY || '',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: true, // Use SSL
+    auth: {
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+    },
     fromEmail: process.env.EMAIL_FROM || 'noreply@schooloffice.com',
     fromName: process.env.EMAIL_FROM_NAME || 'SchoolOffice',
-    provider: 'sendgrid',
   }
 
   return new EmailGatewayService(config)

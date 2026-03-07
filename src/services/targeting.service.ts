@@ -486,7 +486,7 @@ export class TargetingService implements ITargetingService {
   }
 
   /**
-   * Resolves entire school - all active students, guardians, and staff
+   * Resolves entire school - all active students and their guardians (parents only, no staff)
    * Requirements: 5.8
    */
   async resolveEntireSchool(schoolId: string): Promise<Recipient[]> {
@@ -536,29 +536,8 @@ export class TargetingService implements ITargetingService {
       }
     }
 
-    // Get all active staff
-    const staff = await prisma.staff.findMany({
-      where: {
-        schoolId,
-        status: 'ACTIVE'
-      },
-      include: {
-        user: true
-      }
-    })
-
-    for (const staffMember of staff) {
-      recipients.push({
-        id: staffMember.id,
-        type: RecipientType.STAFF,
-        studentId: undefined,
-        name: `${staffMember.firstName} ${staffMember.lastName}`,
-        phone: staffMember.phone || undefined,
-        email: staffMember.email || staffMember.user.email || undefined,
-        whatsappNumber: undefined,
-        preferredChannel: 'EMAIL'
-      })
-    }
+    // Note: Staff are excluded from parent-school communications
+    // For staff communications, use a separate staff communication system
 
     return recipients
   }

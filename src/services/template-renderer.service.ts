@@ -24,6 +24,7 @@ export interface TemplateRenderData {
   guardianName?: string
   amount?: string
   dueDate?: string
+  term?: string
 }
 
 export interface RenderResult {
@@ -113,6 +114,12 @@ export class TemplateRendererService {
       data.studentId = student.admissionNumber || student.id
       data.className = student.class?.name || 'Unknown Class'
 
+      // Get current term for all templates
+      const termData = await this.getCurrentTerm(student.schoolId)
+      if (termData) {
+        data.term = termData.name
+      }
+
       // Get template-specific data
       switch (templateType) {
         case MessageTemplateType.FEES_REMINDER:
@@ -145,6 +152,62 @@ export class TemplateRendererService {
   }
 
   /**
+   * Get current term information
+   */
+  private async getCurrentTerm(schoolId: string): Promise<{ id: string; name: string } | null> {
+    try {
+      const today = new Date()
+      
+      // Try to find term that matches today's date
+      const currentYear = await prisma.academicYear.findFirst({
+        where: { schoolId, isActive: true },
+        include: { 
+          terms: {
+            where: {
+              startDate: { lte: today },
+              endDate: { gte: today }
+            },
+            take: 1
+          }
+        }
+      })
+
+      if (currentYear?.terms[0]) {
+        return {
+          id: currentYear.terms[0].id,
+          name: currentYear.terms[0].name
+        }
+      }
+
+      // If no term matches today, get the most recent term that has started
+      const yearWithRecentTerm = await prisma.academicYear.findFirst({
+        where: { schoolId, isActive: true },
+        include: { 
+          terms: {
+            where: {
+              startDate: { lte: today }
+            },
+            orderBy: { startDate: 'desc' },
+            take: 1
+          }
+        }
+      })
+
+      if (yearWithRecentTerm?.terms[0]) {
+        return {
+          id: yearWithRecentTerm.terms[0].id,
+          name: yearWithRecentTerm.terms[0].name
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error('[Template Renderer] Error getting current term:', error)
+      return null
+    }
+  }
+
+  /**
    * Get fee-related data for the student
    */
   private async getFeeData(studentId: string): Promise<Partial<TemplateRenderData>> {
@@ -169,7 +232,8 @@ export class TemplateRendererService {
         }
       }
 
-      // Get current active term
+      // Get current active term based on today's date
+      const today = new Date()
       const currentYear = await prisma.academicYear.findFirst({
         where: { 
           schoolId: student.schoolId,
@@ -177,21 +241,45 @@ export class TemplateRendererService {
         },
         include: { 
           terms: {
-            where: { isCurrent: true },
+            where: {
+              startDate: { lte: today },
+              endDate: { gte: today }
+            },
             take: 1
           }
         }
       })
 
-      if (!currentYear || currentYear.terms.length === 0) {
+      // If no term matches today's date, get the most recent term that has started
+      let currentTerm = currentYear?.terms[0]
+      
+      if (!currentTerm && currentYear) {
+        const yearWithRecentTerm = await prisma.academicYear.findFirst({
+          where: { 
+            schoolId: student.schoolId,
+            isActive: true 
+          },
+          include: { 
+            terms: {
+              where: {
+                startDate: { lte: today }
+              },
+              orderBy: { startDate: 'desc' },
+              take: 1
+            }
+          }
+        })
+        currentTerm = yearWithRecentTerm?.terms[0]
+      }
+
+      if (!currentTerm) {
+        console.log('[Template Renderer] No active academic year or terms found')
         return {
           balance: 'Contact school',
           amount: 'Contact school',
           dueDate: 'Contact school'
         }
       }
-
-      const currentTerm = currentYear.terms[0]
 
       // Get fee structure for this student's class
       const feeStructure = await prisma.feeStructure.findFirst({
@@ -221,8 +309,8 @@ export class TemplateRendererService {
       const nextDueDate = currentTerm.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
       return {
-        balance: `${Math.max(0, balance).toLocaleString()}`,
-        amount: `${Math.max(0, balance).toLocaleString()}`,
+        balance: `${Math.max(0, balance).toLocaleString('en-US')}`,
+        amount: `${Math.max(0, balance).toLocaleString('en-US')}`,
         dueDate: nextDueDate.toLocaleDateString('en-GB')
       }
     } catch (error) {

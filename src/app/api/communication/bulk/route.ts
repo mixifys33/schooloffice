@@ -86,12 +86,32 @@ export async function POST(request: NextRequest) {
       rateLimit: body.rateLimit,
     })
 
+    // Check if no recipients were found
+    if (result.totalRecipients === 0) {
+      const errorMessage = result.errors.length > 0 
+        ? result.errors[0] 
+        : 'No recipients found for the specified criteria'
+      
+      return NextResponse.json({
+        success: false,
+        error: errorMessage,
+        jobId: result.jobId,
+        totalRecipients: 0,
+        queued: 0,
+        errors: result.errors,
+      }, { status: 400 })
+    }
+
     return NextResponse.json({
-      success: result.errors.length === 0,
+      success: result.queued > 0 && result.errors.length === 0,
       jobId: result.jobId,
       totalRecipients: result.totalRecipients,
       queued: result.queued,
+      failed: result.totalRecipients - result.queued,
       errors: result.errors,
+      message: result.errors.length > 0 
+        ? `Sent to ${result.queued} recipients, ${result.errors.length} failed`
+        : `Successfully sent to ${result.queued} recipients`
     })
   } catch (error) {
     console.error('Error sending bulk message:', error)

@@ -65,6 +65,10 @@ export default function CommunicationsPage() {
   const [emergencyError, setEmergencyError] = useState<string | null>(null)
   const [emergencySuccess, setEmergencySuccess] = useState(false)
   
+  // Resend failed messages state
+  const [resendingFailed, setResendingFailed] = useState(false)
+  const [resendResult, setResendResult] = useState<string | null>(null)
+  
   // Quick action preset state
   const [activePreset, setActivePreset] = useState<QuickActionPreset>(null)
   const composerKeyRef = useRef(0)
@@ -129,6 +133,35 @@ export default function CommunicationsPage() {
       setEmergencyError('Network error. Please try again.')
     } finally {
       setSendingEmergency(false)
+    }
+  }
+
+  const handleResendFailed = async () => {
+    try {
+      setResendingFailed(true)
+      setResendResult(null)
+      
+      const response = await fetch('/api/communication/resend-failed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}), // Defaults to today
+      })
+
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        setResendResult(`Resent ${result.resent} of ${result.total} failed messages`)
+        // Refresh stats after resending
+        fetchStats()
+      } else {
+        setResendResult(`Failed to resend messages: ${result.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      setResendResult('Network error. Please try again.')
+    } finally {
+      setResendingFailed(false)
+      // Clear result after 5 seconds
+      setTimeout(() => setResendResult(null), 5000)
     }
   }
 
@@ -200,6 +233,24 @@ export default function CommunicationsPage() {
             <RefreshCw className={`h-4 w-4 mr-1 ${loadingStats ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
+          {stats && stats.today.failed > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResendFailed}
+              disabled={resendingFailed}
+              className="border-[var(--warning)] text-[var(--warning)] hover:bg-[var(--warning-light)]"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${resendingFailed ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Resend Failed ({stats.today.failed})</span>
+              <span className="sm:hidden">Retry</span>
+            </Button>
+          )}
+          {resendResult && (
+            <div className="text-sm text-muted-foreground">
+              {resendResult}
+            </div>
+          )}
           {isAdmin && (
             <Button
               variant="destructive"
@@ -545,6 +596,7 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
   const [loadingOptions, setLoadingOptions] = useState<boolean>(false)
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false)
   const [sending, setSending] = useState<boolean>(false)
+  const [justSent, setJustSent] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -710,7 +762,14 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
       if (!response.ok) throw new Error(result.error || 'Failed to send message')
 
       if (result.success) {
-        setSuccess(`Message ${scheduleMessage ? 'scheduled' : 'queued'} for ${result.totalRecipients || 0} recipients!`)
+        setSuccess(result.message || `Message ${scheduleMessage ? 'scheduled' : 'queued'} for ${result.totalRecipients || 0} recipients!`)
+        setJustSent(true)
+        
+        // Reset justSent state after 20 seconds
+        setTimeout(() => {
+          setJustSent(false)
+        }, 20000)
+        
         onSendSuccess?.()
         // Reset form
         setCustomContent('')
@@ -718,8 +777,16 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
         setScheduleMessage(false)
         setScheduledDate('')
         setScheduledTime('')
+      } else if (result.queued > 0 && result.errors.length > 0) {
+        // Partial success - some sent, some failed
+        setSuccess(`Sent to ${result.queued} recipients`)
+        setError(`${result.errors.length} failed: ${result.errors.slice(0, 3).join(', ')}${result.errors.length > 3 ? '...' : ''}`)
+        setJustSent(true)
+        setTimeout(() => {
+          setJustSent(false)
+        }, 20000)
       } else {
-        throw new Error(result.error || 'Failed to send message')
+        throw new Error(result.message || result.error || 'Failed to send message')
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send message'
@@ -739,7 +806,6 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
     { value: TargetType.STREAM, label: 'By Stream', icon: Users },
     { value: TargetType.FEE_DEFAULTERS, label: 'Fee Defaulters', icon: AlertTriangle },
     { value: TargetType.ATTENDANCE_BELOW, label: 'Low Attendance', icon: Clock },
-    { value: TargetType.STAFF_ROLE, label: 'Staff by Role', icon: Users },
   ]
 
   // const CHANNEL_OPTIONS = [
@@ -1079,11 +1145,16 @@ function InlineMessageComposer({ preset, onSendSuccess, onSendError }: InlineMes
         </div>
 
         {/* Send Button */}
-        <Button onClick={handleSend} disabled={sending} className="w-full gap-2" size="lg">
+        <Button onClick={handleSend} disabled={sending || justSent} className="w-full gap-2" size="lg">
           {sending ? (
             <>
               <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
               {scheduleMessage ? 'Scheduling...' : 'Sending...'}
+            </>
+          ) : justSent ? (
+            <>
+              <CheckCircle className="h-4 w-4" />
+              Sent!
             </>
           ) : (
             <>

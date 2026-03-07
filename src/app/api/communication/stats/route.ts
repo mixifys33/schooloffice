@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
 
     // Today's stats
-    const todayMessages = await prisma.message.findMany({
+    const todayMessages = await prisma.communicationLog.findMany({
       where: {
         schoolId,
         createdAt: {
@@ -58,18 +58,18 @@ export async function GET(request: NextRequest) {
     const todayStats = {
       sent: todayMessages.length,
       delivered: todayMessages.filter(m => 
-        m.status === MessageStatus.DELIVERED || m.status === MessageStatus.READ
+        m.status === 'DELIVERED' || m.status === 'READ' || m.status === 'SENT'
       ).length,
       failed: todayMessages.filter(m => 
-        m.status === MessageStatus.FAILED
+        m.status === 'FAILED' || m.status === 'BOUNCED'
       ).length,
       pending: todayMessages.filter(m => 
-        m.status === MessageStatus.QUEUED
+        m.status === 'QUEUED' || m.status === 'SENDING'
       ).length,
     }
 
     // This month's stats by channel
-    const monthMessages = await prisma.message.findMany({
+    const monthMessages = await prisma.communicationLog.findMany({
       where: {
         schoolId,
         createdAt: {
@@ -84,16 +84,16 @@ export async function GET(request: NextRequest) {
     })
 
     const monthStats = {
-      sms: monthMessages.filter(m => m.channel === MessageChannel.SMS).length,
-      email: monthMessages.filter(m => m.channel === MessageChannel.EMAIL).length,
+      sms: monthMessages.filter(m => m.channel === 'SMS').length,
+      email: monthMessages.filter(m => m.channel === 'EMAIL').length,
       total: monthMessages.length,
     }
 
     // Calculate delivery rate
     const deliveredCount = monthMessages.filter(m => 
-      m.status === MessageStatus.DELIVERED || 
-      m.status === MessageStatus.READ ||
-      m.status === MessageStatus.SENT
+      m.status === 'DELIVERED' || 
+      m.status === 'READ' ||
+      m.status === 'SENT'
     ).length
     const deliveryRate = monthStats.total > 0 
       ? Math.round((deliveredCount / monthStats.total) * 100) 

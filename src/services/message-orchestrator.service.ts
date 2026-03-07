@@ -11,7 +11,7 @@ import {
   MessageOrchestratorResult, BulkMessageResult, EmergencyAlertResult,
   DeliveryReportParams, CommunicationDeliveryReport, Recipient,
 } from '../types/entities'
-import { MessageChannel, DeliveryStatus, RecipientType, Role } from '../types/enums'
+import { MessageChannel, DeliveryStatus, RecipientType, Role, MessageTemplateType, TargetType } from '../types/enums'
 import type { IMessageOrchestratorService } from '../types/services'
 import { targetingService } from './targeting.service'
 import { communicationPermissionService } from './communication-permission.service'
@@ -91,8 +91,8 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
       }
       
       console.log(`[BULK DEBUG] Resolving recipients for school ${params.schoolId}`)
-      const recipients = await targetingService.resolveRecipients({ schoolId: params.schoolId, targetType: params.targetType, criteria: params.targetCriteria })
-      console.log(`[BULK DEBUG] Found ${recipients.length} recipients`)
+      let recipients = await targetingService.resolveRecipients({ schoolId: params.schoolId, targetType: params.targetType, criteria: params.targetCriteria })
+      console.log(`[BULK DEBUG] Found ${recipients.length} recipients before filtering`)
       
       if (recipients.length === 0) {
         console.log(`[BULK DEBUG] No recipients found`)
@@ -145,6 +145,24 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
             console.log(`[BULK DEBUG] Retrieved template with type: ${templateType}`)
           }
         }
+      }
+      
+      // Filter recipients by fee balance ONLY if this is a FEES_REMINDER template OR FEE_DEFAULTERS target type
+      const isFeeRelated = templateType === 'FEES_REMINDER' || 
+                          templateType === MessageTemplateType.FEES_REMINDER ||
+                          params.targetType === TargetType.FEE_DEFAULTERS
+      
+      if (isFeeRelated) {
+        console.log(`[BULK DEBUG] Filtering recipients for fee-related message (template: ${templateType}, target: ${params.targetType})`)
+        recipients = await this.filterRecipientsByFeeBalance(recipients, params.schoolId)
+        console.log(`[BULK DEBUG] After fee balance filtering: ${recipients.length} recipients`)
+        
+        if (recipients.length === 0) {
+          console.log(`[BULK DEBUG] No recipients with outstanding balances found`)
+          return { jobId, totalRecipients: 0, queued: 0, errors: ['No recipients with outstanding balances found'] }
+        }
+      } else {
+        console.log(`[BULK DEBUG] Skipping fee balance filtering - not a fee-related message (template: ${templateType}, target: ${params.targetType})`)
       }
       
       const channel = params.channel || MessageChannel.SMS
@@ -493,6 +511,278 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Filter recipients by fee balance - only include students with outstanding balances
+   * Used when sending FEES_REMINDER messages with CLASS or other target types
+   */
+  private async filterRecipientsByFeeBalance(recipients: Recipient[], schoolId: string): Promise<Recipient[]> {
+    try {
+      // Get current term
+      const today = new Date()
+      const currentYear = await prisma.academicYear.findFirst({
+        where: { schoolId, isActive: true },
+        include: { 
+          terms: {
+            where: {
+              startDate: { lte: today },
+              endDate: { gte: today }
+            },
+            take: 1
+          }
+        }
+      })
+
+      // If no term matches today's date, get the most recent term that has started
+      let currentTerm = currentYear?.terms[0]
+      
+      if (!currentTerm && currentYear) {
+        const yearWithRecentTerm = await prisma.academicYear.findFirst({
+          where: { schoolId, isActive: true },
+          include: { 
+            terms: {
+              where: {
+                startDate: { lte: today }
+              },
+              orderBy: { startDate: 'desc' },
+              take: 1
+            }
+          }
+        })
+        currentTerm = yearWithRecentTerm?.terms[0]
+      }
+
+      if (!currentTerm) {
+        console.log(`[Fee Filter] No active term found for school ${schoolId}`)
+        // Return original recipients - don't filter if we can't determine term
+        // This prevents breaking non-fee messages when term data is missing
+        return recipients
+      }
+
+      console.log(`[Fee Filter] Using term: ${currentTerm.name} (${currentTerm.id})`)
+
+      return await this.filterByTerm(recipients, schoolId, currentTerm.id)
+    } catch (error) {
+      console.error('[Fee Filter] Error filtering recipients by fee balance:', error)
+      // On error, return original recipients to avoid breaking non-fee messages
+      return recipients
+    }
+  }
+
+  /**
+   * Filter recipients by fee balance for a specific term
+   */
+  private async filterByTerm(recipients: Recipient[], schoolId: string, termId: string): Promise<Recipient[]> {
+    try {
+      // Group recipients by student ID
+      const studentRecipientMap = new Map<string, Recipient[]>()
+      
+      for (const recipient of recipients) {
+        if (recipient.studentId) {
+          if (!studentRecipientMap.has(recipient.studentId)) {
+            studentRecipientMap.set(recipient.studentId, [])
+          }
+          studentRecipientMap.get(recipient.studentId)!.push(recipient)
+        }
+      }
+
+      console.log(`[Fee Filter] Processing ${studentRecipientMap.size} unique students`)
+
+      // Check fee balance for each student
+      const filteredRecipients: Recipient[] = []
+
+      for (const [studentId, studentRecipients] of studentRecipientMap.entries()) {
+        // Get student with payments and fee structure
+        const student = await prisma.student.findUnique({
+          where: { id: studentId },
+          include: {
+            payments: {
+              where: { 
+                termId: termId,
+                status: 'CONFIRMED'
+              }
+            },
+            class: {
+              include: {
+                feeStructures: {
+                  where: { 
+                    termId: termId,
+                    isActive: true
+                  }
+                }
+              }
+            }
+          }
+        })
+
+        if (!student) {
+          console.log(`[Fee Filter] Student ${studentId} not found`)
+          continue
+        }
+
+        // Calculate balance
+        const feeStructure = student.class.feeStructures[0]
+        if (!feeStructure) {
+          console.log(`[Fee Filter] No fee structure for student ${student.firstName} ${student.lastName}`)
+          continue
+        }
+
+        const totalFees = feeStructure.totalAmount
+        const totalPaid = student.payments.reduce((sum, payment) => sum + payment.amount, 0)
+        const balance = totalFees - totalPaid
+
+        console.log(`[Fee Filter] Student: ${student.firstName} ${student.lastName}, Total Fees: ${totalFees}, Total Paid: ${totalPaid}, Balance: ${balance}`)
+
+        // Only include if balance is greater than 0
+        if (balance > 0) {
+          console.log(`[Fee Filter] Including student ${student.firstName} ${student.lastName} with balance ${balance}`)
+          filteredRecipients.push(...studentRecipients)
+        } else {
+          console.log(`[Fee Filter] Excluding student ${student.firstName} ${student.lastName} - balance ${balance} is not greater than 0`)
+        }
+      }
+
+      console.log(`[Fee Filter] Filtered from ${recipients.length} to ${filteredRecipients.length} recipients`)
+      return filteredRecipients
+    } catch (error) {
+      console.error('[Fee Filter] Error in filterByTerm:', error)
+      return []
+    }
+  }
+}
+
+export const messageOrchestratorService = new MessageOrchestratorService()rent active term based on today's date
+      const today = new Date()
+      const currentYear = await prisma.academicYear.findFirst({
+        where: { schoolId, isActive: true },
+        include: { 
+          terms: {
+            where: {
+              startDate: { lte: today },
+              endDate: { gte: today }
+            },
+            take: 1
+          }
+        }
+      })
+
+      // If no term matches today's date, get the most recent term that has started
+      if (!currentYear || currentYear.terms.length === 0) {
+        const yearWithRecentTerm = await prisma.academicYear.findFirst({
+          where: { schoolId, isActive: true },
+          include: { 
+            terms: {
+              where: {
+                startDate: { lte: today }
+              },
+              orderBy: { startDate: 'desc' },
+              take: 1
+            }
+          }
+        })
+        
+        if (!yearWithRecentTerm || yearWithRecentTerm.terms.length === 0) {
+          console.log(`[Fee Filter] No active academic year or terms found for school ${schoolId}`)
+          return []
+        }
+        
+        const currentTerm = yearWithRecentTerm.terms[0]
+        console.log(`[Fee Filter] Using most recent started term: ${currentTerm.name} (${currentTerm.id})`)
+        
+        return await this.filterByTerm(recipients, schoolId, currentTerm.id)
+      }
+
+      const currentTerm = currentYear.terms[0]
+      console.log(`[Fee Filter] Using term: ${currentTerm.name} (${currentTerm.id})`)
+
+      return await this.filterByTerm(recipients, schoolId, currentTerm.id)
+    } catch (error) {
+      console.error('[Fee Filter] Error filtering recipients by fee balance:', error)
+      // On error, return empty array to avoid sending to wrong recipients
+      return []
+    }
+  }
+
+  /**
+   * Filter recipients by fee balance for a specific term
+   */
+  private async filterByTerm(recipients: Recipient[], schoolId: string, termId: string): Promise<Recipient[]> {
+    try {
+      // Group recipients by student ID
+      const studentRecipientMap = new Map<string, Recipient[]>()
+      
+      for (const recipient of recipients) {
+        if (recipient.studentId) {
+          if (!studentRecipientMap.has(recipient.studentId)) {
+            studentRecipientMap.set(recipient.studentId, [])
+          }
+          studentRecipientMap.get(recipient.studentId)!.push(recipient)
+        }
+      }
+
+      console.log(`[Fee Filter] Processing ${studentRecipientMap.size} unique students`)
+
+      // Check fee balance for each student
+      const filteredRecipients: Recipient[] = []
+
+      for (const [studentId, studentRecipients] of studentRecipientMap.entries()) {
+        // Get student with payments and fee structure
+        const student = await prisma.student.findUnique({
+          where: { id: studentId },
+          include: {
+            payments: {
+              where: { 
+                termId: termId,
+                status: 'CONFIRMED'
+              }
+            },
+            class: {
+              include: {
+                feeStructures: {
+                  where: { 
+                    termId: termId,
+                    isActive: true
+                  }
+                }
+              }
+            }
+          }
+        })
+
+        if (!student) {
+          console.log(`[Fee Filter] Student ${studentId} not found`)
+          continue
+        }
+
+        // Calculate balance
+        const feeStructure = student.class.feeStructures[0]
+        if (!feeStructure) {
+          console.log(`[Fee Filter] No fee structure for student ${student.firstName} ${student.lastName}`)
+          continue
+        }
+
+        const totalFees = feeStructure.totalAmount
+        const totalPaid = student.payments.reduce((sum, payment) => sum + payment.amount, 0)
+        const balance = totalFees - totalPaid
+
+        console.log(`[Fee Filter] Student: ${student.firstName} ${student.lastName}, Total Fees: ${totalFees}, Total Paid: ${totalPaid}, Balance: ${balance}`)
+
+        // Only include if balance is greater than 0
+        if (balance > 0) {
+          console.log(`[Fee Filter] Including student ${student.firstName} ${student.lastName} with balance ${balance}`)
+          filteredRecipients.push(...studentRecipients)
+        } else {
+          console.log(`[Fee Filter] Excluding student ${student.firstName} ${student.lastName} - balance ${balance} is not greater than 0`)
+        }
+      }
+
+      console.log(`[Fee Filter] Filtered from ${recipients.length} to ${filteredRecipients.length} recipients`)
+      return filteredRecipients
+    } catch (error) {
+      console.error('[Fee Filter] Error in filterByTerm:', error)
+      return []
+    }
   }
 }
 

@@ -159,15 +159,22 @@ export class SMSGatewayService {
       console.log(`[SMS GATEWAY DEBUG] Parsed cost: ${cost}`);
 
       // Map Africa's Talking status to our MessageStatus
-      const status = this.mapATStatus(recipient.status)
-      console.log(`[SMS GATEWAY DEBUG] Mapped status: ${status}, Success: ${recipient.statusCode === 101}`);
+      // Status codes: 101 = Success, 102 = Queued, 401 = Risk Hold, 402 = Invalid Phone, 403 = Not Allowed, 404 = No Credit, 405 = User in blacklist, 406 = Could not route, 500 = Internal error
+      const isSuccess = recipient.statusCode === 101 || recipient.statusCode === 102
+      const status = this.mapATStatus(recipient.status, recipient.statusCode)
+      console.log(`[SMS GATEWAY DEBUG] Status Code: ${recipient.statusCode}, Mapped status: ${status}, Success: ${isSuccess}`);
+      
+      // Log failure details
+      if (!isSuccess) {
+        console.error(`[SMS GATEWAY ERROR] Message failed with status code ${recipient.statusCode}: ${recipient.status}`);
+      }
 
       return {
-        success: recipient.statusCode === 101,
+        success: isSuccess,
         messageId: recipient.messageId,
         cost,
         status,
-        error: recipient.statusCode !== 101 ? recipient.status : undefined,
+        error: !isSuccess ? `${recipient.status} (Code: ${recipient.statusCode})` : undefined,
         recipient: recipient.number,
       }
     } catch (error) {
@@ -219,14 +226,14 @@ export class SMSGatewayService {
         
         for (const recipient of data.SMSMessageData.Recipients) {
           const cost = this.parseCost(recipient.cost)
-          const success = recipient.statusCode === 101
+          const success = recipient.statusCode === 101 || recipient.statusCode === 102
           
           results.push({
             success,
             messageId: recipient.messageId,
             cost,
-            status: this.mapATStatus(recipient.status),
-            error: !success ? recipient.status : undefined,
+            status: this.mapATStatus(recipient.status, recipient.statusCode),
+            error: !success ? `${recipient.status} (Code: ${recipient.statusCode})` : undefined,
             recipient: recipient.number,
           })
 
@@ -423,7 +430,31 @@ export class SMSGatewayService {
     return match ? parseFloat(match[0]) : SMS_COST_UGX
   }
 
-  private mapATStatus(status: string): MessageStatus {
+  private mapATStatus(status: string, statusCode?: number): MessageStatus {
+    // Handle by status code first (more reliable)
+    if (statusCode) {
+      switch (statusCode) {
+        case 101: // Success
+          return MessageStatus.DELIVERED
+        case 102: // Queued/Sent
+          return MessageStatus.SENT
+        case 401: // Risk Hold
+        case 402: // Invalid Phone Number
+        case 403: // Not Allowed
+        case 404: // No Credit
+        case 405: // User in Blacklist
+        case 406: // Could Not Route
+        case 407: // Do Not Disturb Rejection
+        case 500: // Internal Server Error
+        case 501: // Gateway Error
+          return MessageStatus.FAILED
+        default:
+          // Fall through to status string check
+          break
+      }
+    }
+    
+    // Fallback to status string
     switch (status.toLowerCase()) {
       case 'success':
         return MessageStatus.DELIVERED
