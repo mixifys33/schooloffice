@@ -12,54 +12,160 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const termId = searchParams.get('termId');
+    const period = searchParams.get('period') || 'current-term';
     const limit = parseInt(searchParams.get('limit') || '5');
 
-    // Build the where clause for student accounts
-    let whereClause: any = {
-      schoolId: session.user.schoolId,
-      balance: {
-        gt: 0
-      }
-    };
-
-    // Try with termId first if provided
-    let useTermFilter = false;
-    if (termId) {
-      const tempWhereClause = {
-        ...whereClause,
-        termId: termId
-      };
-      
-      // Check if there are any records with this termId
-      const count = await prisma.studentAccount.count({
-        where: tempWhereClause
-      });
-      
-      // If records found with this termId, use the term filter
-      if (count > 0) {
-        whereClause = tempWhereClause;
-        useTermFilter = true;
+    // Calculate date range based on period
+    let dateRange: { start: Date; end: Date } | null = null;
+    if (period !== 'current-term') {
+      const now = new Date();
+      switch (period) {
+        case 'current-month':
+          dateRange = {
+            start: new Date(now.getFullYear(), now.getMonth(), 1),
+            end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+          };
+          break;
+        case 'last-30-days':
+          dateRange = {
+            start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+            end: now
+          };
+          break;
+        case 'current-year':
+          dateRange = {
+            start: new Date(now.getFullYear(), 0, 1),
+            end: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+          };
+          break;
       }
     }
 
-    // Get students with outstanding balances (defaulters)
-    const defaulters = await prisma.studentAccount.findMany({
-      where: whereClause,
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            classId: true
+    let defaulters: any[];
+
+    // For date-based periods, recalculate balances from payments and fee structures
+    if (dateRange) {
+      // Get all active students
+      const students = await prisma.student.findMany({
+        where: {
+          schoolId: session.user.schoolId,
+          status: 'ACTIVE'
+        },
+        include: {
+          payments: {
+            where: {
+              receivedAt: {
+                gte: dateRange.start,
+                lte: dateRange.end
+              },
+              status: 'CONFIRMED'
+            }
           }
         }
-      },
-      orderBy: {
-        balance: 'desc'
-      },
-      take: limit
-    });
+      });
+
+      // Get all active fee structures for date-based periods
+      const feeStructures = await prisma.feeStructure.findMany({
+        where: {
+          schoolId: session.user.schoolId,
+          isActive: true
+        }
+      });
+
+      // Calculate balance for each student
+      const studentBalances = students.map(student => {
+        // Find fee structure for this student's class
+        const feeStructure = feeStructures.find(fs => 
+          fs.classId === student.classId && 
+          fs.studentType === 'DAY' // Default to DAY
+        );
+
+        const expectedFee = feeStructure?.totalAmount || 0;
+        const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0);
+        const balance = expectedFee - paidAmount;
+
+        return {
+          student,
+          balance,
+          lastPaymentDate: student.payments.length > 0 
+            ? student.payments.reduce((latest, p) => p.receivedAt > latest ? p.receivedAt : latest, student.payments[0].receivedAt)
+            : null
+        };
+      });
+
+      // Filter to students with positive balance and sort by balance descending
+      defaulters = studentBalances
+        .filter(sb => sb.balance > 0)
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, limit)
+        .map(sb => ({
+          student: {
+            id: sb.student.id,
+            firstName: sb.student.firstName,
+            lastName: sb.student.lastName,
+            classId: sb.student.classId
+          },
+          balance: sb.balance,
+          lastPaymentDate: sb.lastPaymentDate,
+          createdAt: sb.student.createdAt
+        }));
+    } else {
+      // Use existing term-based logic for "current-term"
+      // Build the where clause for student accounts
+      let whereClause: any = {
+        schoolId: session.user.schoolId,
+        balance: {
+          gt: 0
+        }
+      };
+
+      // Try with termId first if provided
+      let useTermFilter = false;
+      if (termId) {
+        const tempWhereClause = {
+          ...whereClause,
+          termId: termId
+        };
+        
+        // Check if there are any records with this termId
+        const count = await prisma.studentAccount.count({
+          where: tempWhereClause
+        });
+        
+        // If records found with this termId, use the term filter
+        if (count > 0) {
+          whereClause = tempWhereClause;
+          useTermFilter = true;
+        }
+      }
+
+      // Get students with outstanding balances (defaulters)
+      const studentAccounts = await prisma.studentAccount.findMany({
+        where: whereClause,
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              classId: true
+            }
+          }
+        },
+        orderBy: {
+          balance: 'desc'
+        },
+        take: limit
+      });
+
+      // Map to consistent format
+      defaulters = studentAccounts.map(account => ({
+        student: account.student,
+        balance: account.balance,
+        lastPaymentDate: account.lastPaymentDate,
+        createdAt: account.createdAt
+      }));
+    }
 
     // Extract unique class IDs to fetch all class names in a single query
     const classIds = [...new Set(defaulters.map(d => d.student.classId).filter(Boolean))];
@@ -79,23 +185,23 @@ export async function GET(request: NextRequest) {
     const classMap = new Map(classRecords.map(cls => [cls.id, cls.name]));
 
     // Process the defaulters data - use the class map to get class names
-    const defaulterData = defaulters.map((account) => {
+    const defaulterData = defaulters.map((defaulter) => {
       // Calculate days past due based on the account creation date or last payment date
       // Since we don't have specific due dates, we'll estimate based on when the account was created
       const currentDate = new Date();
-      const accountCreatedDate = account.createdAt;
+      const accountCreatedDate = defaulter.createdAt;
       const daysPastDue = Math.floor((currentDate.getTime() - accountCreatedDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Get the class name using the class map
-      const className = account.student.classId ? classMap.get(account.student.classId) || 'N/A' : 'N/A';
+      const className = defaulter.student.classId ? classMap.get(defaulter.student.classId) || 'N/A' : 'N/A';
 
       return {
-        id: account.studentId,
-        studentName: `${account.student.firstName} ${account.student.lastName}`,
+        id: defaulter.student.id,
+        studentName: `${defaulter.student.firstName} ${defaulter.student.lastName}`,
         className,
-        outstandingAmount: account.balance,
+        outstandingAmount: defaulter.balance,
         daysPastDue: Math.max(0, daysPastDue), // Ensure non-negative value
-        lastPayment: account.updatedAt.toISOString() // Using updatedAt as a proxy for last payment
+        lastPayment: defaulter.lastPaymentDate?.toISOString() || accountCreatedDate.toISOString()
       };
     });
 

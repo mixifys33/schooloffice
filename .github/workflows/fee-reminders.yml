@@ -1,0 +1,34 @@
+name: Fee Reminders Automation
+
+on:
+  schedule:
+    # Run every hour at the top of the hour
+    - cron: "0 * * * *"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  run-fee-reminders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Fee Reminders Cron
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST ${{ secrets.APP_URL }}/api/cron/fee-reminders \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "Error: Cron job failed with status $http_code"
+            exit 1
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Fee reminders cron job failed. Check the logs above for details."

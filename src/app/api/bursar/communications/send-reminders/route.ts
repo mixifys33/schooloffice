@@ -1,165 +1,119 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { sendSMS, formatPhoneNumber } from '@/services/sms.service';
 
 export async function POST(request: NextRequest) {
-  console.log('[SEND-REMINDERS] ========== Starting send reminders ==========')
-  
   try {
-    const session = await auth()
-    console.log('[SEND-REMINDERS] Session user:', session?.user?.id)
-    console.log('[SEND-REMINDERS] School ID:', session?.user?.schoolId)
+    const session = await auth();
 
     if (!session?.user?.schoolId) {
-      console.log('[SEND-REMINDERS] ERROR: No session or school ID')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized', success: false }, { status: 401 });
     }
 
-    const body = await request.json()
-    console.log('[SEND-REMINDERS] Request body:', JSON.stringify(body, null, 2))
-    
-    const { students, messageType, message } = body
+    const body = await request.json();
+    const { defaulters, message } = body;
 
-    if (!students || students.length === 0) {
-      console.log('[SEND-REMINDERS] ERROR: No students selected')
-      return NextResponse.json({ error: 'No students selected' }, { status: 400 })
+    if (!defaulters || defaulters.length === 0) {
+      return NextResponse.json(
+        { error: 'No defaulters selected', success: false },
+        { status: 400 }
+      );
     }
 
     if (!message) {
-      console.log('[SEND-REMINDERS] ERROR: No message provided')
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Message is required', success: false },
+        { status: 400 }
+      );
     }
 
-    console.log(`[SEND-REMINDERS] Processing ${students.length} students`)
-    console.log(`[SEND-REMINDERS] Message type: ${messageType}`)
-    console.log(`[SEND-REMINDERS] Message template: ${message}`)
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
 
-    let successCount = 0
-    let errorCount = 0
-    const errors: string[] = []
-
-    // Process each student
-    for (let i = 0; i < students.length; i++) {
-      const student = students[i]
-      console.log(`[SEND-REMINDERS] Processing student ${i + 1}/${students.length}: ${student.name}`)
-      
+    // Process each defaulter
+    for (const defaulter of defaulters) {
       try {
-        // Get student from database to get guardian info
-        const dbStudent = await prisma.student.findUnique({
-          where: { id: student.id },
+        // Get student and guardian information
+        const student = await prisma.student.findUnique({
+          where: { id: defaulter.id },
           include: {
             studentGuardians: {
               where: { isPrimary: true },
-              include: { guardian: true },
-              take: 1
+              include: { guardian: true }
             }
           }
-        })
+        });
 
-        if (!dbStudent) {
-          console.log(`[SEND-REMINDERS] ERROR: Student ${student.id} not found in database`)
-          errorCount++
-          errors.push(`${student.name}: Student not found`)
-          continue
+        if (!student || student.studentGuardians.length === 0) {
+          failed++;
+          errors.push(`No guardian found for ${defaulter.studentName}`);
+          continue;
         }
 
-        const guardian = dbStudent.studentGuardians[0]?.guardian
-        if (!guardian) {
-          console.log(`[SEND-REMINDERS] ERROR: No guardian found for ${student.name}`)
-          errorCount++
-          errors.push(`${student.name}: No guardian found`)
-          continue
-        }
+        const guardian = student.studentGuardians[0].guardian;
 
-        if (!guardian.phone) {
-          console.log(`[SEND-REMINDERS] ERROR: No phone number for guardian of ${student.name}`)
-          errorCount++
-          errors.push(`${student.name}: No guardian phone number`)
-          continue
-        }
+        // Replace message variables
+        let personalizedMessage = message
+          .replace(/{guardianName}/g, `${guardian.firstName} ${guardian.lastName}`)
+          .replace(/{studentName}/g, defaulter.studentName)
+          .replace(/{className}/g, defaulter.className)
+          .replace(/{balance}/g, defaulter.outstandingAmount.toLocaleString())
+          .replace(/{daysPastDue}/g, defaulter.daysPastDue.toString());
 
-        // Replace variables in message
-        const personalizedMessage = message
-          .replace(/{parentName}/g, `${guardian.firstName} ${guardian.lastName}`)
-          .replace(/{studentName}/g, `${dbStudent.firstName} ${dbStudent.lastName}`)
-          .replace(/{balance}/g, new Intl.NumberFormat('en-UG', {
-            style: 'currency',
-            currency: 'UGX',
-            minimumFractionDigits: 0,
-          }).format(student.balance || 0))
-          .replace(/{daysOverdue}/g, (student.daysOverdue || 0).toString())
+        // Send SMS
+        const phoneNumber = formatPhoneNumber(guardian.phone);
+        const smsResult = await sendSMS(phoneNumber, personalizedMessage);
 
-        console.log(`[SEND-REMINDERS] Personalized message for ${student.name}:`, personalizedMessage)
-        console.log(`[SEND-REMINDERS] Recipient: ${guardian.firstName} ${guardian.lastName} (${guardian.phone})`)
-
-        // Create Message record to queue for SMS sending
-        const messageRecord = await prisma.message.create({
+        // Create notification log
+        await prisma.financeNotificationLog.create({
           data: {
             schoolId: session.user.schoolId,
-            studentId: dbStudent.id,
             guardianId: guardian.id,
-            templateType: 'PAYMENT_REMINDER',
-            messageType: 'AUTOMATED',
+            studentId: student.id,
+            type: 'FEE_REMINDER',
             channel: 'SMS',
             content: personalizedMessage,
-            status: 'QUEUED'
+            status: smsResult.success ? 'SENT' : 'FAILED',
+            sentAt: smsResult.success ? new Date() : null,
+            error: smsResult.error,
+            metadata: JSON.stringify({
+              balance: defaulter.outstandingAmount,
+              daysPastDue: defaulter.daysPastDue,
+              sentBy: session.user.id,
+              sentManually: true,
+              messageId: smsResult.messageId,
+              cost: smsResult.cost
+            })
           }
-        })
-        
-        console.log(`[SEND-REMINDERS] ✅ Created Message record: ${messageRecord.id} - Status: QUEUED`)
+        });
 
-        // Also create communication log for tracking
-        const commLog = await prisma.communicationLog.create({
-          data: {
-            schoolId: session.user.schoolId,
-            messageId: `reminder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            senderId: session.user.id,
-            senderRole: session.user.role || 'ACCOUNTANT',
-            channel: 'SMS',
-            recipientId: student.id,
-            recipientType: 'STUDENT',
-            recipientContact: guardian.phone,
-            content: personalizedMessage,
-            status: 'SENT',
-            metadata: {
-              type: 'PAYMENT_REMINDER',
-              subject: 'Payment Reminder',
-              recipientName: `${guardian.firstName} ${guardian.lastName}`,
-              balance: student.balance,
-              daysOverdue: student.daysOverdue,
-              messageRecordId: messageRecord.id
-            }
-          }
-        })
-        
-        console.log(`[SEND-REMINDERS] ✅ Created communication log: ${commLog.id}`)
-        
-        successCount++
+        if (smsResult.success) {
+          sent++;
+        } else {
+          failed++;
+          errors.push(`Failed to send to ${defaulter.studentName}: ${smsResult.error}`);
+        }
       } catch (error) {
-        console.error(`[SEND-REMINDERS] Error processing student ${student.name}:`, error)
-        errorCount++
-        errors.push(`${student.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        failed++;
+        errors.push(`Failed to send to ${defaulter.studentName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error(`Error sending reminder to ${defaulter.studentName}:`, error);
       }
     }
 
-    console.log(`[SEND-REMINDERS] ========== Summary ==========`)
-    console.log(`[SEND-REMINDERS] Total students: ${students.length}`)
-    console.log(`[SEND-REMINDERS] Success: ${successCount}`)
-    console.log(`[SEND-REMINDERS] Errors: ${errorCount}`)
-    console.log(`[SEND-REMINDERS] ✅ Messages queued for SMS gateway`)
-    console.log(`[SEND-REMINDERS] ========================================`)
-
     return NextResponse.json({
       success: true,
-      sent: successCount,
-      errors: errorCount > 0 ? errors : undefined,
-      message: `Successfully queued ${successCount} SMS reminders`
-    })
+      sent,
+      failed,
+      total: defaulters.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
   } catch (error) {
-    console.error('[SEND-REMINDERS] FATAL ERROR:', error)
+    console.error('Error sending reminders:', error);
     return NextResponse.json(
-      { error: 'Failed to send reminders' },
+      { error: 'Failed to send reminders', success: false },
       { status: 500 }
-    )
+    );
   }
 }

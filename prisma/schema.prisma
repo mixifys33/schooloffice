@@ -461,6 +461,7 @@ model School {
   studentDiscounts                  StudentDiscount[]
   studentPenalties                  StudentPenalty[]
   studentMilestoneStatuses          StudentMilestoneStatus[]
+  feeReminderAutomation             FeeReminderAutomation?
   
   // Report System Relations
   reportHistory ReportHistory[]
@@ -2202,6 +2203,27 @@ model StudentMilestoneStatus {
   @@index([termId])
   @@index([status])
   @@index([schoolId])
+}
+
+// Fee Reminder Automation Settings
+// Stores configuration for automated fee reminders per school
+model FeeReminderAutomation {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  schoolId     String   @unique @db.ObjectId
+  enabled      Boolean  @default(false)
+  frequency    String   @default("weekly") // daily, weekly, biweekly, monthly
+  dayOfWeek    Int?     // 0-6 for weekly/biweekly (0 = Sunday)
+  dayOfMonth   Int?     // 1-31 for monthly
+  time         String   @default("09:00") // HH:MM format
+  minBalance   Float    @default(10000) // Minimum balance to trigger reminder
+  lastRun      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([enabled])
 }
 
 // SMS Log for tracking infrastructure

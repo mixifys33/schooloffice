@@ -1,0 +1,1280 @@
+/* Hero Section Animation System */
+/* GPU-accelerated animations using transforms and opacity */
+/* Requirements: 2.1, 2.2, 2.3, 2.4, 2.6, 7.1, 7.2 */
+
+/* ============================================
+   KEYFRAME DEFINITIONS
+   ============================================ */
+
+/* Slide in from left - for headline and subtext */
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from right - for dashboard preview */
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from bottom - for CTA buttons */
+@keyframes slideInFromBottom {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in - simplified animation for mobile */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   ENTRANCE ANIMATION CLASSES
+   ============================================ */
+
+/* Headline animation - slides from left, no delay */
+.hero-animate-headline {
+  animation: slideInFromLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0s both;
+}
+
+/* Subtext animation - slides from left, 0.15s delay */
+.hero-animate-subtext {
+  animation: slideInFromLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+/* CTA buttons animation - slides from bottom, 0.3s delay */
+.hero-animate-cta {
+  animation: slideInFromBottom 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+/* Dashboard preview animation - slides from right, 0.2s delay */
+.hero-animate-preview {
+  animation: slideInFromRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+/* ============================================
+   HOVER TRANSITION EFFECTS
+   ============================================ */
+
+/* Scale effect for buttons - 5% scale-up */
+.hero-hover-scale {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Enhanced shadow effect for buttons */
+/* Requirements: 5.2 - Professional shadow effects that create depth without being excessive */
+.hero-hover-shadow {
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Base shadow for depth */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.hero-hover-shadow:hover {
+  /* Enhanced shadow on hover - professional depth without being excessive */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15),
+              0 4px 6px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark theme shadow adjustments - lighter shadows for better visibility */
+[data-theme="dark"] .hero-hover-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3),
+              0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .hero-hover-shadow:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4),
+              0 4px 6px -2px rgba(0, 0, 0, 0.25),
+              0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Paper theme shadow adjustments - warm tones */
+[data-theme="paper"] .hero-hover-shadow {
+  box-shadow: 0 4px 6px -1px rgba(120, 53, 15, 0.1),
+              0 2px 4px -1px rgba(120, 53, 15, 0.06);
+}
+
+[data-theme="paper"] .hero-hover-shadow:hover {
+  box-shadow: 0 10px 15px -3px rgba(120, 53, 15, 0.15),
+              0 4px 6px -2px rgba(120, 53, 15, 0.08);
+}
+
+/* Contrast theme shadow adjustments - high contrast */
+[data-theme="contrast"] .hero-hover-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3),
+              0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="contrast"] .hero-hover-shadow:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4),
+              0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* Lift effect for dashboard preview - subtle scale and shadow */
+/* Requirements: 5.2 - Professional shadow effects that create depth */
+.hero-hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Base shadow for depth */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+              0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.hero-hover-lift:hover {
+  transform: translateY(-4px) scale(1.01);
+  /* Enhanced shadow on hover - professional depth */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12),
+              0 10px 10px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark theme lift shadow adjustments */
+[data-theme="dark"] .hero-hover-lift {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4),
+              0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .hero-hover-lift:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5),
+              0 10px 10px -5px rgba(0, 0, 0, 0.4),
+              0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+/* Paper theme lift shadow adjustments */
+[data-theme="paper"] .hero-hover-lift {
+  box-shadow: 0 10px 15px -3px rgba(120, 53, 15, 0.1),
+              0 4px 6px -2px rgba(120, 53, 15, 0.05);
+}
+
+[data-theme="paper"] .hero-hover-lift:hover {
+  box-shadow: 0 20px 25px -5px rgba(120, 53, 15, 0.12),
+              0 10px 10px -5px rgba(120, 53, 15, 0.08);
+}
+
+/* Contrast theme lift shadow adjustments */
+[data-theme="contrast"] .hero-hover-lift {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+              0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="contrast"] .hero-hover-lift:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4),
+              0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Highlight effect for stat cards - using opacity overlay for GPU acceleration */
+.hero-hover-highlight {
+  position: relative;
+}
+
+.hero-hover-highlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-elevated);
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.hero-hover-highlight:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   RESPONSIVE ANIMATION ADJUSTMENTS
+   ============================================ */
+
+/* Mobile optimizations - reduce animation distances by 50% */
+@media (max-width: 768px) {
+  @keyframes slideInFromLeft {
+    0% {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInFromRight {
+    0% {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInFromBottom {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Simplify complex animations to fade-in on mobile */
+  .hero-mobile-simplified {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  }
+
+  /* Reduce animation duration for mobile */
+  .hero-animate-headline,
+  .hero-animate-subtext,
+  .hero-animate-cta,
+  .hero-animate-preview {
+    animation-duration: 0.6s;
+  }
+}
+
+/* ============================================
+   RESPONSIVE CLASSES FOR BREAKPOINTS
+   ============================================ */
+
+/* Requirements: 6.1, 6.2, 6.3 - Responsive behavior for mobile, tablet, and desktop */
+
+/* Mobile simplified class - reduces animation complexity on mobile devices */
+/* Applied automatically on mobile viewports (max-width: 768px) */
+@media (max-width: 768px) {
+  .hero-mobile-simplified {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  }
+  
+  /* Ensure vertical stacking maintains proper spacing */
+  .hero-mobile-simplified.hero-section-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  /* Scale dashboard preview appropriately on mobile */
+  .hero-mobile-simplified .hero-dashboard-preview {
+    max-width: 100%;
+    transform: scale(0.95);
+  }
+  
+  /* Reduce hover effects on mobile for better performance */
+  .hero-mobile-simplified .hero-hover-lift:hover {
+    transform: translateY(-2px) scale(1.005);
+  }
+  
+  .hero-mobile-simplified .hero-hover-scale:hover {
+    transform: scale(1.02);
+  }
+  
+  /* Ensure animations work with vertical stacking */
+  /* Content section maintains slide-in from left */
+  .hero-mobile-simplified .hero-animate-headline,
+  .hero-mobile-simplified .hero-animate-subtext {
+    animation: slideInFromLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  
+  /* CTA buttons maintain slide-in from bottom */
+  .hero-mobile-simplified .hero-animate-cta {
+    animation: slideInFromBottom 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+  }
+  
+  /* Dashboard preview maintains slide-in but from bottom on mobile for better UX */
+  .hero-mobile-simplified .hero-animate-preview {
+    animation: slideInFromBottom 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+  }
+  
+  /* Ensure dashboard preview scales without breaking animations */
+  .hero-dashboard-preview {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Maintain proper spacing in vertical stack */
+  .hero-section-container > * {
+    width: 100%;
+  }
+  
+  /* Center content on mobile */
+  .hero-section-container > div:first-child {
+    text-align: center;
+  }
+  
+  /* Ensure buttons stack properly on very small screens */
+  @media (max-width: 400px) {
+    .hero-animate-cta {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .hero-animate-cta > * {
+      width: 100%;
+    }
+  }
+}
+
+/* Tablet optimized class - balanced animations for tablet devices */
+/* Applied on tablet viewports (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hero-tablet-optimized {
+    /* Slightly reduce animation distances for tablet */
+    animation-duration: 0.7s;
+  }
+  
+  .hero-tablet-optimized .hero-animate-headline,
+  .hero-tablet-optimized .hero-animate-subtext,
+  .hero-tablet-optimized .hero-animate-cta,
+  .hero-tablet-optimized .hero-animate-preview {
+    animation-duration: 0.7s;
+  }
+  
+  /* Adjust dashboard preview size for tablet */
+  .hero-tablet-optimized .hero-dashboard-preview {
+    max-width: 480px;
+  }
+  
+  /* Maintain full hover effects on tablet */
+  .hero-tablet-optimized .hero-hover-lift:hover {
+    transform: translateY(-3px) scale(1.008);
+  }
+  
+  .hero-tablet-optimized .hero-hover-scale:hover {
+    transform: scale(1.04);
+  }
+}
+
+/* Desktop full class - full animation experience for desktop devices */
+/* Applied on desktop viewports (min-width: 1025px) */
+@media (min-width: 1025px) {
+  .hero-desktop-full {
+    /* Full animation duration and distances */
+    animation-duration: 0.8s;
+  }
+  
+  .hero-desktop-full .hero-animate-headline,
+  .hero-desktop-full .hero-animate-subtext,
+  .hero-desktop-full .hero-animate-cta,
+  .hero-desktop-full .hero-animate-preview {
+    animation-duration: 0.8s;
+  }
+  
+  /* Full-size dashboard preview on desktop */
+  .hero-desktop-full .hero-dashboard-preview {
+    max-width: 520px;
+  }
+  
+  /* Full hover effects on desktop */
+  .hero-desktop-full .hero-hover-lift:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+  
+  .hero-desktop-full .hero-hover-scale:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Enhanced shadow effects on desktop */
+  .hero-desktop-full .hero-hover-shadow:hover {
+    box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.25),
+                0 6px 8px -2px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* ============================================
+   CONSISTENT SPACING AND ALIGNMENT
+   ============================================ */
+
+/* Requirements: 5.1 - Consistent spacing and alignment across all breakpoints */
+
+/* Base spacing for all breakpoints */
+.hero-section-container {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+/* Mobile spacing (max-width: 768px) */
+@media (max-width: 768px) {
+  .hero-section-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+  }
+  
+  /* Content spacing on mobile */
+  .hero-section-container > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+  }
+  
+  /* Headline spacing */
+  .hero-animate-headline {
+    margin-bottom: 0;
+    line-height: 1.2;
+  }
+  
+  /* Subtext spacing */
+  .hero-animate-subtext {
+    margin-top: 0;
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+  
+  /* CTA button spacing */
+  .hero-animate-cta {
+    margin-top: 0.5rem;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  /* Dashboard preview spacing */
+  .hero-animate-preview {
+    margin-top: 1rem;
+    width: 100%;
+  }
+}
+
+/* Tablet spacing (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hero-section-container {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
+  }
+  
+  /* Content spacing on tablet */
+  .hero-section-container > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+  }
+  
+  /* Headline spacing */
+  .hero-animate-headline {
+    margin-bottom: 0;
+    line-height: 1.15;
+  }
+  
+  /* Subtext spacing */
+  .hero-animate-subtext {
+    margin-top: 0;
+    max-width: 540px;
+  }
+  
+  /* CTA button spacing */
+  .hero-animate-cta {
+    margin-top: 0.5rem;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+  
+  /* Dashboard preview spacing */
+  .hero-animate-preview {
+    margin-top: 1rem;
+    justify-content: center;
+  }
+}
+
+/* Desktop spacing (min-width: 1025px) */
+@media (min-width: 1025px) {
+  .hero-section-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+  }
+  
+  /* Content spacing on desktop */
+  .hero-section-container > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: flex-start;
+    text-align: left;
+  }
+  
+  /* Headline spacing */
+  .hero-animate-headline {
+    margin-bottom: 0;
+    line-height: 1.1;
+  }
+  
+  /* Subtext spacing */
+  .hero-animate-subtext {
+    margin-top: 0;
+    max-width: 540px;
+  }
+  
+  /* CTA button spacing */
+  .hero-animate-cta {
+    margin-top: 0.5rem;
+    gap: 0.75rem;
+    justify-content: flex-start;
+  }
+  
+  /* Dashboard preview spacing */
+  .hero-animate-preview {
+    justify-content: flex-end;
+  }
+}
+
+/* Consistent padding for section */
+.hero-gradient-bg {
+  /* Padding is handled by section className */
+}
+
+/* Consistent alignment for text elements */
+.hero-text-headline,
+.hero-text-subtext {
+  text-align: inherit;
+}
+
+/* Ensure buttons maintain consistent sizing */
+.hero-animate-cta button,
+.hero-animate-cta a {
+  min-height: 3rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+@media (max-width: 768px) {
+  .hero-animate-cta button,
+  .hero-animate-cta a {
+    min-height: 2.75rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY - REDUCED MOTION SUPPORT
+   ============================================ */
+
+/* Disable all animations when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hero-animate-headline,
+  .hero-animate-subtext,
+  .hero-animate-cta,
+  .hero-animate-preview {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Disable hover transitions for reduced motion */
+  .hero-hover-scale,
+  .hero-hover-shadow,
+  .hero-hover-lift,
+  .hero-hover-highlight {
+    transition: none !important;
+  }
+
+  .hero-hover-scale:hover,
+  .hero-hover-lift:hover {
+    transform: none !important;
+  }
+}
+
+/* ============================================
+   GRADIENT BACKGROUND SYSTEM
+   ============================================ */
+
+/* Hero section gradient background - theme-aware */
+/* Requirements: 1.1, 1.4, 4.5 */
+
+.hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    var(--bg-surface) 0%,
+    var(--bg-main) 50%,
+    var(--bg-surface) 100%
+  );
+  position: relative;
+}
+
+/* Enhanced gradient with accent colors for visual interest */
+.hero-gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at top left,
+    rgba(var(--chart-blue-rgb), 0.08) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    ellipse at bottom right,
+    rgba(var(--chart-purple-rgb), 0.06) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content stays above gradient overlay */
+.hero-gradient-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Light theme specific gradient enhancement */
+[data-theme="light"] .hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #f8fafc 0%,
+    #ffffff 30%,
+    #f1f5f9 60%,
+    #e0f2fe 100%
+  );
+}
+
+/* Dark theme specific gradient enhancement */
+[data-theme="dark"] .hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #0f172a 0%,
+    #1e293b 40%,
+    #0f172a 70%,
+    #1e3a5f 100%
+  );
+}
+
+/* Paper theme specific gradient enhancement */
+[data-theme="paper"] .hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #fefcf3 0%,
+    #f9f6ed 40%,
+    #fef7ed 70%,
+    #fef3c7 100%
+  );
+}
+
+/* Contrast theme specific gradient enhancement */
+[data-theme="contrast"] .hero-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f0f0f0 50%,
+    #ffffff 100%
+  );
+}
+
+/* System theme - follows prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] .hero-gradient-bg {
+    background: linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #ffffff 30%,
+      #f1f5f9 60%,
+      #e0f2fe 100%
+    );
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .hero-gradient-bg {
+    background: linear-gradient(
+      135deg,
+      #0f172a 0%,
+      #1e293b 40%,
+      #0f172a 70%,
+      #1e3a5f 100%
+    );
+  }
+}
+
+/* ============================================
+   HIGH-CONTRAST TEXT COLORS (WCAG AA)
+   ============================================ */
+
+/* Requirements: 1.2, 5.3, 8.3 */
+/* WCAG AA requires 4.5:1 for normal text, 3:1 for large text */
+
+/* Hero headline - large text, high contrast */
+.hero-text-headline {
+  color: var(--text-primary);
+}
+
+/* Dark theme headline - ensure maximum contrast */
+[data-theme="dark"] .hero-text-headline,
+[data-theme="system"] .hero-text-headline {
+  color: var(--white-pure);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .hero-text-headline {
+    color: var(--white-pure);
+  }
+}
+
+/* Hero subtext - normal text, requires 4.5:1 contrast */
+.hero-text-subtext {
+  color: var(--text-secondary);
+}
+
+/* Dark theme subtext - lighter for better contrast on dark backgrounds */
+[data-theme="dark"] .hero-text-subtext {
+  color: var(--text-secondary);
+}
+
+[data-theme="system"] .hero-text-subtext {
+  color: var(--text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .hero-text-subtext {
+    color: var(--text-secondary);
+  }
+}
+
+/* Dashboard preview primary text - high contrast */
+.hero-text-dashboard-primary {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .hero-text-dashboard-primary {
+  color: var(--white-pure);
+}
+
+/* Dashboard preview secondary text - muted but still readable */
+.hero-text-dashboard-secondary {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .hero-text-dashboard-secondary {
+  color: var(--text-muted);
+}
+
+/* Contrast theme - maximum contrast for accessibility */
+[data-theme="contrast"] .hero-text-headline,
+[data-theme="contrast"] .hero-text-dashboard-primary {
+  color: #000000;
+}
+
+[data-theme="contrast"] .hero-text-subtext {
+  color: #333333;
+}
+
+[data-theme="contrast"] .hero-text-dashboard-secondary {
+  color: #666666;
+}
+
+/* Paper theme - warm tones with high contrast */
+[data-theme="paper"] .hero-text-headline,
+[data-theme="paper"] .hero-text-dashboard-primary {
+  color: #1c1917;
+}
+
+[data-theme="paper"] .hero-text-subtext {
+  color: #57534e;
+}
+
+[data-theme="paper"] .hero-text-dashboard-secondary {
+  color: #a8a29e;
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Force GPU acceleration for animated elements */
+.hero-animate-headline,
+.hero-animate-subtext,
+.hero-animate-cta,
+.hero-animate-preview,
+.hero-hover-scale,
+.hero-hover-lift {
+  will-change: transform, opacity;
+}
+
+/* Remove will-change after animation completes to free resources */
+.hero-animate-headline,
+.hero-animate-subtext,
+.hero-animate-cta,
+.hero-animate-preview {
+  animation-fill-mode: both;
+}
+
+/* Ensure smooth rendering */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-animate-headline,
+  .hero-animate-subtext,
+  .hero-animate-cta,
+  .hero-animate-preview {
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+}
+
+/* ============================================
+   COLORED ACCENT ELEMENTS
+   ============================================ */
+
+/* Requirements: 1.3, 1.5 - Colored borders and highlights for key information areas */
+
+/* Dashboard preview colored border - complements color scheme */
+.hero-dashboard-border {
+  border: 2px solid transparent;
+  background-image: linear-gradient(var(--bg-main), var(--bg-main)),
+                    linear-gradient(135deg, 
+                      var(--chart-blue) 0%, 
+                      var(--chart-purple) 50%, 
+                      var(--info-dark) 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme dashboard border */
+[data-theme="dark"] .hero-dashboard-border {
+  background-image: linear-gradient(var(--bg-main), var(--bg-main)),
+                    linear-gradient(135deg, 
+                      var(--chart-blue) 0%, 
+                      var(--accent-primary) 50%, 
+                      var(--chart-purple) 100%);
+}
+
+/* Hover effect for dashboard preview - enhanced border glow */
+.hero-dashboard-border:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3),
+              0 0 40px rgba(139, 92, 246, 0.2);
+}
+
+/* Stat card colored accent - subtle borders for metric separation */
+/* Requirements: 5.2 - Professional shadow effects */
+.hero-stat-accent {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* First stat card - no left border */
+.hero-stat-accent:first-child {
+  border-left: none;
+}
+
+/* Last stat card - no right border */
+.hero-stat-accent:last-child {
+  border-right: none;
+}
+
+/* Dark theme stat card borders */
+[data-theme="dark"] .hero-stat-accent {
+  border-left-color: rgba(71, 85, 105, 0.3);
+  border-right-color: rgba(71, 85, 105, 0.3);
+}
+
+/* Colored accent border on hover */
+.hero-stat-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, 
+    var(--chart-blue) 0%, 
+    var(--chart-purple) 100%);
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-stat-accent:hover::before {
+  opacity: 1;
+}
+
+.hero-stat-accent:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-left-color: rgba(59, 130, 246, 0.3);
+  border-right-color: rgba(59, 130, 246, 0.3);
+  /* Subtle shadow on hover for depth */
+  box-shadow: inset 0 1px 2px 0 rgba(59, 130, 246, 0.05);
+}
+
+[data-theme="dark"] .hero-stat-accent:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left-color: rgba(59, 130, 246, 0.4);
+  border-right-color: rgba(59, 130, 246, 0.4);
+  box-shadow: inset 0 1px 2px 0 rgba(59, 130, 246, 0.1);
+}
+
+/* Paper theme stat card hover */
+[data-theme="paper"] .hero-stat-accent:hover {
+  background-color: rgba(251, 191, 36, 0.05);
+  box-shadow: inset 0 1px 2px 0 rgba(251, 191, 36, 0.05);
+}
+
+/* Contrast theme stat card hover */
+[data-theme="contrast"] .hero-stat-accent:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+  box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Content card colored accents - subtle borders with rounded corners */
+/* Requirements: 5.2 - Professional shadow effects */
+.hero-card-accent {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.5rem;
+  /* Subtle shadow for depth */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme content card borders */
+[data-theme="dark"] .hero-card-accent {
+  border-color: rgba(71, 85, 105, 0.25);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.hero-card-accent:hover {
+  border-color: var(--chart-blue);
+  background-color: rgba(59, 130, 246, 0.03);
+  /* Enhanced shadow on hover */
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1),
+              0 2px 4px -1px rgba(59, 130, 246, 0.06);
+}
+
+[data-theme="dark"] .hero-card-accent:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  border-color: var(--chart-blue);
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15),
+              0 2px 4px -1px rgba(59, 130, 246, 0.1);
+}
+
+/* Paper theme card shadows */
+[data-theme="paper"] .hero-card-accent {
+  box-shadow: 0 1px 2px 0 rgba(120, 53, 15, 0.05);
+}
+
+[data-theme="paper"] .hero-card-accent:hover {
+  box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.1),
+              0 2px 4px -1px rgba(251, 191, 36, 0.06);
+}
+
+/* Contrast theme card shadows */
+[data-theme="contrast"] .hero-card-accent {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="contrast"] .hero-card-accent:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2),
+              0 2px 4px -1px rgba(0, 0, 0, 0.15);
+}
+
+/* Progress bar colored accents - gradient fills */
+.hero-progress-accent {
+  background: linear-gradient(90deg, 
+    var(--chart-blue) 0%, 
+    var(--chart-purple) 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-progress-accent:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* Icon badge colored accents - colored backgrounds */
+.hero-icon-accent-success {
+  background: linear-gradient(135deg, 
+    var(--success-light) 0%, 
+    var(--success) 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-icon-accent-success:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+.hero-icon-accent-info {
+  background: linear-gradient(135deg, 
+    var(--info-light) 0%, 
+    var(--info-dark) 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-icon-accent-info:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+.hero-icon-accent-neutral {
+  background: linear-gradient(135deg, 
+    var(--bg-elevated) 0%, 
+    var(--bg-surface) 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-icon-accent-neutral:hover {
+  transform: scale(1.1);
+  background: linear-gradient(135deg, 
+    var(--chart-blue) 0%, 
+    var(--chart-purple) 100%);
+}
+
+/* Metric value colored accents - highlight important numbers */
+.hero-metric-accent {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-metric-accent:hover {
+  color: var(--chart-blue);
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .hero-metric-accent:hover {
+  color: var(--chart-blue);
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+
+/* Warning/alert colored accent - for overdue payments */
+.hero-alert-accent {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-alert-accent:hover {
+  color: var(--warning);
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  transform: scale(1.05);
+}
+
+/* Reduced motion - disable color transitions */
+@media (prefers-reduced-motion: reduce) {
+  .hero-dashboard-border,
+  .hero-stat-accent,
+  .hero-card-accent,
+  .hero-progress-accent,
+  .hero-icon-accent-success,
+  .hero-icon-accent-info,
+  .hero-icon-accent-neutral,
+  .hero-metric-accent,
+  .hero-alert-accent {
+    transition: none !important;
+  }
+  
+  .hero-dashboard-border:hover,
+  .hero-stat-accent:hover,
+  .hero-card-accent:hover,
+  .hero-icon-accent-success:hover,
+  .hero-icon-accent-info:hover,
+  .hero-icon-accent-neutral:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ============================================
+   GRADIENT BORDER DIVIDER
+   ============================================ */
+
+/* Requirements: 4.3, 4.5 - Gradient border divider at hero section bottom */
+/* Separates hero section from subsequent sections with theme-aware gradient */
+
+.hero-section-divider {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  margin-top: 3rem;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--chart-blue) 20%,
+    var(--chart-purple) 50%,
+    var(--info-dark) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* Enhanced divider with glow effect */
+.hero-section-divider::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.3) 20%,
+    rgba(139, 92, 246, 0.3) 50%,
+    rgba(37, 99, 235, 0.3) 80%,
+    transparent 100%
+  );
+  filter: blur(4px);
+  z-index: -1;
+}
+
+/* Light theme divider */
+[data-theme="light"] .hero-section-divider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.4) 20%,
+    rgba(139, 92, 246, 0.4) 50%,
+    rgba(37, 99, 235, 0.4) 80%,
+    transparent 100%
+  );
+  opacity: 0.8;
+}
+
+/* Dark theme divider - brighter for visibility */
+[data-theme="dark"] .hero-section-divider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(96, 165, 250, 0.6) 20%,
+    rgba(167, 139, 250, 0.6) 50%,
+    rgba(59, 130, 246, 0.6) 80%,
+    transparent 100%
+  );
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .hero-section-divider::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(96, 165, 250, 0.4) 20%,
+    rgba(167, 139, 250, 0.4) 50%,
+    rgba(59, 130, 246, 0.4) 80%,
+    transparent 100%
+  );
+  filter: blur(6px);
+}
+
+/* Paper theme divider - warm tones */
+[data-theme="paper"] .hero-section-divider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.4) 20%,
+    rgba(245, 158, 11, 0.4) 50%,
+    rgba(217, 119, 6, 0.4) 80%,
+    transparent 100%
+  );
+  opacity: 0.7;
+}
+
+[data-theme="paper"] .hero-section-divider::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.3) 20%,
+    rgba(245, 158, 11, 0.3) 50%,
+    rgba(217, 119, 6, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+/* Contrast theme divider - high contrast solid line */
+[data-theme="contrast"] .hero-section-divider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000000 20%,
+    #333333 50%,
+    #000000 80%,
+    transparent 100%
+  );
+  opacity: 1;
+  height: 2px;
+}
+
+[data-theme="contrast"] .hero-section-divider::after {
+  display: none;
+}
+
+/* System theme - follows prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] .hero-section-divider {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(59, 130, 246, 0.4) 20%,
+      rgba(139, 92, 246, 0.4) 50%,
+      rgba(37, 99, 235, 0.4) 80%,
+      transparent 100%
+    );
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .hero-section-divider {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(96, 165, 250, 0.6) 20%,
+      rgba(167, 139, 250, 0.6) 50%,
+      rgba(59, 130, 246, 0.6) 80%,
+      transparent 100%
+    );
+    opacity: 0.9;
+  }
+  
+  [data-theme="system"] .hero-section-divider::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(96, 165, 250, 0.4) 20%,
+      rgba(167, 139, 250, 0.4) 50%,
+      rgba(59, 130, 246, 0.4) 80%,
+      transparent 100%
+    );
+    filter: blur(6px);
+  }
+}
+
+/* Mobile responsive - thinner divider */
+@media (max-width: 768px) {
+  .hero-section-divider {
+    margin-top: 2rem;
+  }
+  
+  .hero-section-divider::after {
+    filter: blur(2px);
+  }
+}
+
+/* Reduced motion - remove glow effect */
+@media (prefers-reduced-motion: reduce) {
+  .hero-section-divider::after {
+    display: none;
+  }
+}

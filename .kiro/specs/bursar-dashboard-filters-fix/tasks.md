@@ -1,0 +1,111 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - Date-Based Period Filtering Ignored
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases - "current-month", "last-30-days", and "current-year" period parameters
+  - Test that when period is "current-month", "last-30-days", or "current-year", the API endpoints return the same data as "current-term" (proving date filtering is not applied)
+  - The test assertions should verify that date-based filtering produces different results than term-based filtering (from Expected Behavior Properties in design)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - `/api/bursar/dashboard/metrics?period=current-month` returns identical data to `period=current-term`
+    - `/api/bursar/dashboard/recent-payments?period=last-30-days` includes payments outside the 30-day window
+    - `/api/bursar/dashboard/top-defaulters?period=current-year` shows defaulters based on term data, not year data
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Term-Based Filtering Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (period="current-term" or not provided)
+  - Observe: `/api/bursar/dashboard/metrics?period=current-term` returns term-filtered data
+  - Observe: `/api/bursar/dashboard/recent-payments` without period parameter defaults to term filtering
+  - Observe: `/api/bursar/dashboard/top-defaulters?period=current-term` calculates defaulters based on term data
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - For all requests where period is "current-term" or not provided, results are filtered by termId
+    - Default period selection is "Current Term"
+    - Fallback to school-wide filtering when no records exist for termId
+    - All response data structures and field names remain identical
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [~] 3. Fix for date-based period filtering
+  - [x] 3.1 Create date range calculation helper function
+    - Add helper function that calculates start and end dates based on period value
+    - "current-month": Start = first day of current month, End = last day of current month
+    - "last-30-days": Start = 30 days ago from today, End = today
+    - "current-year": Start = January 1 of current year, End = December 31 of current year
+    - "current-term": Return null (no date filtering needed)
+    - _Bug_Condition: isBugCondition(input) where input.period IN ['current-month', 'last-30-days', 'current-year']_
+    - _Expected_Behavior: Calculate appropriate date ranges for date-based periods_
+    - _Preservation: Return null for "current-term" to preserve existing term-based filtering_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+
+  - [x] 3.2 Implement date filtering in /api/bursar/dashboard/metrics
+    - Add date range filtering to payment aggregate query using receivedAt field
+    - Add date range filtering to expense aggregate query using expenseDate field
+    - Update student payments include clause to filter by date range when period is not "current-term"
+    - Skip fee structure termId filtering for date-based periods (fetch all active fee structures)
+    - Apply date filters only when period is not "current-term" and date range is calculated
+    - _Bug_Condition: isBugCondition(input) where dateRangeFilterNotApplied(input.period)_
+    - _Expected_Behavior: Filter payments by receivedAt and expenses by expenseDate within calculated date range_
+    - _Preservation: Preserve existing termId-based filtering logic for "current-term"_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.7_
+
+  - [x] 3.3 Implement date filtering in /api/bursar/dashboard/recent-payments
+    - Add date range filtering to payment query using receivedAt field
+    - Apply date filter when period is not "current-term"
+    - Preserve existing termId filtering and sorting logic
+    - _Bug_Condition: isBugCondition(input) where input.period requires date filtering_
+    - _Expected_Behavior: Return only payments where receivedAt falls within the specified date range_
+    - _Preservation: Preserve existing term-based filtering and response structure_
+    - _Requirements: 2.7, 3.1, 3.2, 3.3, 3.5_
+
+  - [x] 3.4 Implement date-based defaulter calculation in /api/bursar/dashboard/top-defaulters
+    - For date-based periods, recalculate balances instead of using pre-calculated StudentAccount balances
+    - Query all active students
+    - For each student, sum payments within the date range (using receivedAt)
+    - Calculate expected fees (use all active fee structures for date-based periods)
+    - Calculate balance = expected - paid
+    - Filter to students with positive balance and sort by balance descending
+    - Preserve existing termId-based logic for "current-term"
+    - _Bug_Condition: isBugCondition(input) where input.period requires date-based balance calculation_
+    - _Expected_Behavior: Calculate outstanding balances based on payments and fees within date range_
+    - _Preservation: Preserve existing term-based defaulter calculation for "current-term"_
+    - _Requirements: 2.8, 3.1, 3.2, 3.7_
+
+  - [x] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Date-Based Period Filtering Works
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify that date-based periods now return different data than term-based filtering
+    - Verify all payments have receivedAt within the specified date range
+    - Verify all expenses have expenseDate within the specified date range
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
+
+  - [x] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Term-Based Filtering Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - Verify "current-term" filtering produces identical results to unfixed code
+    - Verify default period behavior is unchanged
+    - Verify fallback behavior for missing termId data is unchanged
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [~] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise
+  - Verify date-based filtering works correctly for all three period options
+  - Verify term-based filtering behavior is completely preserved
+  - Verify no regressions in dashboard UI or data fetching logic

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -25,18 +25,9 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { Skeleton } from '@/components/ui/skeleton-loader'
 
 interface BursarLayoutProps {
   children: React.ReactNode
-}
-
-interface TodayStats {
-  collections: number
-  transactions: number
-  pendingAmount: number
-  loading: boolean
-  error: string | null
 }
 
 const navigationItems = [
@@ -99,61 +90,6 @@ const navigationItems = [
 export default function BursarLayout({ children }: BursarLayoutProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [todayStats, setTodayStats] = useState<TodayStats>({
-    collections: 0,
-    transactions: 0,
-    pendingAmount: 0,
-    loading: true,
-    error: null
-  })
-
-  // Fetch real-time today's statistics
-  useEffect(() => {
-    const fetchTodayStats = async () => {
-      try {
-        setTodayStats(prev => ({ ...prev, loading: true, error: null }))
-        
-        const response = await fetch('/api/bursar/today-stats')
-        if (!response.ok) {
-          throw new Error('Failed to fetch today\'s statistics')
-        }
-        
-        const data = await response.json()
-        if (data.success) {
-          setTodayStats({
-            collections: data.stats.collections || 0,
-            transactions: data.stats.transactions || 0,
-            pendingAmount: data.stats.pendingAmount || 0,
-            loading: false,
-            error: null
-          })
-        } else {
-          throw new Error(data.error || 'Failed to load statistics')
-        }
-      } catch (error) {
-        setTodayStats(prev => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Failed to load statistics'
-        }))
-      }
-    }
-
-    fetchTodayStats()
-    
-    // Refresh stats every 5 minutes
-    const interval = setInterval(fetchTodayStats, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
 
   const SidebarContent = () => (
     <>
@@ -231,66 +167,6 @@ export default function BursarLayout({ children }: BursarLayoutProps) {
           )
         })}
       </nav>
-
-      {/* Real-time Today's Stats */}
-      <div 
-        className="p-3 lg:p-4 border-t"
-        style={{ borderColor: 'var(--border-default)' }}
-      >
-        <Card className="p-3 lg:p-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span 
-                className="text-xs lg:text-sm font-medium"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                Today's Collections
-              </span>
-              <TrendingUp 
-                className="h-3 w-3 lg:h-4 lg:w-4" 
-                style={{ color: 'var(--success)' }}
-              />
-            </div>
-            
-            {todayStats.loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-            ) : todayStats.error ? (
-              <div>
-                <p 
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--danger)' }}
-                >
-                  Unable to load
-                </p>
-                <p 
-                  className="text-xs"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Check connection
-                </p>
-              </div>
-            ) : (
-              <div>
-                <p 
-                  className="text-base lg:text-lg font-bold"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  {formatCurrency(todayStats.collections)}
-                </p>
-                <p 
-                  className="text-xs"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {todayStats.transactions} transactions
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
 
       {/* Settings */}
       <div 

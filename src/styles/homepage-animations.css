@@ -1,0 +1,657 @@
+/**
+ * Homepage Scroll Animation System
+ * 
+ * This CSS module provides scroll-triggered animations for all homepage sections.
+ * Uses GPU-accelerated properties (transform, opacity) for optimal performance.
+ * Respects user preferences for reduced motion.
+ */
+
+/* ============================================
+   KEYFRAME DEFINITIONS
+   ============================================ */
+
+/**
+ * Fade-in animation
+ * Used for general content reveal on scroll
+ */
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * Slide-up animation
+ * Used for cards and content blocks that rise into view
+ */
+@keyframes sectionSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
+ * Slide-left animation
+ * Used for content that enters from the right side
+ */
+@keyframes sectionSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/**
+ * Slide-right animation
+ * Used for content that enters from the left side
+ */
+@keyframes sectionSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/**
+ * Scale-up animation
+ * Used for cards that grow into view
+ */
+@keyframes sectionScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/**
+ * Pulse animation
+ * Used for icons and badges that need attention
+ */
+@keyframes sectionPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/**
+ * Glow animation
+ * Used for security shields and emphasis elements
+ */
+@keyframes sectionGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.6));
+  }
+}
+
+/**
+ * Security shield glow animation
+ * Green-tinted glow for security emphasis
+ */
+@keyframes securityShieldGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.7));
+  }
+}
+
+/* ============================================
+   ANIMATION CLASSES
+   ============================================ */
+
+/**
+ * Base animation class
+ * Sets up GPU acceleration and initial state
+ */
+.section-animate {
+  will-change: transform, opacity;
+  opacity: 0;
+}
+
+/**
+ * Fade-in animation class
+ * Duration: 0.8s, Easing: ease-out
+ */
+.section-fade-in {
+  animation: sectionFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Slide-up animation class
+ * Duration: 0.8s, Easing: ease-out
+ */
+.section-slide-up {
+  animation: sectionSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Slide-left animation class
+ * Duration: 0.8s, Easing: ease-out
+ */
+.section-slide-left {
+  animation: sectionSlideLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Slide-right animation class
+ * Duration: 0.8s, Easing: ease-out
+ */
+.section-slide-right {
+  animation: sectionSlideRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Scale-up animation class
+ * Duration: 0.8s, Easing: ease-out
+ */
+.section-scale-up {
+  animation: sectionScaleUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Pulse animation class
+ * Duration: 2s, Infinite loop
+ */
+.section-pulse {
+  animation: sectionPulse 2s ease-in-out infinite;
+}
+
+/**
+ * Glow animation class
+ * Duration: 2s, Infinite loop
+ */
+.section-glow {
+  animation: sectionGlow 2s ease-in-out infinite;
+}
+
+/* ============================================
+   STAGGERED ANIMATION DELAYS
+   ============================================ */
+
+/**
+ * Staggered delays for card animations
+ * Use with data-stagger attribute or nth-child selectors
+ */
+.section-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.section-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.section-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.section-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.section-stagger-5 {
+  animation-delay: 0.5s;
+}
+
+.section-stagger-6 {
+  animation-delay: 0.6s;
+}
+
+/* ============================================
+   CARD ANIMATION CLASSES
+   ============================================ */
+
+/**
+ * Card fade and scale animation
+ * Combined effect for card reveals
+ */
+.card-fade-scale {
+  animation: sectionScaleUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/**
+ * Card hover lift effect
+ * Smooth transition on hover
+ */
+.card-hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/**
+ * Card gradient border effect
+ * Animated gradient border on hover
+ */
+.card-gradient-border {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   ICON ANIMATION CLASSES
+   ============================================ */
+
+/**
+ * Icon pulse animation
+ * Subtle pulse for checkmarks and icons
+ */
+.icon-pulse {
+  animation: sectionPulse 2s ease-in-out infinite;
+}
+
+/**
+ * Icon glow animation
+ * Glowing effect for security shields
+ */
+.icon-glow {
+  animation: sectionGlow 2s ease-in-out infinite;
+}
+
+/**
+ * Security shield glow animation
+ * Green-tinted glow for security emphasis
+ */
+.security-shield-glow {
+  animation: securityShieldGlow 2s ease-in-out infinite;
+}
+
+/**
+ * Icon scale on hover
+ * Interactive feedback for icons
+ */
+.icon-scale-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-scale-hover:hover {
+  transform: scale(1.1);
+}
+
+/* ============================================
+   BADGE ANIMATION CLASSES
+   ============================================ */
+
+/**
+ * Badge gradient background
+ * Animated gradient for badges
+ */
+.badge-gradient {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+/**
+ * Security badge gradient background
+ * Green gradient for security point badges
+ */
+.security-badge-gradient {
+  background: linear-gradient(135deg, #22c55e, #10b981);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/**
+ * Badge pulse animation
+ * Pulsing effect for step numbers
+ */
+.badge-pulse {
+  animation: sectionPulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   SECTION-SPECIFIC ANIMATION CLASSES
+   ============================================ */
+
+/**
+ * Trust card hover effect
+ * Lift and colored border on hover
+ */
+.trust-card-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trust-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+
+/**
+ * Value card hover effect
+ * Scale and shadow enhancement
+ */
+.value-card-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.value-card-hover:hover {
+  transform: scale(1.03);
+  box-shadow: 0 16px 32px rgba(139, 92, 246, 0.2);
+}
+
+/**
+ * Step highlight effect
+ * Colored accent border on hover
+ */
+.step-highlight {
+  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-highlight:hover {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/**
+ * Role card hover effect
+ * Lift with colored shadow (different colors for each role)
+ */
+.role-card-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-card-hover:hover {
+  transform: translateY(-4px);
+}
+
+/* Different colored shadows for each role card */
+.role-card-hover:nth-child(1):hover {
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.3); /* Blue for School Admin */
+}
+
+.role-card-hover:nth-child(2):hover {
+  box-shadow: 0 12px 24px rgba(34, 197, 94, 0.3); /* Green for Teachers */
+}
+
+.role-card-hover:nth-child(3):hover {
+  box-shadow: 0 12px 24px rgba(168, 85, 247, 0.3); /* Purple for Parents */
+}
+
+.role-card-hover:nth-child(4):hover {
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.3); /* Orange for Students */
+}
+
+/* Colored top borders for role cards */
+.role-card-hover:nth-child(1) {
+  border-top: 3px solid #3b82f6; /* Blue for School Admin */
+}
+
+.role-card-hover:nth-child(2) {
+  border-top: 3px solid #22c55e; /* Green for Teachers */
+}
+
+.role-card-hover:nth-child(3) {
+  border-top: 3px solid #a855f7; /* Purple for Parents */
+}
+
+.role-card-hover:nth-child(4) {
+  border-top: 3px solid #f97316; /* Orange for Students */
+}
+
+/**
+ * Role card icon badge
+ * Gradient background for role title badges
+ */
+.role-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 8px;
+  font-size: 16px;
+  color: white;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Different gradient backgrounds for each role badge */
+.role-icon-badge-1 {
+  background: linear-gradient(135deg, #3b82f6, #2563eb); /* Blue gradient for School Admin */
+}
+
+.role-icon-badge-2 {
+  background: linear-gradient(135deg, #22c55e, #16a34a); /* Green gradient for Teachers */
+}
+
+.role-icon-badge-3 {
+  background: linear-gradient(135deg, #a855f7, #9333ea); /* Purple gradient for Parents */
+}
+
+.role-icon-badge-4 {
+  background: linear-gradient(135deg, #f97316, #ea580c); /* Orange gradient for Students */
+}
+
+/**
+ * Security point hover effect
+ * Green accent highlight
+ */
+.security-point-hover {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.security-point-hover:hover {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+}
+
+/**
+ * Audience item hover effect
+ * Background color highlight
+ */
+.audience-item-hover {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.audience-item-hover:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/**
+ * CTA button glow effect
+ * Prominent glow on hover
+ */
+.cta-button-glow {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cta-button-glow:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 32px rgba(59, 130, 246, 0.5),
+              0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/**
+ * Animated gradient background for Final CTA Section
+ * Smooth gradient shift animation for visual interest
+ */
+@keyframes gradientShiftCTA {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShiftCTA 8s ease infinite;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+/**
+ * Mobile optimizations
+ * Reduce animation distances and simplify effects
+ */
+@media (max-width: 768px) {
+  /* Reduce slide distances by 50% */
+  @keyframes sectionSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes sectionSlideLeft {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes sectionSlideRight {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Reduce hover effects on mobile */
+  .card-hover-lift:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  .value-card-hover:hover {
+    transform: scale(1.02);
+  }
+
+  .cta-button-glow:hover {
+    transform: scale(1.03);
+  }
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+/**
+ * Accessibility: Respect user preference for reduced motion
+ * Disable all animations and display content immediately
+ */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Show content immediately without animation */
+  .section-animate,
+  .section-fade-in,
+  .section-slide-up,
+  .section-slide-left,
+  .section-slide-right,
+  .section-scale-up {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* Disable infinite animations */
+  .section-pulse,
+  .section-glow,
+  .icon-pulse,
+  .icon-glow,
+  .badge-pulse,
+  .badge-gradient {
+    animation: none !important;
+  }
+
+  /* Simplify hover effects to color changes only */
+  .card-hover-lift:hover,
+  .value-card-hover:hover,
+  .trust-card-hover:hover,
+  .role-card-hover:hover,
+  .cta-button-glow:hover {
+    transform: none !important;
+  }
+}

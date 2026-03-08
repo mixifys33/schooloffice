@@ -2,20 +2,24 @@
 
 import { Shield } from "lucide-react";
 import { HOMEPAGE_CONTENT } from "./content";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import "@/styles/homepage-animations.css";
 
 export function SecuritySection() {
   const { title, points } = HOMEPAGE_CONTENT.security;
+  const { ref, isVisible } = useScrollAnimation();
 
   return (
     <section
-      className="w-full py-12 md:py-24 bg-slate-50 border-y border-slate-200"
+      ref={ref}
+      className="w-full py-12 md:py-24 bg-gradient-to-br from-muted/50 via-muted/30 to-background border-y"
       data-testid="security-section"
     >
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="flex items-center gap-2 text-[var(--text-primary)]">
-            <Shield className="h-6 w-6" />
-            <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl text-[var(--text-primary)]">
+          <div className={`flex items-center gap-2 ${isVisible ? 'section-fade-in' : 'section-animate'}`}>
+            <Shield className="h-6 w-6 text-primary security-shield-glow icon-pulse" />
+            <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl">
               {title}
             </h2>
           </div>
@@ -23,11 +27,13 @@ export function SecuritySection() {
             {points.map((point, index) => (
               <li
                 key={index}
-                className="flex items-center gap-3 text-left p-4 rounded-lg bg-[var(--bg-main)] border border-slate-200 shadow-sm"
+                className={`flex items-center gap-3 text-left p-4 rounded-lg bg-background border shadow-sm security-point-hover ${
+                  isVisible ? `section-fade-in section-stagger-${index + 1}` : "section-animate"
+                }`}
                 data-testid="security-point"
               >
-                <div className="h-2 w-2 rounded-full bg-slate-400 flex-shrink-0" />
-                <span className="text-sm text-[var(--text-secondary)] font-medium">
+                <div className="h-2 w-2 rounded-full security-badge-gradient flex-shrink-0" />
+                <span className="text-sm text-muted-foreground font-medium">
                   {point.text}
                 </span>
               </li>

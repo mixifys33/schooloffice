@@ -13,6 +13,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const termId = searchParams.get('termId');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const period = searchParams.get('period') || 'current-term';
+
+    // Calculate date range based on period
+    let dateRange: { start: Date; end: Date } | null = null;
+    if (period !== 'current-term') {
+      const now = new Date();
+      switch (period) {
+        case 'current-month':
+          dateRange = {
+            start: new Date(now.getFullYear(), now.getMonth(), 1),
+            end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+          };
+          break;
+        case 'last-30-days':
+          dateRange = {
+            start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+            end: now
+          };
+          break;
+        case 'current-year':
+          dateRange = {
+            start: new Date(now.getFullYear(), 0, 1),
+            end: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+          };
+          break;
+      }
+    }
 
     // Build the where clause for payments
     let paymentWhereClause: any = {
@@ -20,8 +47,14 @@ export async function GET(request: NextRequest) {
       status: 'CONFIRMED'
     };
 
-    // Try with termId first if provided
-    if (termId) {
+    // Apply date range filter if period is not current-term
+    if (dateRange) {
+      paymentWhereClause.receivedAt = {
+        gte: dateRange.start,
+        lte: dateRange.end
+      };
+    } else if (termId) {
+      // Try with termId first if provided (only for current-term)
       const tempPaymentWhereClause = {
         ...paymentWhereClause,
         termId: termId

@@ -74,6 +74,7 @@ interface DashboardState {
   error: string | null
   refreshing: boolean
   lastUpdated: Date | null
+  initializing: boolean
 }
 
 export default function EnhancedBursarDashboard() {
@@ -85,7 +86,8 @@ export default function EnhancedBursarDashboard() {
     loading: true,
     error: null,
     refreshing: false,
-    lastUpdated: null
+    lastUpdated: null,
+    initializing: false
   })
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -249,6 +251,37 @@ export default function EnhancedBursarDashboard() {
 
   const handleRefresh = () => {
     fetchDashboardData(true)
+  }
+
+  const handleInitializeAccounts = async () => {
+    try {
+      setState(prev => ({ ...prev, initializing: true }))
+
+      const response = await fetch('/api/admin/initialize-student-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to initialize student accounts')
+      }
+
+      // Show success message
+      alert(`Successfully initialized ${data.data.created} student accounts!`)
+
+      // Refresh dashboard data
+      await fetchDashboardData(true)
+    } catch (error) {
+      console.error('Error initializing accounts:', error)
+      alert(error instanceof Error ? error.message : 'Failed to initialize student accounts')
+    } finally {
+      setState(prev => ({ ...prev, initializing: false }))
+    }
   }
 
   const formatCurrency = (amount: number) => {
@@ -626,8 +659,30 @@ export default function EnhancedBursarDashboard() {
           <CardContent>
             {metrics.topDefaulters.length === 0 ? (
               <div className="text-center py-8">
-                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-[var(--success)]" />
-                <p className="text-sm text-[var(--text-secondary)]">No outstanding balances</p>
+                <AlertTriangle className="h-8 w-8 mx-auto mb-3 text-[var(--warning)]" />
+                <p className="text-sm font-medium mb-2">No student account data found</p>
+                <p className="text-xs text-[var(--text-secondary)] mb-4">
+                  Student accounts need to be initialized to track balances and defaulters.
+                </p>
+                {session?.user?.role === 'ADMIN' && (
+                  <Button 
+                    size="sm" 
+                    onClick={handleInitializeAccounts}
+                    disabled={state.initializing}
+                  >
+                    {state.initializing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Initializing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Initialize Student Accounts
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">

@@ -24,7 +24,7 @@ import { prisma } from '@/lib/db'
 import type { PaymentMethod, PaymentRecord, PaymentResult, PaymentFilters, PaginatedPayments } from '@/types/finance'
 import { ReceiptService, type GenerateReceiptInput } from './receipt.service'
 import { FinanceAuditService } from './finance-audit.service'
-import { updateBalanceAfterPayment } from './student-account.service'
+import * as StudentAccountService from './student-account.service'
 
 // Error codes for payment operations
 export const PAYMENT_ERRORS = {
@@ -317,8 +317,9 @@ export async function recordPayment(data: RecordPaymentInput): Promise<PaymentRe
     )
   }
 
-  // Step 5: Calculate balance before payment using StudentAccountService
-  const balanceBreakdown = await StudentAccountService.calculateBalance(studentId, schoolId, data.termId)
+  // Step 5: Ensure student account exists and calculate balance before payment
+  await StudentAccountService.getOrCreateStudentAccount(studentId, data.termId)
+  const balanceBreakdown = await calculateStudentBalance(studentId, schoolId, data.termId)
   const balanceBefore = balanceBreakdown.balance
 
   // Step 6: Generate receipt using ReceiptService (Property 4 - part 2)
@@ -358,8 +359,8 @@ export async function recordPayment(data: RecordPaymentInput): Promise<PaymentRe
     },
   })
 
-  // Step 8: Update student account balance using StudentAccountService (Property 4 - part 3)
-  const updatedAccount = await StudentAccountService.updateBalance(studentId, schoolId, data.termId)
+  // Step 8: Update student account balance (Property 4 - part 3)
+  const updatedAccount = await StudentAccountService.updateBalanceAfterPayment(studentId, data.termId, data.amount)
 
   // Step 9: Create audit log entry using FinanceAuditService (Property 4 - part 4)
   await FinanceAuditService.logAction({
@@ -508,10 +509,9 @@ export async function reversePayment(
     },
   })
 
-  // Update student account balance using StudentAccountService
-  const updatedAccount = await StudentAccountService.updateBalance(
+  // Update student account balance after reversal
+  const updatedAccount = await StudentAccountService.recalculateStudentBalance(
     payment.studentId,
-    schoolId,
     payment.termId
   )
 
