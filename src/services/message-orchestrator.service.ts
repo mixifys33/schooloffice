@@ -652,62 +652,7 @@ export class MessageOrchestratorService implements IMessageOrchestratorService {
   }
 }
 
-export const messageOrchestratorService = new MessageOrchestratorService()rent active term based on today's date
-      const today = new Date()
-      const currentYear = await prisma.academicYear.findFirst({
-        where: { schoolId, isActive: true },
-        include: { 
-          terms: {
-            where: {
-              startDate: { lte: today },
-              endDate: { gte: today }
-            },
-            take: 1
-          }
-        }
-      })
-
-      // If no term matches today's date, get the most recent term that has started
-      if (!currentYear || currentYear.terms.length === 0) {
-        const yearWithRecentTerm = await prisma.academicYear.findFirst({
-          where: { schoolId, isActive: true },
-          include: { 
-            terms: {
-              where: {
-                startDate: { lte: today }
-              },
-              orderBy: { startDate: 'desc' },
-              take: 1
-            }
-          }
-        })
-        
-        if (!yearWithRecentTerm || yearWithRecentTerm.terms.length === 0) {
-          console.log(`[Fee Filter] No active academic year or terms found for school ${schoolId}`)
-          return []
-        }
-        
-        const currentTerm = yearWithRecentTerm.terms[0]
-        console.log(`[Fee Filter] Using most recent started term: ${currentTerm.name} (${currentTerm.id})`)
-        
-        return await this.filterByTerm(recipients, schoolId, currentTerm.id)
-      }
-
-      const currentTerm = currentYear.terms[0]
-      console.log(`[Fee Filter] Using term: ${currentTerm.name} (${currentTerm.id})`)
-
-      return await this.filterByTerm(recipients, schoolId, currentTerm.id)
-    } catch (error) {
-      console.error('[Fee Filter] Error filtering recipients by fee balance:', error)
-      // On error, return empty array to avoid sending to wrong recipients
-      return []
-    }
-  }
-
-  /**
-   * Filter recipients by fee balance for a specific term
-   */
-  private async filterByTerm(recipients: Recipient[], schoolId: string, termId: string): Promise<Recipient[]> {
+export const messageOrchestratorService = new MessageOrchestratorService()
     try {
       // Group recipients by student ID
       const studentRecipientMap = new Map<string, Recipient[]>()
