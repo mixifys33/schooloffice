@@ -3097,6 +3097,81 @@ export class DashboardService {
   // ============================================
 
   /**
+   * Get current term for a school
+   */
+  private async getCurrentTerm(schoolId: string) {
+    const today = new Date()
+    
+    // Try to find current academic year
+    let currentAcademicYear = await prisma.academicYear.findFirst({
+      where: {
+        schoolId,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find academic year that matches current year
+    if (!currentAcademicYear) {
+      const currentYear = new Date().getFullYear()
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Fallback: Use isActive flag
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          isActive: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
+      return null
+    }
+
+    // Get current term with intelligent fallback
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find term that includes today's date
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Fallback: Most recent term that has started
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    return currentTerm
+  }
+
+  /**
    * Get Bursar Dashboard data
    * Displays financial alerts, quick actions, financial overview, reports access
    * Excludes: marks editing, class changes, attendance modification
@@ -3106,6 +3181,10 @@ export class DashboardService {
     staffId: string,
     schoolId: string
   ): Promise<BursarDashboardData> {
+    // Get current term
+    const currentTerm = await this.getCurrentTerm(schoolId)
+    const termId = currentTerm?.id
+
     const [
       unpaidBalances,
       reconciliationIssues,
@@ -3113,10 +3192,10 @@ export class DashboardService {
       financialOverview,
       reports,
     ] = await Promise.all([
-      this.getBursarUnpaidBalanceAlerts(schoolId),
+      this.getBursarUnpaidBalanceAlerts(schoolId, termId),
       this.getBursarReconciliationIssues(schoolId),
       this.getBursarPendingApprovals(schoolId),
-      this.getBursarFinancialOverview(schoolId),
+      this.getBursarFinancialOverview(schoolId, termId),
       this.getBursarReportAccess(schoolId),
     ])
 
@@ -3131,18 +3210,99 @@ export class DashboardService {
       reports,
     }
   }
+  /**
+   * Get current term for a school
+   */
+  private async getCurrentTerm(schoolId: string) {
+    const today = new Date()
+
+    // Try to find current academic year
+    let currentAcademicYear = await prisma.academicYear.findFirst({
+      where: {
+        schoolId,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find academic year that matches current year
+    if (!currentAcademicYear) {
+      const currentYear = new Date().getFullYear()
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          name: { contains: currentYear.toString() }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    // Fallback: Use isActive flag
+    if (!currentAcademicYear) {
+      currentAcademicYear = await prisma.academicYear.findFirst({
+        where: {
+          schoolId,
+          isActive: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    if (!currentAcademicYear) {
+      return null
+    }
+
+    // Get current term with intelligent fallback
+    let currentTerm = await prisma.term.findFirst({
+      where: {
+        academicYearId: currentAcademicYear.id,
+        isCurrent: true
+      }
+    })
+
+    // Fallback: Find term that includes today's date
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today },
+          endDate: { gte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    // Fallback: Most recent term that has started
+    if (!currentTerm) {
+      currentTerm = await prisma.term.findFirst({
+        where: {
+          academicYearId: currentAcademicYear.id,
+          startDate: { lte: today }
+        },
+        orderBy: { startDate: 'desc' }
+      })
+    }
+
+    return currentTerm
+  }
 
   /**
    * Get unpaid balance alerts for Bursar
    * Requirements: 10.1 - Display financial alerts: unpaid balances
    */
-  private async getBursarUnpaidBalanceAlerts(schoolId: string): Promise<BalanceAlert[]> {
-    // Get students with outstanding balances
+  private async getBursarUnpaidBalanceAlerts(schoolId: string, termId?: string): Promise<BalanceAlert[]> {
+    // Get students with outstanding balances for the current term
+    const whereClause: any = {
+      student: { schoolId, status: StudentStatus.ACTIVE },
+      balance: { gt: 0 },
+    }
+    
+    // Filter by term if provided
+    if (termId) {
+      whereClause.termId = termId
+    }
+    
     const studentsWithBalance = await prisma.studentAccount.findMany({
-      where: {
-        student: { schoolId, status: StudentStatus.ACTIVE },
-        balance: { gt: 0 },
-      },
+      where: whereClause,
       include: {
         student: {
           select: {
@@ -3334,42 +3494,48 @@ export class DashboardService {
    * Get financial overview for Bursar
    * Requirements: 10.3 - Show financial overview: collections today, outstanding fees, payment methods
    */
-  private async getBursarFinancialOverview(schoolId: string): Promise<BursarDashboardData['financialOverview']> {
+  private async getBursarFinancialOverview(schoolId: string, termId?: string): Promise<BursarDashboardData['financialOverview']> {
     const today = this.normalizeDate(new Date())
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    // Get collections today
+    // Get collections today (filter by term if provided)
+    const todayPaymentsWhere: any = {
+      schoolId,
+      status: 'CONFIRMED',
+      receivedAt: { gte: today, lt: tomorrow },
+    }
+    if (termId) {
+      todayPaymentsWhere.termId = termId
+    }
+
     const todayPayments = await prisma.payment.aggregate({
-      where: {
-        schoolId,
-        status: 'CONFIRMED',
-        receivedAt: { gte: today, lt: tomorrow },
-      },
+      where: todayPaymentsWhere,
       _sum: { amount: true },
     })
 
     const collectionsToday = todayPayments._sum.amount || 0
 
-    // Get total outstanding fees
+    // Get total outstanding fees for current term
+    const outstandingWhere: any = {
+      student: { schoolId, status: StudentStatus.ACTIVE },
+      balance: { gt: 0 },
+    }
+    if (termId) {
+      outstandingWhere.termId = termId
+    }
+
     const outstandingResult = await prisma.studentAccount.aggregate({
-      where: {
-        student: { schoolId, status: StudentStatus.ACTIVE },
-        balance: { gt: 0 },
-      },
+      where: outstandingWhere,
       _sum: { balance: true },
     })
 
     const outstandingFees = outstandingResult._sum.balance || 0
 
-    // Get payment methods breakdown for today
+    // Get payment methods breakdown for today (filter by term if provided)
     const paymentsByMethod = await prisma.payment.groupBy({
       by: ['method'],
-      where: {
-        schoolId,
-        status: 'CONFIRMED',
-        receivedAt: { gte: today, lt: tomorrow },
-      },
+      where: todayPaymentsWhere,
       _sum: { amount: true },
     })
 

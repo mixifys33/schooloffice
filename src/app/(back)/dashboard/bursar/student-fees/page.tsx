@@ -19,7 +19,9 @@ import {
   Plus,
   Receipt,
   Send,
-  ChevronLeft
+  ChevronLeft,
+  Printer,
+  Palette
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,6 +38,9 @@ import {
   getResponsiveTypographyClasses,
   getTouchFriendlyClasses,
 } from '@/lib/responsive'
+import { PrintStudentFees } from '@/components/bursar/print-student-fees'
+import ReactDOM from 'react-dom/client'
+import { useSession } from 'next-auth/react'
 
 // ============================================
 // TYPES & INTERFACES
@@ -211,11 +216,13 @@ function StudentFeesTable({ students, onStudentClick, onRecordPayment }: Student
 // ============================================
 
 export default function StudentFeesIndexPage() {
+  const { data: session } = useSession()
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedClass, setSelectedClass] = useState<string>('all')
   const [selectedTerm, setSelectedTerm] = useState<string>('current')
+  const [showPrintMenu, setShowPrintMenu] = useState(false)
   
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -225,6 +232,49 @@ export default function StudentFeesIndexPage() {
   const [receiptNumber, setReceiptNumber] = useState('')
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
   const [submitting, setSubmitting] = useState(false)
+
+  // Print handler
+  const handlePrint = (printType: 'colored' | 'standard') => {
+    const schoolName = (session?.user as any)?.schoolName || 'School Name'
+    const currentTerm = selectedTerm === 'current' ? 'Current Term' : selectedTerm
+    
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('Please allow popups to print')
+      return
+    }
+
+    const printContainer = printWindow.document.createElement('div')
+    printWindow.document.body.appendChild(printContainer)
+
+    const style = printWindow.document.createElement('style')
+    style.textContent = `
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { margin: 0; padding: 0; }
+      }
+      body { margin: 0; padding: 0; }
+    `
+    printWindow.document.head.appendChild(style)
+
+    const root = ReactDOM.createRoot(printContainer)
+    root.render(
+      <PrintStudentFees
+        students={students}
+        schoolName={schoolName}
+        currentTerm={currentTerm}
+        printType={printType}
+      />
+    )
+
+    setTimeout(() => {
+      printWindow.document.title = `Student Fees Report - ${schoolName} - ${new Date().toLocaleDateString()}`
+      printWindow.print()
+      setTimeout(() => printWindow.close(), 100)
+    }, 500)
+
+    setShowPrintMenu(false)
+  }
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -376,7 +426,8 @@ export default function StudentFeesIndexPage() {
   const notPaid = students.filter(s => s.paymentStatus === 'not_paid').length
   const totalExpected = students.reduce((sum, s) => sum + s.totalDue, 0)
   const totalPaid = students.reduce((sum, s) => sum + s.totalPaid, 0)
-  const totalOutstanding = totalExpected - totalPaid
+  // Only sum positive balances (money owed), exclude overpaid amounts
+  const totalOutstanding = students.reduce((sum, s) => sum + Math.max(0, s.balance), 0)
 
   return (
     <div className={getResponsiveSpacingClasses('containerPadding', 'space-y-3 sm:space-y-4 md:space-y-6')}>
@@ -389,6 +440,45 @@ export default function StudentFeesIndexPage() {
           <p className={getResponsiveTypographyClasses('body', 'text-[var(--text-secondary)] dark:text-[var(--text-muted)]')}>
             View and manage individual student fee records
           </p>
+        </div>
+        
+        {/* Print Button */}
+        <div className="relative">
+          <Button
+            variant="outline"
+            onClick={() => setShowPrintMenu(!showPrintMenu)}
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">Print Report</span>
+          </Button>
+          
+          {showPrintMenu && (
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+              <div className="p-2">
+                <button
+                  onClick={() => handlePrint('colored')}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                >
+                  <Palette className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <div className="font-medium">Colored Print</div>
+                    <div className="text-xs text-gray-500">Visually appealing design</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handlePrint('standard')}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                >
+                  <Printer className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <div className="font-medium">Standard Print</div>
+                    <div className="text-xs text-gray-500">Printer-friendly format</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

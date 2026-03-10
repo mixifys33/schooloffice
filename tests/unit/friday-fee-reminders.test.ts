@@ -20,7 +20,7 @@ jest.mock('@/lib/db', () => ({
       findMany: jest.fn(),
       update: jest.fn(),
     },
-    studentMilestoneTracker: {
+    studentMilestoneStatus: {
       upsert: jest.fn(),
       update: jest.fn(),
     },
@@ -96,7 +96,7 @@ describe('FinanceNotificationService - Friday Fee Reminders', () => {
       (prisma.studentAccount.findMany as jest.Mock).mockResolvedValue(mockAccounts);
 
       // Mock the other prisma calls
-      (prisma.studentMilestoneTracker.upsert as jest.Mock).mockResolvedValue({
+      (prisma.studentMilestoneStatus.upsert as jest.Mock).mockResolvedValue({
         id: 'tracker-1',
         reminderCount: 0,
         lastReminderSentAt: null,
@@ -178,7 +178,7 @@ describe('FinanceNotificationService - Friday Fee Reminders', () => {
       (prisma.studentAccount.findMany as jest.Mock).mockResolvedValue(mockAccounts);
 
       // Mock the other prisma calls
-      (prisma.studentMilestoneTracker.upsert as jest.Mock).mockResolvedValue({
+      (prisma.studentMilestoneStatus.upsert as jest.Mock).mockResolvedValue({
         id: 'tracker-1',
         reminderCount: 0,
         lastReminderSentAt: null,
@@ -260,7 +260,7 @@ describe('FinanceNotificationService - Friday Fee Reminders', () => {
       (prisma.studentAccount.findMany as jest.Mock).mockResolvedValue(mockAccounts);
 
       // Mock the other prisma calls
-      (prisma.studentMilestoneTracker.upsert as jest.Mock).mockResolvedValue({
+      (prisma.studentMilestoneStatus.upsert as jest.Mock).mockResolvedValue({
         id: 'tracker-1',
         reminderCount: 0,
         lastReminderSentAt: null,
@@ -365,7 +365,7 @@ describe('FinanceNotificationService - Friday Fee Reminders', () => {
       (prisma.studentAccount.findMany as jest.Mock).mockResolvedValue(mockAccounts);
 
       // Mock the other prisma calls
-      (prisma.studentMilestoneTracker.upsert as jest.Mock).mockResolvedValue({
+      (prisma.studentMilestoneStatus.upsert as jest.Mock).mockResolvedValue({
         id: 'tracker-1',
         reminderCount: 0,
         lastReminderSentAt: null,

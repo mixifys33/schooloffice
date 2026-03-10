@@ -98,85 +98,48 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Calculate total expected fees and outstanding amounts
-    // Get all active students for the school
-    const students = await prisma.student.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        status: 'ACTIVE'
-      },
-      include: {
-        payments: dateRange ? {
-          where: {
-            receivedAt: {
-              gte: dateRange.start,
-              lte: dateRange.end
-            },
-            status: 'CONFIRMED'
-          }
-        } : termId ? {
-          where: {
-            termId: termId,
-            status: 'CONFIRMED'
-          }
-        } : {
-          where: {
-            status: 'CONFIRMED'
-          }
-        }
-      }
-    })
+    // Calculate total expected fees and outstanding amounts using StudentAccount
+    // StudentAccount is the single source of truth for financial data
+    let studentAccountWhereClause: any = {
+      schoolId: session.user.schoolId
+    };
 
-    // Get fee structures for the term
-    let feeStructures: any[] = []
-    if (termId && !dateRange) {
-      // Only filter by termId for current-term period
-      feeStructures = await prisma.feeStructure.findMany({
-        where: {
-          schoolId: session.user.schoolId,
-          termId: termId,
-          isActive: true
-        }
-      })
-    } else if (dateRange) {
-      // For date-based periods, fetch all active fee structures
-      feeStructures = await prisma.feeStructure.findMany({
-        where: {
-          schoolId: session.user.schoolId,
-          isActive: true
-        }
-      })
+    // For current-term, filter by termId
+    if (!dateRange && termId) {
+      studentAccountWhereClause.termId = termId;
     }
 
-    // Calculate totals
-    let totalExpectedFees = 0
-    let totalCollected = 0
-    let studentsWithBalance = 0
-    let totalOverpayments = 0
-    let totalOutstanding = 0 // Sum of all positive balances
-
-    students.forEach(student => {
-      // Find fee structure for this student's class
-      const feeStructure = feeStructures.find(fs => 
-        fs.classId === student.classId && 
-        fs.studentType === 'DAY' // Default to DAY, adjust if you have studentType field
-      )
-
-      const expectedFee = feeStructure?.totalAmount || 0
-      const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
-      const balance = expectedFee - paidAmount
-
-      totalExpectedFees += expectedFee
-      totalCollected += paidAmount
-
-      if (balance > 0) {
-        studentsWithBalance++
-        totalOutstanding += balance // Add this student's outstanding balance
-      } else if (balance < 0) {
-        // This is an overpayment, don't count it as reducing outstanding
-        totalOverpayments += Math.abs(balance)
+    // Get all student accounts with their students
+    const studentAccounts = await prisma.studentAccount.findMany({
+      where: studentAccountWhereClause,
+      include: {
+        student: true
       }
-    })
+    });
+
+    // Filter to only include accounts where student is active
+    const activeStudentAccounts = studentAccounts.filter(sa => sa.student && sa.student.status === 'ACTIVE');
+
+    // Calculate totals from StudentAccount (single source of truth)
+    let totalExpectedFees = 0;
+    let totalCollected = 0;
+    let studentsWithBalance = 0;
+    let totalOverpayments = 0;
+    let totalOutstanding = 0; // Sum of all positive balances only
+
+    activeStudentAccounts.forEach(account => {
+      totalExpectedFees += account.totalFees;
+      totalCollected += account.totalPaid;
+
+      if (account.balance > 0) {
+        // Student owes money
+        studentsWithBalance++;
+        totalOutstanding += account.balance;
+      } else if (account.balance < 0) {
+        // Student overpaid - don't count in outstanding
+        totalOverpayments += Math.abs(account.balance);
+      }
+    });
 
     // Calculate collection rate based on what was expected vs what was collected
     // Cap at 100% even if there are overpayments
@@ -185,9 +148,9 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Calculate net income
-    const netIncome = (totalRevenue._sum.amount || 0) - (totalExpenses._sum.amount || 0)
+    const netIncome = (totalRevenue._sum.amount || 0) - (totalExpenses._sum.amount || 0);
 
-    const totalStudents = students.length
+    const totalStudents = activeStudentAccounts.length;
 
     console.log('Metrics calculation:', {
       totalStudents,
@@ -196,8 +159,9 @@ export async function GET(request: NextRequest) {
       totalOutstanding,
       totalOverpayments,
       collectionRate: collectionRate.toFixed(2),
-      studentsWithBalance
-    })
+      studentsWithBalance,
+      usingStudentAccount: true
+    });
 
     return NextResponse.json({
       success: true,

@@ -12,8 +12,6 @@
  */
 
 import { prisma } from '@/lib/db'
-import { EnhancedStudentAccountService } from './enhanced-student-account.service'
-import { FinanceAuditService } from './finance-audit.service'
 
 // Type definitions
 type PaymentMilestone = {
@@ -271,7 +269,7 @@ export class EnhancedBursarService {
           if (daysPastMilestone < settings.gracePeriodDays) continue;
 
           // Check milestone tracker to prevent spam
-          const tracker = await prisma.studentMilestoneTracker.upsert({
+          const tracker = await prisma.studentMilestoneStatus.upsert({
             where: {
               studentId_termId_milestonePercentage: {
                 studentId: account.studentId,
@@ -280,6 +278,7 @@ export class EnhancedBursarService {
               }
             },
             create: {
+              schoolId: schoolId,
               studentId: account.studentId,
               termId: termId,
               milestonePercentage: relevantMilestone.percentage,
@@ -339,7 +338,7 @@ export class EnhancedBursarService {
             result.sent++;
 
             // Update milestone tracker
-            await prisma.studentMilestoneTracker.update({
+            await prisma.studentMilestoneStatus.update({
               where: { id: tracker.id },
               data: {
                 reminderCount: { increment: 1 },
@@ -579,7 +578,7 @@ export class EnhancedBursarService {
         }
 
         // Check milestone tracker
-        const tracker = await prisma.studentMilestoneTracker.findUnique({
+        const tracker = await prisma.studentMilestoneStatus.findUnique({
           where: {
             studentId_termId_milestonePercentage: {
               studentId: account.studentId,
@@ -1026,6 +1025,73 @@ export class EnhancedBursarService {
     
     // Simulate success/failure
     return { success: true }; // Replace with actual SMS gateway call
+  }
+
+  private static async generateFinancialAlerts(
+    schoolId: string,
+    termId: string
+  ): Promise<Array<{ id: string; type: 'warning' | 'error' | 'info'; message: string; timestamp: string }>> {
+    const alerts: Array<{ id: string; type: 'warning' | 'error' | 'info'; message: string; timestamp: string }> = [];
+    const timestamp = new Date().toISOString();
+
+    try {
+      // Check for high outstanding fees
+      const outstandingData = await this.calculateOutstandingFees(schoolId, termId, new Date());
+      if (outstandingData.amount > 0) {
+        const percentage = outstandingData.count > 0 ? (outstandingData.count / await this.getStudentCounts(schoolId, termId)) * 100 : 0;
+        
+        if (percentage > 50) {
+          alerts.push({
+            id: `alert-outstanding-${Date.now()}`,
+            type: 'warning',
+            message: `${percentage.toFixed(0)}% of students have outstanding fees`,
+            timestamp
+          });
+        }
+      }
+
+      // Check for low collection rate
+      const { startDate, endDate } = await this.getDateRange(schoolId, termId, 'current-term');
+      const revenue = await this.calculateRevenue(schoolId, termId, startDate, endDate);
+      const totalFees = await this.calculateTotalFees(schoolId, termId, startDate, endDate);
+      const collectionRate = totalFees > 0 ? (revenue / totalFees) * 100 : 0;
+
+      if (collectionRate < 50) {
+        alerts.push({
+          id: `alert-collection-${Date.now()}`,
+          type: 'error',
+          message: `Low collection rate: ${collectionRate.toFixed(1)}%`,
+          timestamp
+        });
+      } else if (collectionRate < 75) {
+        alerts.push({
+          id: `alert-collection-${Date.now()}`,
+          type: 'warning',
+          message: `Collection rate below target: ${collectionRate.toFixed(1)}%`,
+          timestamp
+        });
+      }
+
+      // Add info alert if everything is good
+      if (alerts.length === 0) {
+        alerts.push({
+          id: `alert-status-${Date.now()}`,
+          type: 'info',
+          message: 'Financial metrics are within normal range',
+          timestamp
+        });
+      }
+
+      return alerts;
+    } catch (error) {
+      console.error('Error generating financial alerts:', error);
+      return [{
+        id: `alert-error-${Date.now()}`,
+        type: 'error',
+        message: 'Failed to generate financial alerts',
+        timestamp
+      }];
+    }
   }
 }
 

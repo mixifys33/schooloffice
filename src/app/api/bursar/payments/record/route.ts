@@ -318,6 +318,75 @@ export async function POST(request: NextRequest) {
       data: { receiptId: receipt.id }
     })
 
+    // Update StudentAccount with the new payment
+    // This is critical - StudentAccount is the single source of truth for payment data
+    const studentAccount = await prisma.studentAccount.findUnique({
+      where: {
+        studentId_termId: {
+          studentId,
+          termId: currentTerm.id
+        }
+      }
+    })
+
+    if (studentAccount) {
+      // Update existing student account
+      const newTotalPaid = studentAccount.totalPaid + parseFloat(amount)
+      const newBalance = studentAccount.totalFees - newTotalPaid
+
+      await prisma.studentAccount.update({
+        where: {
+          studentId_termId: {
+            studentId,
+            termId: currentTerm.id
+          }
+        },
+        data: {
+          totalPaid: newTotalPaid,
+          balance: newBalance,
+          lastPaymentDate: new Date(receivedAt),
+          lastPaymentAmount: parseFloat(amount),
+          status: newBalance <= 0 ? 'OK' : (newBalance > studentAccount.totalFees * 0.5 ? 'OVERDUE' : 'OK')
+        }
+      })
+
+      console.log('StudentAccount updated:', {
+        studentId,
+        termId: currentTerm.id,
+        totalPaid: newTotalPaid,
+        balance: newBalance,
+        lastPaymentDate: new Date(receivedAt)
+      })
+    } else {
+      // Create student account if it doesn't exist
+      const totalFees = feeStructure?.totalAmount || 0
+      const newTotalPaid = parseFloat(amount)
+      const newBalance = totalFees - newTotalPaid
+
+      await prisma.studentAccount.create({
+        data: {
+          studentId,
+          schoolId: session.user.schoolId,
+          termId: currentTerm.id,
+          studentType: 'DAY', // Default, should be determined from student data
+          totalFees,
+          totalPaid: newTotalPaid,
+          balance: newBalance,
+          lastPaymentDate: new Date(receivedAt),
+          lastPaymentAmount: parseFloat(amount),
+          status: newBalance <= 0 ? 'OK' : (newBalance > totalFees * 0.5 ? 'OVERDUE' : 'OK')
+        }
+      })
+
+      console.log('StudentAccount created:', {
+        studentId,
+        termId: currentTerm.id,
+        totalFees,
+        totalPaid: newTotalPaid,
+        balance: newBalance
+      })
+    }
+
     return NextResponse.json({
       success: true,
       payment,

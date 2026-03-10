@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
       isCurrent: currentTerm.isCurrent
     })
 
-    // Get all students in the school
+    // Get all students in the school with their student accounts
     const students = await prisma.student.findMany({
       where: {
         schoolId: session.user.schoolId,
@@ -191,24 +191,24 @@ export async function GET(request: NextRequest) {
       include: {
         class: true,
         stream: true,
-        payments: {
+        studentAccounts: {
           where: {
             termId: currentTerm.id
-          },
-          orderBy: { receivedAt: 'desc' }
+          }
         }
       }
     })
 
     console.log('Students found:', students.length)
-    console.log('Sample student payments:', students[0] ? {
+    console.log('Sample student account:', students[0] ? {
       name: `${students[0].firstName} ${students[0].lastName}`,
-      paymentsCount: students[0].payments.length,
-      payments: students[0].payments.map(p => ({
-        amount: p.amount,
-        termId: p.termId,
-        receivedAt: p.receivedAt
-      }))
+      hasAccount: students[0].studentAccounts.length > 0,
+      account: students[0].studentAccounts[0] ? {
+        totalFees: students[0].studentAccounts[0].totalFees,
+        totalPaid: students[0].studentAccounts[0].totalPaid,
+        balance: students[0].studentAccounts[0].balance,
+        lastPaymentDate: students[0].studentAccounts[0].lastPaymentDate
+      } : null
     } : 'No students')
 
     // Get all fee structures for the current term
@@ -249,38 +249,43 @@ export async function GET(request: NextRequest) {
       totalAmount: fs.totalAmount
     })))
 
-    // Process student data with financial information
+    // Process student data with financial information from StudentAccount
     const processedStudents = students.map(student => {
-      // Determine student type based on available data
-      // TODO: Add a studentType field to Student model or determine from other fields
-      // For now, default to DAY
-      const studentType: 'DAY' | 'BOARDING' = 'DAY'
+      // Get student account for current term
+      const studentAccount = student.studentAccounts[0]
       
-      // Find the fee structure for this student's class and student type
-      const feeStructure = feeStructures.find(fs => 
-        fs.classId === student.classId && 
-        fs.studentType === studentType
-      )
-
-      const totalDue = feeStructure?.totalAmount || 0
+      let totalDue = 0
+      let totalPaid = 0
+      let balance = 0
+      let lastPaymentDate: string | null = null
       
-      // Calculate total payments for this student for current term
-      const totalPaid = student.payments.reduce((sum, payment) => sum + payment.amount, 0)
-      const balance = totalDue - totalPaid
+      if (studentAccount) {
+        // Use StudentAccount data which is the single source of truth
+        totalDue = studentAccount.totalFees
+        totalPaid = studentAccount.totalPaid
+        balance = studentAccount.balance
+        lastPaymentDate = studentAccount.lastPaymentDate?.toISOString() || null
+      } else {
+        // Fallback: Get fee structure if no student account exists
+        const studentType: 'DAY' | 'BOARDING' = 'DAY'
+        const feeStructure = feeStructures.find(fs => 
+          fs.classId === student.classId && 
+          fs.studentType === studentType
+        )
+        totalDue = feeStructure?.totalAmount || 0
+      }
 
       // Log for first student to debug
       if (students.indexOf(student) === 0) {
         console.log('First student debug:', {
           name: `${student.firstName} ${student.lastName}`,
           classId: student.classId,
-          studentType: studentType,
-          feeStructureFound: !!feeStructure,
-          feeStructureDetails: feeStructure ? {
-            id: feeStructure.id,
-            classId: feeStructure.classId,
-            termId: feeStructure.termId,
-            studentType: feeStructure.studentType,
-            totalAmount: feeStructure.totalAmount
+          hasStudentAccount: !!studentAccount,
+          studentAccountDetails: studentAccount ? {
+            totalFees: studentAccount.totalFees,
+            totalPaid: studentAccount.totalPaid,
+            balance: studentAccount.balance,
+            lastPaymentDate: studentAccount.lastPaymentDate
           } : null,
           totalDue,
           totalPaid,
@@ -288,19 +293,23 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Determine payment status
+      // Determine payment status based on balance and amount paid
       let paymentStatus: 'not_paid' | 'partially_paid' | 'fully_paid' = 'not_paid'
       if (balance <= 0 && totalDue > 0) {
         // Fully paid or overpaid
         paymentStatus = 'fully_paid'
       } else if (totalPaid > 0 && balance > 0) {
+        // Partially paid (has paid something but still owes)
         paymentStatus = 'partially_paid'
-      } else if (totalDue > 0 && totalPaid === 0) {
+      } else if (totalPaid === 0 && totalDue > 0) {
+        // Not paid at all
         paymentStatus = 'not_paid'
+      } else if (totalDue === 0) {
+        // No fees assigned yet
+        paymentStatus = 'fully_paid'
       }
 
       // For display purposes, show balance as 0 if overpaid (negative balance)
-      // The actual overpayment is tracked in creditBalance
       const displayBalance = Math.max(0, balance)
 
       return {
@@ -311,15 +320,15 @@ export async function GET(request: NextRequest) {
         className: student.class?.name || 'Unknown',
         stream: student.stream?.name || null,
         streamId: student.streamId,
-        studentType: studentType,
+        studentType: studentAccount?.studentType || 'DAY',
         status: student.status as 'active' | 'transferred' | 'left',
         totalDue,
         totalPaid,
-        balance: displayBalance, // Show 0 instead of negative
+        balance: displayBalance, // Show 0 instead of negative for overpaid
         actualBalance: balance, // Keep actual balance for internal calculations
-        lastPaymentDate: student.payments[0]?.receivedAt.toISOString() || null,
+        lastPaymentDate,
         paymentStatus,
-        feeStructureId: feeStructure?.id || null,
+        feeStructureId: studentAccount?.id || null,
         currentTerm: currentTerm.name,
         currentAcademicYear: currentTerm.academicYear.name
       }

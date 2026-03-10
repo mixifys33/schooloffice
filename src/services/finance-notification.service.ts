@@ -12,7 +12,7 @@
 
 import { prisma } from '@/lib/db'
 import { MessageChannel, DeliveryStatus, MessageType } from '@/types/enums'
-import { AutomationFrequency, StudentAccountStatus, TrackerStatus } from '@prisma/client'
+import { TrackerStatus } from '@prisma/client'
 
 type PaymentMilestone = {
   week: number;
@@ -402,7 +402,7 @@ export class FinanceNotificationService {
     const result: BulkNotificationResult = { totalRecipients: 0, sent: 0, failed: 0, queued: 0, errors: [] }
 
     try {
-      const settings = await prisma.financeSettings.findUnique({ where: { schoolId } })
+      const settings = await prisma.financeSettings.findFirst({ where: { schoolId } })
       if (!settings) { result.errors.push('Finance settings not configured'); return result }
 
       const feeStructures = await prisma.feeStructure.findMany({
@@ -463,10 +463,11 @@ export class FinanceNotificationService {
     schoolName: string; studentName: string; className: string; totalFees: number;
     balance: number; dueDate: Date; daysUntilDue: number; termName?: string
   }): string {
-    const { schoolName, studentName, className, totalFees, balance, dueDate, daysUntilDue, termName } = params
-    let urgencyText = daysUntilDue < 0 ? `OVERDUE by ${Math.abs(daysUntilDue)} days`
-      : daysUntilDue === 0 ? 'DUE TODAY' : daysUntilDue <= 3 ? `Due in ${daysUntilDue} days` : `Due: ${dueDate.toLocaleDateString()}`
-    return `${schoolName}\nFee Reminder for ${studentName} (${className})\n${termName ? `Term: ${termName}\n` : ''}Total Fees: UGX ${totalFees.toLocaleString()}\nOutstanding: UGX ${balance.toLocaleString()}\n${urgencyText}\nPlease make payment to avoid penalties.`
+    const { studentName, className, balance, daysUntilDue } = params
+    const urgencyText = daysUntilDue < 0 ? `OVERDUE ${Math.abs(daysUntilDue)}d`
+      : daysUntilDue === 0 ? 'DUE TODAY' : daysUntilDue <= 3 ? `Due ${daysUntilDue}d` : ''
+    // Short message to reduce SMS costs
+    return `${studentName} (${className}) has outstanding fees of UGX ${balance.toLocaleString('en-US')}. ${urgencyText}. Please pay now.`
   }
 
   private buildPenaltyNotificationMessage(params: {
@@ -634,7 +635,7 @@ export class FinanceNotificationService {
     const LOG_PREFIX = `[DRY-RUN ${schoolId}]`
 
     try {
-      const settings = await prisma.financeSettings.findUnique({ where: { schoolId } })
+      const settings = await prisma.financeSettings.findFirst({ where: { schoolId } })
       if (!settings?.enableAutomatedReminders) {
         result.errors.push('Automation disabled')
         return result
@@ -713,7 +714,7 @@ export class FinanceNotificationService {
           skipReason = `Within grace period (${settings.gracePeriodDays} days)`
         }
 
-        const tracker = await prisma.studentMilestoneTracker.findUnique({
+        const tracker = await prisma.studentMilestoneStatus.findUnique({
           where: {
             studentId_termId_milestonePercentage: {
               studentId: account.studentId,
@@ -788,7 +789,7 @@ export class FinanceNotificationService {
    * - Calculates "Required Amount" based on active milestone %
    * - Checks Grace Period (default 3 days)
    * - Checks Max Reminders Cap
-   * - Updates StudentMilestoneTracker to prevent spam
+   * - Updates StudentMilestoneStatus to prevent spam
    * - Logs snapshot of legal evidence (Phone, Milestones)
    */
   async runAutomatedFeeReminders(schoolId: string, dryRun: boolean = false): Promise<BulkNotificationResult> {
@@ -799,7 +800,7 @@ export class FinanceNotificationService {
       // 1. PRE-FLIGHT VALIDATION (FAIL FAST)
       console.log(`${LOG_PREFIX} Starting automated fee reminders...`)
       
-      const settings = await prisma.financeSettings.findUnique({ where: { schoolId } })
+      const settings = await prisma.financeSettings.findFirst({ where: { schoolId } })
 
       if (!settings?.enableAutomatedReminders) {
         console.log(`${LOG_PREFIX} Automation disabled. Skipping.`)
@@ -885,29 +886,6 @@ export class FinanceNotificationService {
 
       // 4. FETCH TARGET ACCOUNTS
       // Only Active students, with balances
-      const accounts = await prisma.studentAccount.findMany({
-        where: {
-          schoolId,
-          isExempted: false,
-          status: { not: StudentAccountStatus.OK }
-        },
-        include: {
-          student: {
-            include: {
-              class: true,
-              studentGuardians: {
-                where: { isPrimary: true },
-                include: { guardian: true }
-              }
-            }
-          }
-        }
-      })
-
-      // Optimization: If fetched accounts is 0, we can try fetching ALL accounts with balance > 0 if status isn't reliable yet
-      // But for production safety, we assume status is maintained.
-      // If implementation is new, we might want to fallback to balance check.
-      // Let's rely on balance check for now to be safe until status sync is perfect.
       const accountsToCheck = await prisma.studentAccount.findMany({
         where: {
           schoolId,
@@ -949,7 +927,7 @@ export class FinanceNotificationService {
           if (daysPastMilestone < settings.gracePeriodDays) continue
 
           // Tracker Check
-          const tracker = await prisma.studentMilestoneTracker.upsert({
+          const tracker = await prisma.studentMilestoneStatus.upsert({
             where: {
               studentId_termId_milestonePercentage: {
                 studentId: account.studentId,
@@ -958,6 +936,7 @@ export class FinanceNotificationService {
               }
             },
             create: {
+              schoolId: schoolId,
               studentId: account.studentId,
               termId: activeTerm.id,
               milestonePercentage: relevantMilestone.percentage,
@@ -991,7 +970,6 @@ export class FinanceNotificationService {
           }
 
           const balance = account.balance
-          const shortfall = requiredAmount - paidAmount
           const message = `Dear Parent, our records show that ${account.student.firstName} ${account.student.lastName} (${account.student.class.name}) has paid ${paidPercentage.toFixed(1)}% of the required ${relevantMilestone.percentage}% fees for ${activeTerm.name}. Balance: UGX ${balance.toLocaleString()}. Please clear by Week ${relevantMilestone.week}.`
 
           if (dryRun) {
@@ -1010,7 +988,7 @@ export class FinanceNotificationService {
 
           if (sendResult.success) {
             result.sent++
-            await prisma.studentMilestoneTracker.update({
+            await prisma.studentMilestoneStatus.update({
               where: { id: tracker.id },
               data: {
                 reminderCount: { increment: 1 },
@@ -1113,7 +1091,7 @@ export class FinanceNotificationService {
    * - Calculates "Required Amount" based on active milestone %
    * - Checks Grace Period (default 3 days)
    * - Checks Max Reminders Cap
-   * - Updates StudentMilestoneTracker to prevent spam
+   * - Updates StudentMilestoneStatus to prevent spam
    * - Logs snapshot of legal evidence (Phone, Milestones)
    */
   async runGuaranteedFridayFeeReminders(schoolId: string, dryRun: boolean = false, forceRun: boolean = false): Promise<BulkNotificationResult> {
@@ -1124,7 +1102,7 @@ export class FinanceNotificationService {
       // 1. PRE-FLIGHT VALIDATION (FAIL FAST)
       console.log(`${LOG_PREFIX} Starting guaranteed Friday fee reminders...`)
 
-      const settings = await prisma.financeSettings.findUnique({ where: { schoolId } })
+      const settings = await prisma.financeSettings.findFirst({ where: { schoolId } })
 
       // Check if we should run despite automation being disabled
       const isAutomationEnabled = settings?.enableAutomatedReminders
@@ -1258,7 +1236,7 @@ export class FinanceNotificationService {
           if (daysPastMilestone < (settings?.gracePeriodDays || 3)) continue
 
           // Tracker Check
-          const tracker = await prisma.studentMilestoneTracker.upsert({
+          const tracker = await prisma.studentMilestoneStatus.upsert({
             where: {
               studentId_termId_milestonePercentage: {
                 studentId: account.studentId,
@@ -1267,6 +1245,7 @@ export class FinanceNotificationService {
               }
             },
             create: {
+              schoolId: schoolId,
               studentId: account.studentId,
               termId: activeTerm.id,
               milestonePercentage: relevantMilestone.percentage,
@@ -1306,7 +1285,6 @@ export class FinanceNotificationService {
           }
 
           const balance = account.balance
-          const shortfall = requiredAmount - paidAmount
           const message = `Dear Parent, our records show that ${account.student.firstName} ${account.student.lastName} (${account.student.class.name}) has paid ${paidPercentage.toFixed(1)}% of the required ${relevantMilestone.percentage}% fees for ${activeTerm.name}. Balance: UGX ${balance.toLocaleString()}. Please clear by Week ${relevantMilestone.week}. This is an urgent reminder sent weekly.`
 
           if (dryRun) {
@@ -1325,7 +1303,7 @@ export class FinanceNotificationService {
 
           if (sendResult.success) {
             result.sent++
-            await prisma.studentMilestoneTracker.update({
+            await prisma.studentMilestoneStatus.update({
               where: { id: tracker.id },
               data: {
                 reminderCount: { increment: 1 },

@@ -133,53 +133,36 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get all active students with their payments for the term
-    const students = await prisma.student.findMany({
+    // Get student accounts for the term (this is the source of truth for financial data)
+    const studentAccounts = await prisma.studentAccount.findMany({
       where: {
         schoolId,
-        status: 'ACTIVE'
+        termId: currentTerm.id
       },
       include: {
-        class: true,
-        payments: {
-          where: {
-            termId: currentTerm.id,
-            status: 'CONFIRMED'
-          }
-        },
-        studentGuardians: {
+        student: {
           include: {
-            guardian: true
+            class: true,
+            studentGuardians: {
+              include: {
+                guardian: true
+              }
+            }
           }
         }
       }
     })
 
-    // Get fee structures for the term
-    const feeStructures = await prisma.feeStructure.findMany({
-      where: {
-        schoolId,
-        termId: currentTerm.id,
-        isActive: true
-      }
-    })
-
-    // Calculate totals
+    // Calculate totals from student accounts
     let totalExpected = 0
     let totalCollected = 0
     let totalOutstanding = 0
     const unpaidStudents = []
 
-    for (const student of students) {
-      // Find fee structure for this student's class
-      const feeStructure = feeStructures.find(fs => 
-        fs.classId === student.classId && 
-        fs.studentType === 'DAY' // Default to DAY
-      )
-
-      const expectedFee = feeStructure?.totalAmount || 0
-      const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
-      const balance = expectedFee - paidAmount
+    for (const account of studentAccounts) {
+      const expectedFee = account.totalFees
+      const paidAmount = account.totalPaid
+      const balance = account.balance
 
       totalExpected += expectedFee
       totalCollected += paidAmount
@@ -188,29 +171,16 @@ export async function GET(request: NextRequest) {
       if (balance > 0) {
         totalOutstanding += balance
         
-        const primaryGuardian = student.studentGuardians.find(g => g.isPrimary)?.guardian
-        
-        // Get last payment date
-        let lastPaymentDate: string | null = null
-        if (student.payments.length > 0) {
-          const lastPayment = student.payments.reduce((latest, payment) => {
-            const latestDate = latest.receivedAt ? new Date(latest.receivedAt) : new Date(0)
-            const currentDate = payment.receivedAt ? new Date(payment.receivedAt) : new Date(0)
-            return currentDate > latestDate ? payment : latest
-          })
-          if (lastPayment?.receivedAt) {
-            lastPaymentDate = new Date(lastPayment.receivedAt).toISOString()
-          }
-        }
+        const primaryGuardian = account.student.studentGuardians.find(g => g.isPrimary)?.guardian
         
         unpaidStudents.push({
-          id: student.id,
-          name: `${student.firstName} ${student.lastName}`,
-          class: student.class?.name || 'No Class',
+          id: account.student.id,
+          name: `${account.student.firstName} ${account.student.lastName}`,
+          class: account.student.class?.name || 'No Class',
           balance: balance,
           totalDue: expectedFee,
           totalPaid: paidAmount,
-          lastPaymentDate: lastPaymentDate,
+          lastPaymentDate: account.lastPaymentDate?.toISOString() || null,
           phone: primaryGuardian?.phone || undefined,
           email: primaryGuardian?.email || undefined
         })

@@ -106,11 +106,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const totalFees = feeStructure?.totalAmount || 0
 
-    // Get current payments
+    // Get current payments with schoolId filter for tenant isolation
     const currentPayments = await prisma.payment.aggregate({
       where: {
+        schoolId,
         studentId: id,
         termId: currentTerm.id,
+        status: 'CONFIRMED',
       },
       _sum: { amount: true },
     })
@@ -138,6 +140,55 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             notes: `Marked as paid by ${session.user.name || session.user.email || 'School Admin'} (${session.user.role || 'SCHOOL_ADMIN'})`,
           },
         })
+
+        // Update StudentAccount with the new payment
+        const paymentAmount = amount || remainingBalance
+        const studentAccount = await prisma.studentAccount.findUnique({
+          where: {
+            studentId_termId: {
+              studentId: id,
+              termId: currentTerm.id
+            }
+          }
+        })
+
+        if (studentAccount) {
+          // Update existing student account
+          const newTotalPaid = studentAccount.totalPaid + paymentAmount
+          const newBalance = studentAccount.totalFees - newTotalPaid
+
+          await prisma.studentAccount.update({
+            where: {
+              studentId_termId: {
+                studentId: id,
+                termId: currentTerm.id
+              }
+            },
+            data: {
+              totalPaid: newTotalPaid,
+              balance: newBalance,
+              lastPaymentDate: new Date(),
+              lastPaymentAmount: paymentAmount,
+              status: newBalance <= 0 ? 'OK' : 'OVERDUE'
+            }
+          })
+        } else {
+          // Create student account if it doesn't exist
+          await prisma.studentAccount.create({
+            data: {
+              studentId: id,
+              schoolId,
+              termId: currentTerm.id,
+              studentType: 'DAY',
+              totalFees,
+              totalPaid: paymentAmount,
+              balance: totalFees - paymentAmount,
+              lastPaymentDate: new Date(),
+              lastPaymentAmount: paymentAmount,
+              status: (totalFees - paymentAmount) <= 0 ? 'OK' : 'OVERDUE'
+            }
+          })
+        }
       }
 
       // Set student to active status - Requirement 6.2
@@ -302,11 +353,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const totalFees = feeStructure?.totalAmount || 0
 
-    // Get all payments
+    // Get all payments with schoolId filter for tenant isolation
     const payments = await prisma.payment.findMany({
       where: {
+        schoolId,
         studentId: id,
         termId: currentTerm.id,
+        status: 'CONFIRMED',
       },
       orderBy: { receivedAt: 'desc' },
     })

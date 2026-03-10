@@ -1,7 +1,4 @@
 const nextConfig = {
-  // Disable React compiler to avoid compatibility issues
-  reactCompiler: false,
-  
   // TypeScript configuration
   // WARNING: Ignoring TypeScript errors - build will succeed even with type errors
   typescript: {
@@ -44,6 +41,17 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+  },
+  
+  // Webpack configuration to suppress handlebars warnings
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
+    if (isServer) {
+      config.ignoreWarnings = [
+        ...(config.ignoreWarnings || []),
+        { module: /node_modules\/handlebars\/lib\/index\.js/ },
+      ];
+    }
+    return config;
   },
 };
 

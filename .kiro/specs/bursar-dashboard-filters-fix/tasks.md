@@ -36,7 +36,7 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [~] 3. Fix for date-based period filtering
+- [ ] 3. Fix for date-based period filtering
   - [x] 3.1 Create date range calculation helper function
     - Add helper function that calculates start and end dates based on period value
     - "current-month": Start = first day of current month, End = last day of current month
@@ -104,7 +104,7 @@
     - Verify fallback behavior for missing termId data is unchanged
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [~] 4. Checkpoint - Ensure all tests pass
+- [ ] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise
   - Verify date-based filtering works correctly for all three period options
   - Verify term-based filtering behavior is completely preserved

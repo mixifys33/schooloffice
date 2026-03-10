@@ -78,49 +78,61 @@ export async function GET(request: NextRequest) {
       let lastPaymentMethod = ''
       
       if (currentTerm) {
-        // Get fee structure for student's class
-        const feeStructure = await prisma.feeStructure.findFirst({
+        // Get student account which has aggregated payment data
+        const studentAccount = await prisma.studentAccount.findUnique({
           where: {
-            classId: student.classId,
-            termId: currentTerm.id,
+            studentId_termId: {
+              studentId: student.id,
+              termId: currentTerm.id,
+            },
           },
         })
 
-        amountRequired = feeStructure?.totalAmount || 0
-
-        // Get total payments
-        const payments = await prisma.payment.aggregate({
-          where: {
-            studentId: student.id,
-            termId: currentTerm.id,
-          },
-          _sum: { amount: true },
-        })
-
-        amountPaid = payments._sum.amount || 0
-
-        // Get last payment
-        const lastPayment = await prisma.payment.findFirst({
-          where: {
-            studentId: student.id,
-            termId: currentTerm.id,
-          },
-          orderBy: { receivedAt: 'desc' },
-        })
-
-        if (lastPayment) {
-          lastPaymentDate = lastPayment.receivedAt.toISOString().split('T')[0]
-          lastPaymentMethod = lastPayment.method
+        if (studentAccount) {
+          amountRequired = studentAccount.totalFees
+          amountPaid = studentAccount.totalPaid
+          if (studentAccount.lastPaymentDate) {
+            lastPaymentDate = studentAccount.lastPaymentDate.toISOString().split('T')[0]
+            // Get last payment method
+            const lastPayment = await prisma.payment.findFirst({
+              where: {
+                schoolId,
+                studentId: student.id,
+                termId: currentTerm.id,
+                status: 'CONFIRMED',
+              },
+              orderBy: { receivedAt: 'desc' },
+            })
+            lastPaymentMethod = lastPayment?.method || ''
+          }
+        } else {
+          // Fallback: Get fee structure if no student account exists
+          const feeStructure = await prisma.feeStructure.findFirst({
+            where: {
+              classId: student.classId,
+              termId: currentTerm.id,
+            },
+          })
+          amountRequired = feeStructure?.totalAmount || 0
         }
       }
 
       const balance = amountRequired - amountPaid
       let paymentStatus: 'PAID' | 'NOT_PAID' | 'PARTIAL' = 'NOT_PAID'
       
-      if (amountPaid >= amountRequired && amountRequired > 0) {
+      // Determine payment status based on balance and amount paid
+      if (balance <= 0 && amountRequired > 0) {
+        // Paid in full or overpaid
         paymentStatus = 'PAID'
-      } else if (amountPaid > 0) {
+      } else if (amountPaid > 0 && balance > 0) {
+        // Partially paid (has paid something but still owes)
         paymentStatus = 'PARTIAL'
+      } else if (amountPaid === 0 && amountRequired > 0) {
+        // Not paid at all
+        paymentStatus = 'NOT_PAID'
+      } else if (amountRequired === 0) {
+        // No fees assigned yet
+        paymentStatus = 'PAID'
       }
 
       const isActive = student.status === 'ACTIVE' && paymentStatus === 'PAID'

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { sendSMS, formatPhoneNumber } from '@/services/sms.service';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const session = await auth();
 
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
 
         const guardian = student.studentGuardians[0].guardian;
 
-        // Build reminder message
-        const message = `Dear ${guardian.firstName} ${guardian.lastName}, this is an automated reminder that ${student.firstName} ${student.lastName} (${student.class.name}) has an outstanding fee balance of UGX ${account.balance.toLocaleString()}. Kindly settle this amount at your earliest convenience. Thank you.`;
+        // Build reminder message - Short and cost-effective
+        const message = `${student.firstName} ${student.lastName} (${student.class.name}) has outstanding fees of UGX ${account.balance.toLocaleString('en-US')}. Please pay now. Thank you.`;
 
         // Send SMS
         const phoneNumber = formatPhoneNumber(guardian.phone);

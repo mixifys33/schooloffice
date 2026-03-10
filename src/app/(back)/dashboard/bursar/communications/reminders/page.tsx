@@ -53,7 +53,7 @@ export default function BursarCommunicationsPage() {
   
   // Message
   const [customMessage, setCustomMessage] = useState(
-    'Dear {guardianName}, this is a reminder that {studentName} ({className}) has an outstanding fee balance of UGX {balance}. Kindly settle this amount at your earliest convenience. Thank you.'
+    '{studentName} ({className}) has outstanding fees of {balance}. Please pay now. Thank you.'
   )
   
   // Automation state
@@ -235,11 +235,10 @@ export default function BursarCommunicationsPage() {
     }
   }
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-UG', { 
-    style: 'currency', 
-    currency: 'UGX', 
-    minimumFractionDigits: 0 
-  }).format(amount)
+  const formatCurrency = (amount: number) => {
+    // Format with comma as thousand separator for clarity
+    return `UGX ${amount.toLocaleString('en-US')}`
+  }
 
   const selectedCount = defaulters.filter(d => d.selected).length
   const totalBalance = defaulters.filter(d => d.selected).reduce((sum, d) => sum + d.outstandingAmount, 0)

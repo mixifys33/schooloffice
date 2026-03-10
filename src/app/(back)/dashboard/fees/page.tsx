@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
-import { Download, Filter, CheckCircle } from 'lucide-react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { Download, Filter, CheckCircle, Printer, Palette } from 'lucide-react'
 import { DataTable, Column } from '@/components/ui/data-table'
 import { SearchInput } from '@/components/ui/search-input'
 import { PaymentStatusBadge, PaymentStatus } from '@/components/ui/payment-status-badge'
@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { AlertBanner } from '@/components/ui/alert-banner'
 import { Toast, useLocalToast } from '@/components/ui/toast'
+import { useSession } from 'next-auth/react'
+import { PrintFeesReport } from '@/components/fees/print-fees-report'
+import ReactDOM from 'react-dom/client'
 
 /**
  * Fees and Payments Page
@@ -57,6 +60,7 @@ interface FeesResponse {
 }
 
 export default function FeesPage() {
+  const { data: session } = useSession()
   const [students, setStudents] = useState<FeeListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +69,9 @@ export default function FeesPage() {
   const [filterUnpaid, setFilterUnpaid] = useState(false)
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [showPrintMenu, setShowPrintMenu] = useState(false)
   const { toast, showToast, hideToast } = useLocalToast()
+  const printRef = useRef<HTMLDivElement>(null)
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -122,6 +128,18 @@ export default function FeesPage() {
   useEffect(() => {
     fetchFees(1, '', false)
   }, [fetchFees])
+
+  // Close print menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showPrintMenu && !(event.target as Element).closest('.relative')) {
+        setShowPrintMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showPrintMenu])
 
   // Handle search with debounce (300ms handled by SearchInput component)
   const handleSearch = useCallback((value: string) => {
@@ -195,6 +213,66 @@ export default function FeesPage() {
     } finally {
       setExporting(false)
     }
+  }
+
+  // Print report with specified style
+  const handlePrint = (printType: 'colored' | 'standard') => {
+    const schoolName = (session?.user as any)?.schoolName || 'School Name'
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      showToast('error', 'Please allow popups to print')
+      return
+    }
+
+    // Create a container for the print content
+    const printContainer = printWindow.document.createElement('div')
+    printWindow.document.body.appendChild(printContainer)
+
+    // Add print styles
+    const style = printWindow.document.createElement('style')
+    style.textContent = `
+      @media print {
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    `
+    printWindow.document.head.appendChild(style)
+
+    // Render the print component
+    const root = ReactDOM.createRoot(printContainer)
+    root.render(
+      <PrintFeesReport
+        students={students}
+        summary={summary}
+        schoolName={schoolName}
+        printType={printType}
+      />
+    )
+
+    // Wait for rendering and then print
+    setTimeout(() => {
+      printWindow.document.title = `Fees Report - ${schoolName} - ${new Date().toLocaleDateString()}`
+      printWindow.print()
+      
+      // Close after printing or if cancelled
+      setTimeout(() => {
+        printWindow.close()
+      }, 100)
+    }, 500)
+
+    setShowPrintMenu(false)
   }
 
   const formatCurrency = (amount: number) => {
@@ -342,6 +420,46 @@ export default function FeesPage() {
               {filterUnpaid ? 'Show All' : 'Unpaid Only'}
             </span>
           </Button>
+          
+          {/* Print Menu */}
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setShowPrintMenu(!showPrintMenu)}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Print</span>
+            </Button>
+            
+            {showPrintMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                <div className="p-2">
+                  <button
+                    onClick={() => handlePrint('colored')}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                  >
+                    <Palette className="h-4 w-4 text-blue-500" />
+                    <div>
+                      <div className="font-medium">Colored Print</div>
+                      <div className="text-xs text-gray-500">Visually appealing design</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handlePrint('standard')}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                  >
+                    <Printer className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <div className="font-medium">Standard Print</div>
+                      <div className="text-xs text-gray-500">Printer-friendly format</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
           <Button
             variant="outline"
             onClick={handleExportReport}
@@ -353,7 +471,7 @@ export default function FeesPage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            <span className="hidden sm:inline">Export Report</span>
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
         </div>
       </div>

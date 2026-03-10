@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const dateRange = searchParams.get('dateRange') || 'this-term'
     const classFilter = searchParams.get('classFilter') || 'all'
 
     // Get current term using intelligent fallback
@@ -101,42 +100,30 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get all active students with their payments for the current term
-    const students = await prisma.student.findMany({
+    // Get all student accounts for the current term (single source of truth)
+    const studentAccounts = await prisma.studentAccount.findMany({
       where: {
         schoolId: session.user.schoolId,
-        status: 'ACTIVE',
-        ...(classFilter !== 'all' && { classId: classFilter })
+        termId: currentTerm.id,
+        ...(classFilter !== 'all' && { 
+          student: { classId: classFilter }
+        })
       },
       include: {
-        class: true,
-        stream: true,
-        payments: {
-          where: {
-            termId: currentTerm.id,
-            status: 'CONFIRMED'
+        student: {
+          include: {
+            class: true,
+            stream: true
           }
         }
       }
     })
 
-    // Get fee structures for the current term
-    const feeStructures = await prisma.feeStructure.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        termId: currentTerm.id,
-        isActive: true
-      },
-      include: {
-        class: true
-      }
-    })
-
-    // Calculate overall metrics
+    // Calculate overall metrics from StudentAccount
     let totalExpected = 0
     let totalCollected = 0
     let totalOutstanding = 0
-    const totalStudents = students.length
+    const totalStudents = studentAccounts.length
     let fullyPaid = 0
     let partiallyPaid = 0
     let notPaid = 0
@@ -151,16 +138,11 @@ export async function GET(request: NextRequest) {
       studentCount: number
     }>()
 
-    // Calculate metrics per student
-    students.forEach(student => {
-      const feeStructure = feeStructures.find(fs => 
-        fs.classId === student.classId && 
-        fs.studentType === 'DAY'
-      )
-      
-      const expectedFee = feeStructure?.totalAmount || 0
-      const paidAmount = student.payments.reduce((sum, p) => sum + p.amount, 0)
-      const balance = expectedFee - paidAmount
+    // Calculate metrics from StudentAccount (use full amounts, not date-filtered)
+    studentAccounts.forEach(account => {
+      const expectedFee = account.totalFees || 0
+      const paidAmount = account.totalPaid || 0
+      const balance = account.balance || 0
 
       totalExpected += expectedFee
       totalCollected += paidAmount
@@ -180,10 +162,10 @@ export async function GET(request: NextRequest) {
       }
 
       // Aggregate by class
-      const classKey = `${student.classId}-${student.streamId || 'no-stream'}`
+      const classKey = `${account.student.classId}-${account.student.streamId || 'no-stream'}`
       const classData = classDataMap.get(classKey) || {
-        className: student.class?.name || 'Unknown',
-        stream: student.stream?.name || null,
+        className: account.student.class?.name || 'Unknown',
+        stream: account.student.stream?.name || null,
         totalExpected: 0,
         totalCollected: 0,
         outstanding: 0,
@@ -203,16 +185,26 @@ export async function GET(request: NextRequest) {
     const studentsWithOutstandingFees = partiallyPaid + notPaid
 
     // Get payment methods breakdown for current term
+    const payments = await prisma.payment.findMany({
+      where: {
+        schoolId: session.user.schoolId,
+        termId: currentTerm.id,
+        status: 'CONFIRMED'
+      },
+      select: {
+        method: true,
+        amount: true
+      }
+    })
+
     const paymentMethodsMap = new Map<string, { amount: number; count: number }>()
     
-    students.forEach(student => {
-      student.payments.forEach(payment => {
-        const method = payment.method
-        const current = paymentMethodsMap.get(method) || { amount: 0, count: 0 }
-        current.amount += payment.amount
-        current.count++
-        paymentMethodsMap.set(method, current)
-      })
+    payments.forEach(payment => {
+      const method = payment.method
+      const current = paymentMethodsMap.get(method) || { amount: 0, count: 0 }
+      current.amount += payment.amount
+      current.count++
+      paymentMethodsMap.set(method, current)
     })
 
     const paymentMethods = Array.from(paymentMethodsMap.entries()).map(([method, data]) => ({
@@ -240,15 +232,15 @@ export async function GET(request: NextRequest) {
     // Sort by collection rate ascending (worst first)
     classBreakdown.sort((a, b) => a.collectionRate - b.collectionRate)
 
-    // Get monthly trend for the current academic year
-    const academicYearStart = currentAcademicYear.startDate || new Date(currentYear, 0, 1)
+    // Get monthly trend for the current term
+    const termStart = currentTerm.startDate || new Date(currentYear, 0, 1)
     
     const monthlyPayments = await prisma.payment.findMany({
       where: {
         schoolId: session.user.schoolId,
         status: 'CONFIRMED',
         receivedAt: {
-          gte: academicYearStart
+          gte: termStart
         }
       },
       select: {
@@ -258,14 +250,14 @@ export async function GET(request: NextRequest) {
     })
 
     // Group payments by month
-    const monthlyTrendMap = new Map<string, { collected: number; outstanding: number }>()
+    const monthlyTrendMap = new Map<string, { collected: number; outstanding: number; monthDate: Date }>()
     
     // Initialize last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
       date.setMonth(date.getMonth() - i)
       const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' })
-      monthlyTrendMap.set(monthKey, { collected: 0, outstanding: 0 })
+      monthlyTrendMap.set(monthKey, { collected: 0, outstanding: 0, monthDate: new Date(date) })
     }
 
     // Add collected amounts
@@ -277,17 +269,31 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate outstanding for each month (simplified: current outstanding divided by months)
-    const monthlyOutstanding = totalOutstanding / 6
-    monthlyTrendMap.forEach((value, key) => {
-      value.outstanding = monthlyOutstanding
+    // Calculate outstanding for each month based on StudentAccount balances at that time
+    // We'll show the progression of outstanding balances over time
+    let cumulativeCollected = 0
+    const monthlyTrend = Array.from(monthlyTrendMap.entries()).map(([month, data], index) => {
+      cumulativeCollected += data.collected
+      
+      // Calculate outstanding as: totalExpected - cumulative collected up to this month
+      // This shows how outstanding decreased over time as payments came in
+      const outstandingAtMonth = Math.max(0, totalExpected - cumulativeCollected)
+      
+      return {
+        month,
+        collected: data.collected,
+        outstanding: outstandingAtMonth
+      }
     })
 
-    const monthlyTrend = Array.from(monthlyTrendMap.entries()).map(([month, data]) => ({
-      month,
-      collected: data.collected,
-      outstanding: data.outstanding
-    }))
+    // If no payments in current term, show empty payment methods
+    if (paymentMethods.length === 0) {
+      paymentMethods.push(
+        { method: 'CASH', amount: 0, count: 0, percentage: 0 },
+        { method: 'MOBILE_MONEY', amount: 0, count: 0, percentage: 0 },
+        { method: 'BANK', amount: 0, count: 0, percentage: 0 }
+      )
+    }
 
     return NextResponse.json({
       success: true,

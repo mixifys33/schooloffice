@@ -166,8 +166,8 @@ export async function GET(request: NextRequest) {
 
             const guardian = student.studentGuardians[0].guardian;
 
-            // Build reminder message
-            const message = `Dear ${guardian.firstName} ${guardian.lastName}, this is an automated reminder that ${student.firstName} ${student.lastName} (${student.class.name}) has an outstanding fee balance of UGX ${account.balance.toLocaleString()}. Kindly settle this amount at your earliest convenience. Thank you.`;
+            // Build reminder message - Short and cost-effective
+            const message = `${student.firstName} ${student.lastName} (${student.class.name}) has outstanding fees of UGX ${account.balance.toLocaleString('en-US')}. Please pay now. Thank you.`;
 
             // Send SMS
             const phoneNumber = formatPhoneNumber(guardian.phone);

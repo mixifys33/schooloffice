@@ -69,6 +69,33 @@ interface ReportFilters {
 // COMPONENTS
 // ============================================
 
+// Shared currency formatting utility
+const formatCurrencyCompact = (amount: number) => {
+  if (amount >= 1000000000) {
+    return `UGX ${(amount / 1000000000).toFixed(1)}B`
+  }
+  if (amount >= 1000000) {
+    return `UGX ${(amount / 1000000).toFixed(1)}M`
+  }
+  if (amount >= 100000) {
+    return `UGX ${(amount / 1000).toFixed(0)}K`
+  }
+  return `UGX ${amount.toLocaleString()}`
+}
+
+const formatCurrencyShortMobile = (amount: number) => {
+  if (amount >= 1000000000) {
+    return `${(amount / 1000000000).toFixed(1)}B`
+  }
+  if (amount >= 1000000) {
+    return `${(amount / 1000000).toFixed(1)}M`
+  }
+  if (amount >= 1000) {
+    return `${(amount / 1000).toFixed(0)}K`
+  }
+  return amount.toString()
+}
+
 interface MonthlyTrendChartProps {
   data: Array<{ month: string; collected: number; outstanding: number }>
 }
@@ -79,41 +106,38 @@ function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
     1
   )
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
+        <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
           Monthly Collection Trend
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {data.map((item, index) => {
             const collectedWidth = (item.collected / maxValue) * 100
             const outstandingWidth = (item.outstanding / maxValue) * 100
 
             return (
               <div key={index} className="space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium text-[var(--text-primary)] dark:text-[var(--text-muted)]">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0">
+                  <span className="font-medium text-sm sm:text-base text-[var(--text-primary)] dark:text-[var(--text-muted)]">
                     {item.month}
                   </span>
-                  <div className="flex gap-4 text-xs">
+                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs">
                     <span className="text-[var(--success)]">
-                      Collected: {formatCurrency(item.collected)}
+                      <span className="hidden sm:inline">Collected: </span>
+                      <span className="sm:hidden">C: </span>
+                      <span className="hidden sm:inline">{formatCurrencyCompact(item.collected)}</span>
+                      <span className="sm:hidden">{formatCurrencyShortMobile(item.collected)}</span>
                     </span>
                     <span className="text-[var(--danger)]">
-                      Outstanding: {formatCurrency(item.outstanding)}
+                      <span className="hidden sm:inline">Outstanding: </span>
+                      <span className="sm:hidden">O: </span>
+                      <span className="hidden sm:inline">{formatCurrencyCompact(item.outstanding)}</span>
+                      <span className="sm:hidden">{formatCurrencyShortMobile(item.outstanding)}</span>
                     </span>
                   </div>
                 </div>
@@ -163,45 +187,36 @@ function PaymentMethodChart({ data }: PaymentMethodChartProps) {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <PieChart className="h-5 w-5" />
+        <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+          <PieChart className="h-4 w-4 sm:h-5 sm:w-5" />
           Payment Methods Distribution
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {data.map((item, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${getMethodColor(item.method)}`}>
+            <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className={`p-1.5 sm:p-2 rounded-full ${getMethodColor(item.method)} flex-shrink-0`}>
                   {getMethodIcon(item.method)}
                 </div>
-                <div>
-                  <p className="font-medium text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm sm:text-base text-[var(--text-primary)] dark:text-[var(--text-primary)] truncate">
                     {item.method.replace('_', ' ')}
                   </p>
-                  <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
-                    {item.count} transactions
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                    {item.count} txn{item.count !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-[var(--text-primary)] dark:text-[var(--text-primary)]">
-                  {formatCurrency(item.amount)}
+              <div className="text-right flex-shrink-0 ml-2">
+                <p className="font-bold text-xs sm:text-sm text-[var(--text-primary)] dark:text-[var(--text-primary)]">
+                  {formatCurrencyCompact(item.amount)}
                 </p>
-                <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] dark:text-[var(--text-muted)]">
                   {item.percentage.toFixed(1)}%
                 </p>
               </div>
@@ -218,15 +233,6 @@ interface ClassBreakdownTableProps {
 }
 
 function ClassBreakdownTable({ data }: ClassBreakdownTableProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   const formatPercentage = (value: number) => {
     return `${value.toFixed(1)}%`
   }
@@ -234,10 +240,11 @@ function ClassBreakdownTable({ data }: ClassBreakdownTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Class Breakdown</CardTitle>
+        <CardTitle className="text-base sm:text-lg font-semibold">Class Breakdown</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-default)] dark:border-[var(--border-strong)]">
@@ -264,14 +271,14 @@ function ClassBreakdownTable({ data }: ClassBreakdownTableProps) {
                   <td className="py-3 px-4 font-medium">
                     {item.className} {item.stream ? `(${item.stream})` : ''}
                   </td>
-                  <td className="py-3 px-4">
-                    {formatCurrency(item.totalExpected)}
+                  <td className="py-3 px-4 text-sm">
+                    {formatCurrencyCompact(item.totalExpected)}
                   </td>
-                  <td className="py-3 px-4 text-[var(--success)]">
-                    {formatCurrency(item.totalCollected)}
+                  <td className="py-3 px-4 text-[var(--success)] text-sm">
+                    {formatCurrencyCompact(item.totalCollected)}
                   </td>
-                  <td className="py-3 px-4 text-[var(--danger)]">
-                    {formatCurrency(item.outstanding)}
+                  <td className="py-3 px-4 text-[var(--danger)] text-sm">
+                    {formatCurrencyCompact(item.outstanding)}
                   </td>
                   <td className="py-3 px-4">
                     <Badge variant={item.collectionRate >= 80 ? "success" : item.collectionRate >= 60 ? "default" : "destructive"}>
@@ -282,6 +289,36 @@ function ClassBreakdownTable({ data }: ClassBreakdownTableProps) {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {data.map((item, index) => (
+            <div key={index} className="p-3 bg-[var(--bg-surface)] dark:bg-[var(--border-strong)] rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-[var(--text-primary)]">
+                  {item.className} {item.stream ? `(${item.stream})` : ''}
+                </h4>
+                <Badge variant={item.collectionRate >= 80 ? "success" : item.collectionRate >= 60 ? "default" : "destructive"}>
+                  {formatPercentage(item.collectionRate)}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-[var(--text-secondary)] text-xs">Expected</p>
+                  <p className="font-medium text-[var(--text-primary)]">{formatCurrencyCompact(item.totalExpected)}</p>
+                </div>
+                <div>
+                  <p className="text-[var(--text-secondary)] text-xs">Collected</p>
+                  <p className="font-medium text-[var(--success)]">{formatCurrencyCompact(item.totalCollected)}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[var(--text-secondary)] text-xs">Outstanding</p>
+                  <p className="font-medium text-[var(--danger)]">{formatCurrencyCompact(item.outstanding)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -296,6 +333,7 @@ export default function BursarReportsPage() {
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
   const [filters, setFilters] = useState<ReportFilters>({
     dateRange: 'this-month',
     classFilter: 'all',
@@ -303,13 +341,35 @@ export default function BursarReportsPage() {
     reportType: 'comprehensive'
   })
 
+  // Fetch classes on mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const classesResponse = await fetch('/api/classes')
+        if (classesResponse.ok) {
+          const classesData = await classesResponse.json()
+          setClasses(classesData.classes || [])
+        }
+      } catch (err) {
+        console.error('Error fetching classes:', err)
+      }
+    }
+
+    fetchClasses()
+  }, [])
+
   useEffect(() => {
     const fetchReportData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/bursar/reports')
+        const params = new URLSearchParams()
+        if (filters.classFilter !== 'all') {
+          params.append('classFilter', filters.classFilter)
+        }
+
+        const response = await fetch(`/api/bursar/reports?${params.toString()}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch report data')
@@ -327,7 +387,7 @@ export default function BursarReportsPage() {
     }
 
     fetchReportData()
-  }, [filters])
+  }, [filters.classFilter])
 
   const handleFilterChange = (filterName: keyof ReportFilters, value: string) => {
     setFilters(prev => ({
@@ -337,12 +397,7 @@ export default function BursarReportsPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
+    return formatCurrencyCompact(amount)
   }
 
   const formatPercentage = (value: number) => {
@@ -409,51 +464,26 @@ export default function BursarReportsPage() {
             Comprehensive financial analysis and reporting
           </p>
         </div>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <Download className="h-4 w-4 mr-2" />
-          Export Report
+          <span className="hidden xs:inline">Export Report</span>
+          <span className="xs:hidden">Export</span>
         </Button>
       </div>
 
       {/* Report Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Select value={filters.dateRange} onValueChange={(value) => handleFilterChange('dateRange', value)}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Date Range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="this-week">This Week</SelectItem>
-            <SelectItem value="this-month">This Month</SelectItem>
-            <SelectItem value="this-term">This Term</SelectItem>
-            <SelectItem value="this-year">This Year</SelectItem>
-          </SelectContent>
-        </Select>
-        
+      <div className="flex gap-2 sm:gap-3">
         <Select value={filters.classFilter} onValueChange={(value) => handleFilterChange('classFilter', value)}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-full sm:w-[250px]">
             <SelectValue placeholder="Select Class" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Classes</SelectItem>
-            <SelectItem value="s1">S1</SelectItem>
-            <SelectItem value="s2">S2</SelectItem>
-            <SelectItem value="s3">S3</SelectItem>
-            <SelectItem value="s4">S4</SelectItem>
-            <SelectItem value="s5">S5</SelectItem>
-            <SelectItem value="s6">S6</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        <Select value={filters.term} onValueChange={(value) => handleFilterChange('term', value)}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Select Term" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Current Term</SelectItem>
-            <SelectItem value="t1">Term 1</SelectItem>
-            <SelectItem value="t2">Term 2</SelectItem>
-            <SelectItem value="t3">Term 3</SelectItem>
+            {classes.map((cls) => (
+              <SelectItem key={cls.id} value={cls.id}>
+                {cls.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

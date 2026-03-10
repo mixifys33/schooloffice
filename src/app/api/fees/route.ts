@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
     })
 
 
-    // Calculate payment status for each student
+    // Calculate payment status for each student using StudentAccount
     const studentsWithFees = await Promise.all(
       allStudents.map(async (student) => {
         let amountRequired = 0
@@ -144,49 +144,61 @@ export async function GET(request: NextRequest) {
         let lastPaymentMethod: string | null = null
         
         if (currentTerm) {
-          // Get fee structure for student's class
-          const feeStructure = await prisma.feeStructure.findFirst({
+          // Get student account which has aggregated payment data
+          const studentAccount = await prisma.studentAccount.findUnique({
             where: {
-              classId: student.classId,
-              termId: currentTerm.id,
+              studentId_termId: {
+                studentId: student.id,
+                termId: currentTerm.id,
+              },
             },
           })
 
-          amountRequired = feeStructure?.totalAmount || 0
-
-          // Get total payments
-          const payments = await prisma.payment.aggregate({
-            where: {
-              studentId: student.id,
-              termId: currentTerm.id,
-            },
-            _sum: { amount: true },
-          })
-
-          amountPaid = payments._sum.amount || 0
-
-          // Get last payment
-          const lastPayment = await prisma.payment.findFirst({
-            where: {
-              studentId: student.id,
-              termId: currentTerm.id,
-            },
-            orderBy: { receivedAt: 'desc' },
-          })
-
-          if (lastPayment) {
-            lastPaymentDate = lastPayment.receivedAt.toISOString()
-            lastPaymentMethod = lastPayment.method
+          if (studentAccount) {
+            amountRequired = studentAccount.totalFees
+            amountPaid = studentAccount.totalPaid
+            lastPaymentDate = studentAccount.lastPaymentDate?.toISOString() || null
+            // Get last payment method from most recent payment
+            if (studentAccount.lastPaymentDate) {
+              const lastPayment = await prisma.payment.findFirst({
+                where: {
+                  schoolId,
+                  studentId: student.id,
+                  termId: currentTerm.id,
+                  status: 'CONFIRMED',
+                },
+                orderBy: { receivedAt: 'desc' },
+              })
+              lastPaymentMethod = lastPayment?.method || null
+            }
+          } else {
+            // Fallback: Get fee structure if no student account exists
+            const feeStructure = await prisma.feeStructure.findFirst({
+              where: {
+                classId: student.classId,
+                termId: currentTerm.id,
+              },
+            })
+            amountRequired = feeStructure?.totalAmount || 0
           }
         }
 
         const balance = amountRequired - amountPaid
         let paymentStatus: 'PAID' | 'NOT_PAID' | 'PARTIAL' = 'NOT_PAID'
         
-        if (amountPaid >= amountRequired && amountRequired > 0) {
+        // Determine payment status based on balance and amount paid
+        if (balance <= 0 && amountRequired > 0) {
+          // Paid in full or overpaid
           paymentStatus = 'PAID'
-        } else if (amountPaid > 0) {
+        } else if (amountPaid > 0 && balance > 0) {
+          // Partially paid (has paid something but still owes)
           paymentStatus = 'PARTIAL'
+        } else if (amountPaid === 0 && amountRequired > 0) {
+          // Not paid at all
+          paymentStatus = 'NOT_PAID'
+        } else if (amountRequired === 0) {
+          // No fees assigned yet
+          paymentStatus = 'PAID'
         }
 
         return {
@@ -227,7 +239,8 @@ export async function GET(request: NextRequest) {
       partialStudents: studentsWithFees.filter(s => s.paymentStatus === 'PARTIAL').length,
       totalExpected: studentsWithFees.reduce((sum, s) => sum + s.amountRequired, 0),
       totalCollected: studentsWithFees.reduce((sum, s) => sum + s.amountPaid, 0),
-      totalOutstanding: studentsWithFees.reduce((sum, s) => sum + s.balance, 0),
+      // Only sum positive balances (money owed), exclude overpaid amounts
+      totalOutstanding: studentsWithFees.reduce((sum, s) => sum + Math.max(0, s.balance), 0),
     }
 
     // Paginate

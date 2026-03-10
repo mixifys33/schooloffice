@@ -26,6 +26,12 @@ export interface SMSResult {
   error?: string;
 }
 
+interface SMSOptions {
+  to: string[];
+  message: string;
+  from?: string;
+}
+
 /**
  * Send SMS to a single recipient
  * @param to Phone number in international format (e.g., +256700000000)
@@ -49,7 +55,7 @@ export async function sendSMS(to: string, message: string): Promise<SMSResult> {
     const isSandbox = process.env.AFRICASTALKING_ENVIRONMENT === 'sandbox';
 
     // Prepare SMS options
-    const options: any = {
+    const options: SMSOptions = {
       to: [phoneNumber],
       message: message,
     };

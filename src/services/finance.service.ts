@@ -839,8 +839,40 @@ export async function getFinanceDashboardSummary(schoolId: string, termId?: stri
     currentTermId = currentTerm?.id
   }
 
+  // If no term found, use StudentAccount data without term filter
+  // This ensures we show accurate payment data even when no current term is set
+  if (!currentTermId) {
+    const accounts = await prisma.studentAccount.findMany({
+      where: { schoolId },
+      include: { student: { include: { class: true, stream: true } } },
+    })
+
+    const totalExpected = accounts.reduce((sum, a) => sum + a.totalFees, 0)
+    const totalCollected = accounts.reduce((sum, a) => sum + a.totalPaid, 0)
+    const totalOutstanding = accounts.reduce((sum, a) => sum + Math.max(0, a.balance), 0)
+    const paidStudents = accounts.filter(a => a.balance <= 0).length
+    const partialStudents = accounts.filter(a => a.totalPaid > 0 && a.balance > 0).length
+    const unpaidStudents = accounts.filter(a => a.totalPaid === 0 && a.totalFees > 0).length
+
+    const topDefaulters = accounts.filter(a => a.balance > 0).sort((a, b) => b.balance - a.balance).slice(0, 10)
+
+    return {
+      totalExpected, totalCollected, totalOutstanding,
+      collectionRate: totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0,
+      paidStudents, partialStudents, unpaidStudents, totalStudents: accounts.length,
+      recentPayments: [],
+      topDefaulters: topDefaulters.map(a => ({
+        id: a.id, studentId: a.studentId,
+        studentName: `${a.student.firstName} ${a.student.lastName}`,
+        admissionNumber: a.student.admissionNumber,
+        className: a.student.class.name,
+        balance: a.balance, totalFees: a.totalFees, totalPaid: a.totalPaid,
+      })),
+    }
+  }
+
   const accounts = await prisma.studentAccount.findMany({
-    where: { schoolId },
+    where: { schoolId, termId: currentTermId },
     include: { student: { include: { class: true, stream: true } } },
   })
 
@@ -852,7 +884,7 @@ export async function getFinanceDashboardSummary(schoolId: string, termId?: stri
   const unpaidStudents = accounts.filter(a => a.totalPaid === 0 && a.totalFees > 0).length
 
   const recentPayments = await prisma.payment.findMany({
-    where: { schoolId, status: 'CONFIRMED' },
+    where: { schoolId, termId: currentTermId, status: 'CONFIRMED' },
     orderBy: { receivedAt: 'desc' },
     take: 10,
     include: { student: { include: { class: true } }, receipt: true },
