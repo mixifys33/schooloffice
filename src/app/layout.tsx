@@ -4,6 +4,7 @@ import './globals.css'
 import '../styles/themes.css'
 import { ToastProvider, SessionProvider, StaffOnboardingProvider, ErrorBoundary } from '@/components/providers'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { Analytics } from '@vercel/analytics/react'
 // Import error handler to catch unhandled rejections
 import '@/lib/error-handler'
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://schooloffice.academy',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://schooloffice.vercel.app',
     siteName: 'SchoolOffice.academy',
     title: 'SchoolOffice.academy - Complete School Management System',
     description: 'A comprehensive school management system for modern educational institutions. Manage students, teachers, attendance, grades, fees, and more.',
@@ -90,6 +91,7 @@ export default function RootLayout({
             </ThemeProvider>
           </ToastProvider>
         </ErrorBoundary>
+        <Analytics />
       </body>
     </html>
   )

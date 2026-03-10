@@ -2,43 +2,24 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  DollarSign,
-  Users,
-  AlertTriangle,
-  Calendar,
-  CreditCard,
-  PieChart,
-  BarChart3,
   RefreshCw,
-  Download,
   Filter,
-  Eye,
-  ArrowUpRight,
-  ArrowDownRight,
-  Search,
   Plus,
-  Receipt,
-  Send,
   Edit,
   Trash2,
-  Copy
+  Printer
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
-import { StatCard } from '@/components/ui/stat-card'
 import { SkeletonLoader } from '@/components/ui/skeleton-loader'
 import { ErrorMessage } from '@/components/ui/error-message'
-import { cn } from '@/lib/utils'
 import {
-  getResponsiveGridClasses,
   getResponsiveSpacingClasses,
   getResponsiveTypographyClasses,
-  getTouchFriendlyClasses,
 } from '@/lib/responsive'
+import { PrintFeeStructures } from '@/components/bursar/print-fee-structures'
 
 // ============================================
 // TYPES & INTERFACES
@@ -61,12 +42,6 @@ interface FeeStructure {
   }
   createdAt: string
   updatedAt: string
-}
-
-interface Class {
-  id: string
-  name: string
-  streams: Array<{ id: string; name: string }>
 }
 
 interface ClassWithStreams {
@@ -412,7 +387,7 @@ function FeeStructureForm({ structure, onSave, onCancel, classes, terms, academi
     value: t.id
   }))
 
-  const handleChange = (field: keyof FeeStructure, value: any) => {
+  const handleChange = (field: keyof FeeStructure, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -699,6 +674,8 @@ export default function FeeStructureManagementPage() {
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
+  const [schoolName, setSchoolName] = useState('School Name')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -707,28 +684,31 @@ export default function FeeStructureManagementPage() {
         setError(null)
 
         // Fetch fee structures, classes, terms, and academic years
-        const [structuresRes, classesRes, termsRes, academicYearsRes] = await Promise.all([
+        const [structuresRes, classesRes, termsRes, academicYearsRes, schoolRes] = await Promise.all([
           fetch('/api/bursar/fee-structures'),
           fetch('/api/classes'),
           fetch('/api/terms'),
-          fetch('/api/settings/academic-years')
+          fetch('/api/settings/academic-years'),
+          fetch('/api/settings/school')
         ])
         
         if (!structuresRes.ok || !classesRes.ok || !termsRes.ok || !academicYearsRes.ok) {
           throw new Error('Failed to fetch data')
         }
 
-        const [structuresData, classesData, termsData, academicYearsData] = await Promise.all([
+        const [structuresData, classesData, termsData, academicYearsData, schoolData] = await Promise.all([
           structuresRes.json(),
           classesRes.json(),
           termsRes.json(),
-          academicYearsRes.json()
+          academicYearsRes.json(),
+          schoolRes.ok ? schoolRes.json() : { school: { name: 'School Name' } }
         ])
         
         setStructures(structuresData.structures)
         setClasses(classesData.classes)
         setTerms(termsData.terms || termsData)
         setAcademicYears(academicYearsData.academicYears)
+        setSchoolName(schoolData.school?.name || 'School Name')
       } catch (err) {
         console.error('Error fetching data:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -825,6 +805,10 @@ export default function FeeStructureManagementPage() {
     setEditingStructure(null)
   }
 
+  const handlePrint = () => {
+    setShowPrint(true)
+  }
+
   if (loading) {
     return (
       <div className={getResponsiveSpacingClasses('containerPadding', 'space-y-3 sm:space-y-4 md:space-y-6')}>
@@ -870,11 +854,25 @@ export default function FeeStructureManagementPage() {
             Define and manage fee structures for different classes and terms
           </p>
         </div>
-        <Button onClick={handleCreateNew}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create New Structure
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint} disabled={structures.length === 0}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button onClick={handleCreateNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create New Structure
+          </Button>
+        </div>
       </div>
+
+      {showPrint && (
+        <PrintFeeStructures
+          structures={structures}
+          schoolName={schoolName}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
 
       {showForm ? (
         <FeeStructureForm

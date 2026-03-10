@@ -32,94 +32,164 @@ interface SMSOptions {
   from?: string;
 }
 
-/**
- * Send SMS to a single recipient
- * @param to Phone number in international format (e.g., +256700000000)
- * @param message Message content (max 160 chars for single SMS)
- * @returns Result with success status and message ID
- */
-export async function sendSMS(to: string, message: string): Promise<SMSResult> {
-  try {
-    // Validate inputs
-    if (!to || !message) {
-      return {
-        success: false,
-        error: 'Phone number and message are required'
-      };
-    }
-
-    // Ensure phone number starts with +
-    const phoneNumber = to.startsWith('+') ? to : `+${to}`;
-
-    // Check if we're in sandbox mode
-    const isSandbox = process.env.AFRICASTALKING_ENVIRONMENT === 'sandbox';
-
-    // Prepare SMS options
-    const options: SMSOptions = {
-      to: [phoneNumber],
-      message: message,
-    };
-
-    // Only add sender ID in production
-    if (!isSandbox && process.env.AFRICASTALKING_SENDER_ID) {
-      options.from = process.env.AFRICASTALKING_SENDER_ID;
-    }
-
-    console.log(`[SMS] Sending to ${phoneNumber} (${isSandbox ? 'SANDBOX' : 'PRODUCTION'})`);
-
-    // Send SMS
-    const result = await sms.send(options);
-
-    // Check if send was successful
-    if (result.SMSMessageData && result.SMSMessageData.Recipients) {
-      const recipient = result.SMSMessageData.Recipients[0];
-      
-      if (recipient.status === 'Success' || recipient.statusCode === 101) {
-        console.log(`[SMS] Success: ${recipient.messageId}`);
-        return {
-          success: true,
-          messageId: recipient.messageId,
-          status: recipient.status,
-          cost: recipient.cost
-        };
-      } else {
-        console.error(`[SMS] Failed: ${recipient.status}`);
-        return {
-          success: false,
-          error: recipient.status || 'SMS send failed'
-        };
-      }
-    }
-
-    return {
-      success: false,
-      error: 'Invalid response from SMS gateway'
-    };
-  } catch (error) {
-    console.error('[SMS] Error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
+interface RetryOptions {
+  maxRetries?: number;
+  retryDelay?: number;
+  backoffMultiplier?: number;
 }
 
 /**
- * Send SMS to multiple recipients
+ * Sleep utility for retry delays
+ */
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Send SMS to a single recipient with retry logic
+ * @param to Phone number in international format (e.g., +256700000000)
+ * @param message Message content (max 160 chars for single SMS)
+ * @param retryOptions Retry configuration
+ * @returns Result with success status and message ID
+ */
+export async function sendSMS(
+  to: string, 
+  message: string,
+  retryOptions: RetryOptions = {}
+): Promise<SMSResult> {
+  const {
+    maxRetries = 3,
+    retryDelay = 2000,
+    backoffMultiplier = 2
+  } = retryOptions;
+
+  let lastError: string = '';
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      // Validate inputs
+      if (!to || !message) {
+        return {
+          success: false,
+          error: 'Phone number and message are required'
+        };
+      }
+
+      // Ensure phone number starts with +
+      const phoneNumber = to.startsWith('+') ? to : `+${to}`;
+
+      // Check if we're in sandbox mode
+      const isSandbox = process.env.AFRICASTALKING_ENVIRONMENT === 'sandbox';
+
+      // Prepare SMS options
+      const options: SMSOptions = {
+        to: [phoneNumber],
+        message: message,
+      };
+
+      // Only add sender ID in production
+      if (!isSandbox && process.env.AFRICASTALKING_SENDER_ID) {
+        options.from = process.env.AFRICASTALKING_SENDER_ID;
+      }
+
+      const attemptLog = attempt > 0 ? ` (Attempt ${attempt + 1}/${maxRetries + 1})` : '';
+      console.log(`[SMS] Sending to ${phoneNumber} (${isSandbox ? 'SANDBOX' : 'PRODUCTION'})${attemptLog}`);
+
+      // Send SMS
+      const result = await sms.send(options);
+
+      // Check if send was successful
+      if (result.SMSMessageData && result.SMSMessageData.Recipients) {
+        const recipient = result.SMSMessageData.Recipients[0];
+        
+        if (recipient.status === 'Success' || recipient.statusCode === 101) {
+          console.log(`[SMS] Success: ${recipient.messageId}${attemptLog}`);
+          return {
+            success: true,
+            messageId: recipient.messageId,
+            status: recipient.status,
+            cost: recipient.cost
+          };
+        } else {
+          lastError = recipient.status || 'SMS send failed';
+          console.error(`[SMS] Failed: ${lastError}${attemptLog}`);
+          
+          // If this is not the last attempt, retry
+          if (attempt < maxRetries) {
+            const delay = retryDelay * Math.pow(backoffMultiplier, attempt);
+            console.log(`[SMS] Retrying in ${delay}ms...`);
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
+          
+          return {
+            success: false,
+            error: lastError
+          };
+        }
+      }
+
+      lastError = 'Invalid response from SMS gateway';
+      
+      // Retry on invalid response
+      if (attempt < maxRetries) {
+        const delay = retryDelay * Math.pow(backoffMultiplier, attempt);
+        console.log(`[SMS] Invalid response, retrying in ${delay}ms...`);
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
+
+      return {
+        success: false,
+        error: lastError
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[SMS] Error (Attempt ${attempt + 1}/${maxRetries + 1}):`, error);
+      
+      // If this is not the last attempt, retry
+      if (attempt < maxRetries) {
+        const delay = retryDelay * Math.pow(backoffMultiplier, attempt);
+        console.log(`[SMS] Retrying in ${delay}ms...`);
+        await sleep(delay);
+        attempt++;
+        continue;
+      }
+      
+      return {
+        success: false,
+        error: lastError
+      };
+    }
+  }
+
+  return {
+    success: false,
+    error: lastError || 'Max retries exceeded'
+  };
+}
+
+/**
+ * Send SMS to multiple recipients with retry logic
  * @param recipients Array of phone numbers
  * @param message Message content
+ * @param retryOptions Retry configuration for each SMS
  * @returns Results for each recipient
  */
 export async function sendBulkSMS(
   recipients: string[],
-  message: string
+  message: string,
+  retryOptions?: RetryOptions
 ): Promise<{ sent: number; failed: number; results: SMSResult[] }> {
   const results: SMSResult[] = [];
   let sent = 0;
   let failed = 0;
 
   for (const recipient of recipients) {
-    const result = await sendSMS(recipient, message);
+    const result = await sendSMS(recipient, message, retryOptions);
     results.push(result);
     
     if (result.success) {
@@ -129,7 +199,7 @@ export async function sendBulkSMS(
     }
 
     // Add small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await sleep(100);
   }
 
   return { sent, failed, results };
