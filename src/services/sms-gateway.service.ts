@@ -506,6 +506,7 @@ export class SMSGatewayService {
 export function createSMSGateway(): SMSGatewayService {
   console.log('[SMS GATEWAY INIT] Loading configuration from environment variables');
   console.log('[SMS GATEWAY INIT] AFRICASTALKING_API_KEY exists:', !!process.env.AFRICASTALKING_API_KEY);
+  console.log('[SMS GATEWAY INIT] AFRICASTALKING_API_KEY length:', process.env.AFRICASTALKING_API_KEY?.length || 0);
   console.log('[SMS GATEWAY INIT] AFRICASTALKING_USERNAME:', process.env.AFRICASTALKING_USERNAME);
   console.log('[SMS GATEWAY INIT] AFRICASTALKING_SENDER_ID:', process.env.AFRICASTALKING_SENDER_ID);
   console.log('[SMS GATEWAY INIT] AFRICASTALKING_ENVIRONMENT:', process.env.AFRICASTALKING_ENVIRONMENT);
@@ -519,8 +520,19 @@ export function createSMSGateway(): SMSGatewayService {
 
   // Check if required configuration is missing
   if (!config.apiKey) {
-    console.warn('[SMS GATEWAY WARN] AFRICASTALKING_API_KEY is not set. SMS sending will fail.');
+    console.error('[SMS GATEWAY ERROR] AFRICASTALKING_API_KEY is not set. SMS sending will fail.');
   }
+  
+  if (!config.username || config.username === 'sandbox') {
+    console.warn('[SMS GATEWAY WARN] Using default/sandbox username. Make sure this is correct.');
+  }
+
+  console.log('[SMS GATEWAY INIT] Final config:', {
+    apiKeyLength: config.apiKey.length,
+    username: config.username,
+    senderId: config.senderId,
+    environment: config.environment
+  });
 
   return new SMSGatewayService(config)
 }

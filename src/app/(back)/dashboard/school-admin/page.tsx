@@ -384,18 +384,18 @@ export default function SchoolAdminDashboardPage() {
       {/* Staff Onboarding Banner - Show only when clicked */}
       {showOnboardingBanner && onboardingStatus && !onboardingStatus.isComplete && onboardingStatus.missingRoles.some((role: any) => role.isRequired) && (
         <div 
-          className="border rounded-lg p-4 relative"
+          className="border rounded-lg p-4 relative shadow-sm"
           style={{
-            background: 'linear-gradient(to right, var(--warning-light), var(--warning-light))',
-            borderColor: 'var(--warning)',
-            color: 'var(--warning-dark)'
+            background: 'linear-gradient(135deg, var(--chart-blue)/10, var(--chart-blue)/5)',
+            borderColor: 'var(--chart-blue)',
+            borderLeftWidth: '4px'
           }}
         >
           {/* Close button */}
           <button
             onClick={() => setShowOnboardingBanner(false)}
             className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/10 transition-colors"
-            style={{ color: 'var(--warning-dark)' }}
+            style={{ color: 'var(--text-secondary)' }}
             title="Close"
           >
             <X className="h-4 w-4" />
@@ -406,34 +406,35 @@ export default function SchoolAdminDashboardPage() {
               <div 
                 className="p-2 rounded-lg"
                 style={{
-                  backgroundColor: 'var(--warning)',
-                  color: 'var(--bg-main)'
+                  backgroundColor: 'var(--chart-blue)',
+                  color: 'var(--white-pure)'
                 }}
               >
-                <AlertTriangle className="h-6 w-6" />
+                <UserCog className="h-6 w-6" />
               </div>
             </div>
             <div className="flex-1">
               <h3 
                 className="text-lg font-semibold mb-2"
-                style={{ color: 'var(--warning-dark)' }}
+                style={{ color: 'var(--text-primary)' }}
               >
-                Complete Your Staff Setup
+                🎯 Complete Your Staff Setup
               </h3>
               <p 
-                className="mb-4"
-                style={{ color: 'var(--warning-dark)' }}
+                className="mb-4 text-sm leading-relaxed"
+                style={{ color: 'var(--text-secondary)' }}
               >
-                Your school setup is incomplete. You need to register {onboardingStatus.missingRoles.filter((role: any) => role.isRequired).length} required staff member{onboardingStatus.missingRoles.filter((role: any) => role.isRequired).length === 1 ? '' : 's'} to unlock all features.
+                Your school is almost ready! Register {onboardingStatus.missingRoles.filter((role: any) => role.isRequired).length} more staff member{onboardingStatus.missingRoles.filter((role: any) => role.isRequired).length === 1 ? '' : 's'} to unlock all features and complete your setup.
               </p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {onboardingStatus.missingRoles.filter((role: any) => role.isRequired).map((role: any, index: number) => (
                   <span 
                     key={index} 
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm"
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
                     style={{
-                      backgroundColor: 'var(--warning)',
-                      color: 'var(--bg-main)'
+                      backgroundColor: 'var(--chart-blue)/20',
+                      color: 'var(--chart-blue)',
+                      border: '1px solid var(--chart-blue)/30'
                     }}
                   >
                     <UserCog className="h-4 w-4 mr-1" />
@@ -444,11 +445,7 @@ export default function SchoolAdminDashboardPage() {
               <Button
                 onClick={showOnboardingModal}
                 disabled={onboardingButtonLoading}
-                style={{
-                  backgroundColor: 'var(--warning)',
-                  color: 'var(--bg-main)'
-                }}
-                className="hover:opacity-90"
+                className="bg-[var(--chart-blue)] hover:bg-[var(--chart-blue)]/90 text-white border-0 shadow-sm"
               >
                 {onboardingButtonLoading ? (
                   <>
@@ -461,7 +458,7 @@ export default function SchoolAdminDashboardPage() {
                 ) : (
                   <>
                     <UserCog className="h-4 w-4 mr-2" />
-                    Complete Staff Setup
+                    Complete Setup Now
                   </>
                 )}
               </Button>
@@ -492,15 +489,16 @@ export default function SchoolAdminDashboardPage() {
               {onboardingStatus && !onboardingStatus.isComplete && onboardingStatus.missingRoles.some((role: any) => role.isRequired) && (
                 <button
                   onClick={() => setShowOnboardingBanner(true)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity border"
                   style={{
-                    backgroundColor: 'var(--warning)',
-                    color: 'var(--bg-main)'
+                    backgroundColor: 'var(--chart-blue)/10',
+                    color: 'var(--chart-blue)',
+                    borderColor: 'var(--chart-blue)/30'
                   }}
                   title="Click to view staff setup requirements"
                 >
-                  <AlertTriangle className="h-3 w-3" />
-                  Setup Incomplete
+                  <UserCog className="h-3 w-3" />
+                  Setup Pending
                 </button>
               )}
             </div>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Rethink_Sans } from 'next/font/google'
 import './globals.css'
 import '../styles/themes.css'
-import { ToastProvider, SessionProvider, StaffOnboardingProvider, ErrorBoundary } from '@/components/providers'
+import { ToastProvider, SessionProvider, ErrorBoundary } from '@/components/providers'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { Analytics } from '@vercel/analytics/react'
 // Import error handler to catch unhandled rejections
@@ -14,6 +14,7 @@ const inter = Rethink_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://schooloffice.vercel.app'),
   title: 'SchoolOffice.academy - Complete School Management System',
   description: 'A comprehensive school management system for modern educational institutions. Manage students, teachers, attendance, grades, fees, and more.',
   keywords: ['school management system', 'education software', 'student management', 'teacher portal', 'school administration', 'attendance tracking', 'grade management'],
@@ -84,9 +85,7 @@ export default function RootLayout({
           <ToastProvider>
             <ThemeProvider>
               <SessionProvider>
-                <StaffOnboardingProvider>
-                  {children}
-                </StaffOnboardingProvider>
+                {children}
               </SessionProvider>
             </ThemeProvider>
           </ToastProvider>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { X, Users, UserPlus, Send, CheckCircle, AlertCircle, Eye, EyeOff, Settings, RefreshCw } from 'lucide-react'
+import { Users, UserPlus, Send, CheckCircle, AlertCircle, Eye, EyeOff, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { StaffCredentialsModal } from './staff-credentials-modal'
 import { StaffRole, Role } from '@/types/enums'
 import { useFormNotifications } from '@/lib/notifications'
-import { createThemeStyle, getThemeClasses } from '@/lib/theme-utils'
+import { createThemeStyle } from '@/lib/theme-utils'
 
 /**
  * Staff Onboarding Modal
@@ -159,6 +159,42 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
     setError(null)
 
     try {
+      // First, check if user already exists to provide better error message
+      const checkResponse = await fetch('/api/staff/onboarding/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: formData.email.trim(), 
+          phone: formData.phone.trim() 
+        }),
+      })
+
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json()
+        if (checkData.exists) {
+          let conflictMessage = 'Registration conflict detected:'
+          
+          // Build conflict details more concisely
+          const conflicts = []
+          if (checkData.emailExists) conflicts.push(`Email: ${formData.email}`)
+          if (checkData.phoneExists) conflicts.push(`Phone: ${formData.phone}`)
+          
+          if (conflicts.length > 0) {
+            conflictMessage += `\n${conflicts.join(' • ')}`
+          }
+          
+          if (checkData.existingUser) {
+            conflictMessage += `\nRegistered to: ${checkData.existingUser.name} (${checkData.existingUser.role})`
+          }
+          
+          conflictMessage += '\n\nSuggestions: Verify contact details or use different information if this is a different person. thank you'
+          
+          setError(conflictMessage)
+          setLoading(false)
+          return
+        }
+      }
+
       const response = await fetch('/api/staff/onboarding/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +203,22 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to register staff')
+        console.error('Staff registration error:', errorData)
+        
+        // Build a comprehensive error message
+        let errorMessage = errorData.error || errorData.message || 'Failed to register staff'
+        
+        // Add details if available
+        if (errorData.details) {
+          errorMessage += ` ${errorData.details}`
+        }
+        
+        // In development, also show the original error
+        if (errorData.originalError && process.env.NODE_ENV === 'development') {
+          errorMessage += ` (Technical: ${errorData.originalError})`
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
@@ -187,11 +238,11 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
           lastName: '',
           email: '',
           phone: '',
-          role: '',
+          role: StaffRole.DOS,
           employeeNumber: '',
           department: '',
         })
-        setStep('form')
+        setStep('check')
         
         // Clear any previous errors
         setError(null)
@@ -206,7 +257,16 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to register staff')
+      // Preserve the exact error message from the API
+      let errorMessage = err instanceof Error ? err.message : 'Failed to register staff'
+      
+      // Add helpful suggestions for common errors (more concise)
+      if (errorMessage.includes('already exists')) {
+        errorMessage += '\n\nSuggestions: Check if this person is already registered or use different contact information.'
+      }
+      
+      console.error('Staff registration error:', err)
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -351,19 +411,62 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
 
             {error && (
               <div 
-                className="mb-6 p-4 border rounded-lg"
+                className="mb-4 p-3 border rounded-md bg-gradient-to-r from-red-50 to-red-50/50 dark:from-red-950/20 dark:to-red-900/10"
                 style={{
-                  backgroundColor: 'var(--danger-light)',
                   borderColor: 'var(--danger)',
-                  color: 'var(--danger-dark)'
+                  borderLeftWidth: '3px',
+                  borderLeftColor: 'var(--danger)'
                 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <AlertCircle 
-                    className="h-5 w-5" 
+                    className="h-4 w-4 flex-shrink-0 mt-0.5" 
                     style={{ color: 'var(--danger)' }}
                   />
-                  <p style={{ color: 'var(--danger-dark)' }}>{error}</p>
+                  <div className="flex-1 min-w-0">
+                    {error.split('\n').map((line, index) => {
+                      const isTitle = index === 0
+                      const isSubheading = line.includes('Registered to:') || line.includes('Suggestions:')
+                      const isDetail = line.includes('•') || (line.includes(':') && !isTitle && !isSubheading)
+                      
+                      return (
+                        <div key={index} className={index > 0 ? 'mt-1.5' : ''}>
+                          {isTitle && (
+                            <p className="text-sm font-semibold" style={{ color: 'var(--danger-dark)' }}>
+                              {line}
+                            </p>
+                          )}
+                          {isSubheading && (
+                            <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: 'var(--danger-dark)' }}>
+                              {line.includes('Registered to:') && (
+                                <span className="inline-block w-1 h-1 bg-current rounded-full opacity-60"></span>
+                              )}
+                              {line.includes('Suggestions:') && (
+                                <span className="inline-block w-1 h-1 bg-current rounded-full opacity-60"></span>
+                              )}
+                              {line}
+                            </p>
+                          )}
+                          {isDetail && (
+                            <p className="text-xs font-mono bg-white/60 dark:bg-black/30 px-2 py-1 rounded border-l-2 ml-2" 
+                               style={{ 
+                                 color: 'var(--danger-dark)',
+                                 borderLeftColor: 'var(--danger)',
+                                 fontSize: '11px',
+                                 lineHeight: '1.3'
+                               }}>
+                              {line}
+                            </p>
+                          )}
+                          {!isTitle && !isSubheading && !isDetail && line.trim() && (
+                            <p className="text-xs leading-relaxed" style={{ color: 'var(--danger-dark)' }}>
+                              {line}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -462,7 +565,7 @@ export function StaffOnboardingModal({ isOpen, onClose, onComplete }: StaffOnboa
                                   {role.title}
                                 </h4>
                                 {role.isRequired && (
-                                  <Badge variant="warning">Required</Badge>
+                                  <Badge variant="destructive">Required</Badge>
                                 )}
                               </div>
                               <p 

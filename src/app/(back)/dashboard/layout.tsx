@@ -29,6 +29,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { PasswordResetGuard } from '@/components/auth/password-reset-guard'
+import { StaffOnboardingProvider } from '@/components/providers/staff-onboarding-provider'
 import { Role, StaffRole } from '@/types/enums'
 import { AIChatToggle } from '@/components/ai-assistant/ai-chat-toggle'
 
@@ -550,92 +551,99 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   // BUT we must do this AFTER all hooks have been called
   if (isDosRoute || isBursarRoute || isTeacherRoute || isClassTeacherRoute || isParentRoute || isStudentRoute) {
     return (
-      <>
+      <StaffOnboardingProvider>
         {children}
-      </>
+      </StaffOnboardingProvider>
     )
   }
 
   return (
-    <PasswordResetGuard>
-      <DashboardLayout
-        navItems={filteredNavItems}
-        brandLogo="/images/schooloffice.png"
-        brandText="SchoolOffice"
-        subtitle={getSubtitleForRole(currentRole)}
-        headerContent={
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-            {/* Context Display - Requirements: 9.4, 18.5 */}
-            {/* Temporarily disabled to debug React error */}
-            {/* <InlineContextDisplay className="hidden md:flex" /> */}
-            
-            {/* Role Switcher - Requirements: 1.3, 1.4, 1.5 */}
-            {/* Temporarily disabled to debug React error */}
-            {/* {hasMultipleRoles && currentRole && (
-              <div className="hidden sm:block">
-                <DashboardRoleSwitcher
-                  currentRole={currentRole}
-                  availableRoles={availableRoles}
-                  onRoleChange={handleRoleChange}
-                />
-              </div>
-            )} */}
-            
-            {/* Staff Onboarding Button - Only for School Admins */}
-            {/* Temporarily disabled to debug React error */}
-            {/* <StaffOnboardingButton /> */}
-            
-            {/* Theme toggle - hidden on very small screens to save space */}
-            <div className="hidden xs:block">
+    <StaffOnboardingProvider>
+      <PasswordResetGuard>
+        <DashboardLayout
+          navItems={filteredNavItems}
+          brandLogo="/images/schooloffice.png"
+          brandText="SchoolOffice"
+          subtitle={getSubtitleForRole(currentRole)}
+          headerContent={
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+              {/* Context Display - Requirements: 9.4, 18.5 */}
+              {/* Temporarily disabled to debug React error */}
+              {/* <InlineContextDisplay className="hidden md:flex" /> */}
+              
+              {/* Role Switcher - Requirements: 1.3, 1.4, 1.5 */}
+              {/* Temporarily disabled to debug React error */}
+              {/* {hasMultipleRoles && currentRole && (
+                <div className="hidden sm:block">
+                  <DashboardRoleSwitcher
+                    currentRole={currentRole}
+                    availableRoles={availableRoles}
+                    onRoleChange={handleRoleChange}
+                  />
+                </div>
+              )} */}
+              
+              {/* Staff Onboarding Button - Only for School Admins */}
+              {/* Temporarily disabled to debug React error */}
+              {/* <StaffOnboardingButton /> */}
+              
+              {/* Theme toggle - always visible for admins */}
               <ThemeToggle />
+              
+              {/* AI Assistant Toggle */}
+              <AIChatToggle />
+              
+              <Button 
+                variant="ghost" 
+                size="touch-icon" 
+                className="relative h-9 w-9 sm:h-10 sm:w-10"
+                onClick={() => router.push('/dashboard/notifications')}
+              >
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] text-[var(--white-pure)]">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                )}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="touch-icon"
+                className="h-9 w-9 sm:h-10 sm:w-10"
+                onClick={() => router.push('/dashboard/profile')}
+              >
+                <User className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
             </div>
-            
-            {/* AI Assistant Toggle */}
-            <AIChatToggle />
-            
-            <Button 
-              variant="ghost" 
-              size="touch-icon" 
-              className="relative h-9 w-9 sm:h-10 sm:w-10"
-              onClick={() => router.push('/dashboard/notifications')}
-            >
-              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--danger)] text-[10px] text-[var(--white-pure)]">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="touch-icon"
-              className="h-9 w-9 sm:h-10 sm:w-10"
-              onClick={() => router.push('/dashboard/profile')}
-            >
-              <User className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </div>
-        }
-        sidebarFooter={
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">{formatRole(safeUserRole)}</p>
-            <p className="truncate">{safeUserEmail}</p>
-            {/* Mobile Role Switcher - shown in sidebar footer on small screens */}
-            {/* Temporarily disabled to debug React error */}
-            {/* {hasMultipleRoles && currentRole && (
-              <div className="mt-3 sm:hidden">
-                <DashboardRoleSwitcher
-                  currentRole={currentRole}
-                  availableRoles={availableRoles}
-                  onRoleChange={handleRoleChange}
-                />
+          }
+          sidebarFooter={
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{formatRole(safeUserRole)}</p>
+              <p className="truncate">{safeUserEmail}</p>
+              
+              {/* Mobile Theme Toggle - shown in sidebar footer on small screens */}
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs">Theme</span>
+                <ThemeToggle />
               </div>
-            )} */}
-          </div>
-        }
-      >
-        {children}
-      </DashboardLayout>
-    </PasswordResetGuard>
+              
+              {/* Mobile Role Switcher - shown in sidebar footer on small screens */}
+              {/* Temporarily disabled to debug React error */}
+              {/* {hasMultipleRoles && currentRole && (
+                <div className="mt-3 sm:hidden">
+                  <DashboardRoleSwitcher
+                    currentRole={currentRole}
+                    availableRoles={availableRoles}
+                    onRoleChange={handleRoleChange}
+                  />
+                </div>
+              )} */}
+            </div>
+          }
+        >
+          {children}
+        </DashboardLayout>
+      </PasswordResetGuard>
+    </StaffOnboardingProvider>
   )
 }

@@ -128,7 +128,20 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error registering staff:', error)
     
-    // Use centralized error formatting
+    // Get the original error message
+    const originalMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Original error message:', originalMessage)
+    
+    // For duplicate user errors, provide more specific information
+    if (originalMessage.includes('User with this email or phone already exists')) {
+      return NextResponse.json({
+        error: 'A staff member with this email or phone number already exists in your school.',
+        details: 'Please check if this person is already registered or use different contact information.',
+        originalError: originalMessage
+      }, { status: 400 })
+    }
+    
+    // Use centralized error formatting for other errors
     const apiError = formatApiError(error)
     
     return NextResponse.json(apiError, { status: 400 })

@@ -226,7 +226,7 @@ export class StaffOnboardingService {
         include: { staff: true }
       })
 
-      if (!verifyUser?.staff || verifyUser.staff.length === 0) {
+      if (!verifyUser?.staff || (Array.isArray(verifyUser.staff) && verifyUser.staff.length === 0)) {
         console.error('Staff-user relationship not created properly')
         throw new Error('Failed to create staff profile properly')
       }
@@ -369,7 +369,7 @@ export class StaffOnboardingService {
         email: staff.email,
         phone: staff.phone || '',
         password: newPassword,
-        role: this.formatRoleForDisplay(staff.primaryRole || staff.role as Role),
+        role: this.formatRoleForDisplay((staff.primaryRole || staff.role) as StaffRole | Role),
         schoolCode: school.code,
         staffId: staff.id,
         createdAt: new Date(),
@@ -416,7 +416,10 @@ export class StaffOnboardingService {
     schoolName: string
   ): Promise<{ smsSuccess: boolean; emailSuccess: boolean }> {
     // Get base URL for internal API calls
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                   process.env.NEXTAUTH_URL || 
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+                   'http://localhost:3000'
     const loginUrl = `${baseUrl}/login`
     
     const message = this.createCredentialsMessage(credentials, schoolName, loginUrl)
@@ -556,7 +559,11 @@ export class StaffOnboardingService {
     schoolName: string,
     loginUrl: string
   ): { sms: string; email: string } {
-    const sms = `Welcome to ${schoolName}! Your login: Email: ${credentials.email}, Password: ${credentials.password}, School Code: ${credentials.schoolCode}. Login at: ${loginUrl}`
+    // Create a professional, informative SMS message under 156 characters
+    const shortSchoolName = schoolName.length > 18 ? schoolName.substring(0, 15) + '...' : schoolName
+    
+    // Build the message with all essential information
+    const sms = `🎓Welcome to ${shortSchoolName} Your Staff Access: Email: ${credentials.email}, Password: ${credentials.password}, School Code: ${credentials.schoolCode}. Login: ${loginUrl}`
 
     const email = `
 <!DOCTYPE html>

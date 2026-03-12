@@ -438,7 +438,7 @@ function LoginPageContent() {
             
             {/* Requirements: 10.4 - Display example school codes */}
             <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] -mt-4">
-              Example: STMARYS, GREENHILL, KASENYI
+              Example: STMARYS, MASCE, BASS
             </p>
             
             <Button
@@ -564,25 +564,35 @@ function LoginPageContent() {
             Register your school
           </a>
           
-          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">
-            Having trouble?{' '}
+             <div className="flex items-center justify-center space-x-4 pt-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[var(--border-default)]" />
+            <p className="text-xs text-[var(--text-muted)] dark:text-[var(--text-muted)] px-3">
+              Need help?
+            </p>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[var(--border-default)]" />
+          </div>
+          
+          <div className="flex justify-center space-x-6">
             <a 
               href="/contact-admin"
-              className="text-[var(--text-primary)] dark:text-[var(--text-muted)] hover:text-[var(--text-primary)] dark:hover:text-[var(--white-pure)] transition-colors cursor-pointer"
+              className="text-sm text-[var(--chart-cyan)] hover:text-[var(--chart-cyan)]/80 transition-colors font-medium flex items-center"
             >
-              Contact school admin.
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Contact Admin
             </a>
-          </p>
-          
-          {/* Super Admin Login Link */}
-          <p className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)] pt-2">
+            
             <a 
               href="/admin/login"
-              className="text-[var(--chart-purple)] dark:text-[var(--chart-purple)] hover:text-[var(--chart-purple)] dark:hover:text-[var(--chart-purple)] transition-colors font-medium"
+              className="text-sm text-[var(--chart-purple)] hover:text-[var(--chart-purple)]/80 transition-colors font-medium flex items-center"
             >
-              Super Admin Login →
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Super Admin
             </a>
-          </p>
+          </div>
         </div>
       </div>
     </div>
