@@ -30,8 +30,8 @@ class OpenRouterClient {
   private baseURL = 'https://openrouter.ai/api/v1'
 
   constructor() {
-    this.apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || ''
-    this.model = process.env.NEXT_PUBLIC_OPENROUTER_MODEL || 'meta-llama/llama-3.2-3b-instruct:free'
+    this.apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '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'
+    this.model = process.env.NEXT_PUBLIC_OPENROUTER_MODEL || 'google/gemma-3-4b-it:free'
   }
 
   async chat(messages: Message[]): Promise<string> {
@@ -57,7 +57,7 @@ class OpenRouterClient {
         const requestBody = {
           model: this.model,
           messages,
-          temperature: 0.7, // Slightly lower for faster, more focused responses
+          temperature: 0.9, // Slightly lower for faster, more focused responses
           max_tokens: 2600, // Reduced from 1200 to 600 for faster responses
           stream: false,
         }
