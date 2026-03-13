@@ -55,10 +55,21 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user?.schoolId) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    }
+
+    // Check if user has permission (admin or school admin)
+    const userRole = session.user.role
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'SCHOOL_ADMIN') {
       return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
+        { error: 'You do not have permission to create terms' },
+        { status: 403 }
       )
     }
 
@@ -239,7 +250,7 @@ export async function POST(request: NextRequest) {
         endDate: end,
         weekCount: Math.max(1, weekCount), // Ensure at least 1 week
         academicYearId,
-        schoolId: session.user.schoolId,
+        schoolId: schoolId,
       },
       include: {
         academicYear: {
