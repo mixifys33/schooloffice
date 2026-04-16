@@ -1,5 +1,5 @@
 /**
- * Check the "stuff" table specifically for user credentials
+ * Restore the "stuff" table records that were modified for testing
  */
 
 const { MongoClient } = require('mongodb')
@@ -7,10 +7,8 @@ require('dotenv').config()
 
 const MONGODB_URI = process.env.DATABASE_URL
 
-async function checkStuffTable() {
-  console.log('🔍 Checking "stuff" table for user...')
-  console.log('Email:', 'teddymylove6@gmail.com')
-  console.log('Phone:', '0761819885')
+async function restoreStuffTable() {
+  console.log('🔄 Restoring modified records in "stuff" table...')
   console.log('')
 
   if (!MONGODB_URI) {
@@ -27,90 +25,81 @@ async function checkStuffTable() {
     const db = client.db()
     const stuffCollection = db.collection('stuff')
     
-    console.log('🔍 Searching "stuff" collection...')
+    console.log('🔍 Searching for modified records...')
     
-    // Search by email or phone with various field names
-    const users = await stuffCollection.find({
-      $or: [
-        { email: 'teddymylove6@gmail.com' },
-        { phone: '0761819885' },
-        { phoneNumber: '0761819885' },
-        { mobile: '0761819885' },
-        { contactNumber: '0761819885' }
-      ]
+    // Find all records that were modified for testing
+    const modifiedUsers = await stuffCollection.find({
+      modifiedForTesting: true
     }).toArray()
 
-    if (users.length === 0) {
-      console.log('✅ No users found in "stuff" collection with those credentials')
-      console.log('🎉 You can proceed with staff registration!')
+    if (modifiedUsers.length === 0) {
+      console.log('✅ No modified records found in "stuff" collection')
+      console.log('🎉 Nothing to restore!')
       return
     }
 
-    console.log(`📋 Found ${users.length} user(s) in "stuff" collection:`)
+    console.log(`📋 Found ${modifiedUsers.length} modified record(s):`)
     console.log('')
 
-    users.forEach((user, index) => {
-      console.log(`👤 User ${index + 1}:`)
+    modifiedUsers.forEach((user, index) => {
+      console.log(`👤 Record ${index + 1}:`)
       console.log('   ID:', user._id)
-      console.log('   Name:', user.name || user.fullName || user.firstName + ' ' + user.lastName || 'N/A')
-      console.log('   Email:', user.email || 'N/A')
-      console.log('   Phone:', user.phone || user.phoneNumber || user.mobile || user.contactNumber || 'N/A')
-      console.log('   Role:', user.role || user.position || user.staffRole || 'N/A')
-      console.log('   School:', user.schoolId || user.school || 'N/A')
-      console.log('   Status:', user.status || user.isActive || 'N/A')
-      console.log('   Created:', user.createdAt || 'N/A')
+      console.log('   Current Email:', user.email || 'N/A')
+      console.log('   Original Email:', user.originalEmail || 'N/A')
+      console.log('   Current Phone:', user.phone || user.phoneNumber || 'N/A')
+      console.log('   Original Phone:', user.originalPhone || 'N/A')
       console.log('')
     })
 
-    // Ask if user wants to modify these records
-    console.log('🔧 Would you like me to modify these credentials to free them up?')
-    console.log('   This will change their email/phone slightly so you can test with the original credentials.')
+    console.log('🔄 Restoring original credentials...')
     console.log('')
     
-    // Automatically modify to help with testing
-    console.log('🔄 Modifying credentials automatically...')
-    
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i]
-      const timestamp = Date.now()
-      const newEmail = user.email ? `${user.email.split('@')[0]}.old.${timestamp}@${user.email.split('@')[1]}` : null
-      const newPhone = user.phone ? `${user.phone}${Math.floor(Math.random() * 100)}` : 
-                      user.phoneNumber ? `${user.phoneNumber}${Math.floor(Math.random() * 100)}` : null
+    for (let i = 0; i < modifiedUsers.length; i++) {
+      const user = modifiedUsers[i]
 
-      const updateFields = {
-        updatedAt: new Date(),
-        modifiedForTesting: true,
-        originalEmail: user.email,
-        originalPhone: user.phone || user.phoneNumber || user.mobile || user.contactNumber
+      const restoreFields = {
+        updatedAt: new Date()
       }
 
-      if (newEmail) updateFields.email = newEmail
-      if (newPhone) {
-        updateFields.phone = newPhone
-        updateFields.phoneNumber = newPhone
-        if (user.mobile) updateFields.mobile = newPhone
-        if (user.contactNumber) updateFields.contactNumber = newPhone
+      // Restore original email
+      if (user.originalEmail) {
+        restoreFields.email = user.originalEmail
+      }
+
+      // Restore original phone to all phone fields that exist
+      if (user.originalPhone) {
+        if (user.phone !== undefined) restoreFields.phone = user.originalPhone
+        if (user.phoneNumber !== undefined) restoreFields.phoneNumber = user.originalPhone
+        if (user.mobile !== undefined) restoreFields.mobile = user.originalPhone
+        if (user.contactNumber !== undefined) restoreFields.contactNumber = user.originalPhone
+      }
+
+      // Remove the testing flags and backup fields
+      const unsetFields = {
+        modifiedForTesting: "",
+        originalEmail: "",
+        originalPhone: ""
       }
 
       const updateResult = await stuffCollection.updateOne(
         { _id: user._id },
-        { $set: updateFields }
+        { 
+          $set: restoreFields,
+          $unset: unsetFields
+        }
       )
 
       if (updateResult.modifiedCount > 0) {
-        console.log(`✅ Modified User ${i + 1}:`)
-        console.log('   New Email:', newEmail || 'unchanged')
-        console.log('   New Phone:', newPhone || 'unchanged')
+        console.log(`✅ Restored Record ${i + 1}:`)
+        console.log('   Email:', user.originalEmail || 'unchanged')
+        console.log('   Phone:', user.originalPhone || 'unchanged')
       } else {
-        console.log(`❌ Failed to modify User ${i + 1}`)
+        console.log(`❌ Failed to restore Record ${i + 1}`)
       }
     }
 
     console.log('')
-    console.log('🎉 Original credentials are now available for testing:')
-    console.log('   Email: teddymylove6@gmail.com')
-    console.log('   Phone: 0761819885')
-
+    console.log('🎉 All records have been restored to their original state!')
   } catch (error) {
     console.error('❌ Database error:', error.message)
   } finally {
@@ -119,4 +108,4 @@ async function checkStuffTable() {
   }
 }
 
-checkStuffTable().catch(console.error)
+restoreStuffTable().catch(console.error)

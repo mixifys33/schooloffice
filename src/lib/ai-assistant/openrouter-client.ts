@@ -25,13 +25,16 @@ export interface ChatCompletionResponse {
 }
 
 class OpenRouterClient {
-  private apiKey: string
-  private model: string
   private baseURL = 'https://openrouter.ai/api/v1'
-
-  constructor() {
-    this.apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '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'
-    this.model = process.env.NEXT_PUBLIC_OPENROUTER_MODEL || 'google/gemma-3-4b-it:free'
+  // Read at call time so production env vars are always picked up
+  private get apiKey() {
+    return process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || ''
+  }
+  private get model() {
+    const m = process.env.NEXT_PUBLIC_OPENROUTER_MODEL || ''
+    // Fallback to a known-good free model if the configured one looks invalid
+    const validModels = ['meta-llama/llama-3.2-3b-instruct:free', 'google/gemma-3-4b-it:free', 'mistralai/mistral-7b-instruct:free']
+    return validModels.includes(m) ? m : 'meta-llama/llama-3.2-3b-instruct:free'
   }
 
   async chat(messages: Message[]): Promise<string> {
